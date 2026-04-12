@@ -45,6 +45,24 @@ func runReboot() tea.Cmd {
 	}
 }
 
+// runPowerOff executes the poweroff command asynchronously
+func runPowerOff() tea.Cmd {
+	return func() tea.Msg {
+		if dryRunMode {
+			return PowerOffMsg{
+				Output:  "running: poweroff",
+				Success: true,
+			}
+		}
+		cmd := exec.Command("/sbin/poweroff")
+		err := cmd.Start()
+		return PowerOffMsg{
+				Output:  "Power off initiated",
+				Success: err == nil,
+			}
+	}
+}
+
 // RunTestScenario runs a test scenario in non-interactive mode
 // This is used by the debug agent to test specific application states
 func (m *MainModel) RunTestScenario(scenario string) {

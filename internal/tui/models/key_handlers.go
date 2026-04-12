@@ -114,6 +114,16 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Handle power off completion
+	if pom, ok := msg.(PowerOffMsg); ok {
+		if pom.Success {
+			m.statusBar.SetMessage("Power off: " + pom.Output)
+		} else {
+			m.statusBar.SetMessage("Power off failed: " + pom.Output)
+		}
+		return m, nil
+	}
+
 	// If we're in VM creation view, delegate to that model
 	if m.currentView == ViewVMCreate && m.vmCreateModel != nil {
 		// Forward file/disk selection messages to sub-view
@@ -566,7 +576,8 @@ func (m *MainModel) handlePowerSelection() (tea.Model, tea.Cmd) {
 		// Reboot system
 		return m, runReboot()
 	case 1:
-		m.statusBar.SetMessage("Power off system: Feature coming soon")
+		// Power off system
+		return m, runPowerOff()
 	}
 	return m, nil
 }

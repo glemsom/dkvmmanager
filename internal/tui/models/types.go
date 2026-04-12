@@ -58,6 +58,12 @@ type RebootMsg struct {
 	Success bool
 }
 
+// PowerOffMsg is sent when a power off operation completes
+type PowerOffMsg struct {
+	Output  string
+	Success bool
+}
+
 // MainModel is the main model for the application
 type MainModel struct {
 	// Current view
