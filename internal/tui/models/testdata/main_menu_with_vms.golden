@@ -1,0 +1,30 @@
+DKVM Manager                                                              v0.0.1
+
+                        Start VM | Configuration | Power                        
+                        ────────                                                
+ >  test-vm-1  ┌─────────────────────────────────────────────┐
+    test-vm-2  │ test-vm-1                                   │
+               │ ID: 0                                       │
+               │                                             │
+               │                                             │
+               │ Storage                                     │
+               │   None                                      │
+               │                                             │
+               │                                             │
+               │ Network                                     │
+               │   MAC: 9a:9b:1d:a6:65:c8                    │
+               │   Mode:                                     │
+               │   VNC: disabled                             │
+               │                                             │
+               │                                             │
+               │                                             │
+               │                                             │
+               │                                             │
+               │                                             │
+               │                                             │
+               │                                             │
+               │                                             │
+               │                                             │
+               │                                             │
+               └─────────────────────────────────────────────┘
+◌ Ready                                                     VMs: 2 (▶ 0 running)

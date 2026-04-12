@@ -1,0 +1,630 @@
+// Package vm provides virtual machine management functionality
+package vm
+
+import (
+	"bufio"
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/glemsom/dkvmmanager/internal/config"
+	"github.com/glemsom/dkvmmanager/internal/models"
+)
+
+// Package-level debug mode flag for the vm package
+var debugMode bool
+
+// Package-level dry-run mode flag for the vm package
+var dryRunMode bool
+
+// SetDebugMode enables or disables debug mode for the vm package
+func SetDebugMode(enabled bool) {
+	debugMode = enabled
+	if debugMode {
+		log.Println("[DEBUG] Debug mode enabled for vm package")
+	}
+}
+
+// SetDryRunMode enables or disables dry-run mode for the vm package
+func SetDryRunMode(enabled bool) {
+	dryRunMode = enabled
+	if dryRunMode {
+		log.Println("[DRY-RUN] Dry-run mode enabled for vm package")
+	}
+}
+
+// VMRunner manages the lifecycle of a running QEMU virtual machine
+type VMRunner struct {
+	vm                   *models.VM
+	cfg                  *config.Config
+	cmd                  *exec.Cmd
+	cmdProcess           *os.Process // Cached for race-safe access
+	qmpClient            *QMPClient
+	socketPath           string
+	logChan              chan string
+	done                 chan struct{}
+	mu                   sync.Mutex
+	running              bool
+	exitErr              error
+	startTime            time.Time
+	dryRun               bool
+	pciPassthroughConfig models.PCIPassthroughConfig
+	usbPassthroughConfig models.USBPassthroughConfig
+	cpuOptions           models.CPUOptions
+	cpuTopology          models.CPUTopology
+	vcpuPinning          models.VCPUPinningGlobal
+	startStopScript      models.StartStopScript
+}
+
+// NewVMRunner creates a new VM runner for the given VM
+func NewVMRunner(vm *models.VM, cfg *config.Config) *VMRunner {
+	r := &VMRunner{
+		vm:      vm,
+		cfg:     cfg,
+		logChan: make(chan string, 256),
+		done:    make(chan struct{}),
+	}
+	if dryRunMode {
+		r.dryRun = true
+	}
+	return r
+}
+
+// SetDryRun enables or disables dry-run mode on this runner
+func (r *VMRunner) SetDryRun(enabled bool) {
+	r.dryRun = enabled
+}
+
+// SetStartStopScript sets the start/stop script configuration
+func (r *VMRunner) SetStartStopScript(cfg models.StartStopScript) {
+	r.startStopScript = cfg
+}
+
+// SetVCPUPinning sets global vCPU pinning configuration for this run.
+func (r *VMRunner) SetVCPUPinning(p models.VCPUPinningGlobal) {
+	r.vcpuPinning = p
+}
+
+// LogChan returns a read-only channel that receives QEMU stdout/stderr lines
+func (r *VMRunner) LogChan() <-chan string {
+	return r.logChan
+}
+
+// IsRunning returns true if the VM process is still running
+func (r *VMRunner) IsRunning() bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.running
+}
+
+// ExitError returns the error from the QEMU process exit, if any
+func (r *VMRunner) ExitError() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.exitErr
+}
+
+// StartTime returns when the VM was started
+func (r *VMRunner) StartTime() time.Time {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.startTime
+}
+
+// QMPClient returns the QMP client, or nil if not yet connected
+func (r *VMRunner) QMPClient() *QMPClient {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.qmpClient
+}
+
+// VM returns the VM model
+func (r *VMRunner) VM() *models.VM {
+	return r.vm
+}
+
+// Done returns a channel that is closed when the VM exits
+func (r *VMRunner) Done() <-chan struct{} {
+	return r.done
+}
+
+// ValidateOVMFFiles checks that OVMF_CODE.fd and OVMF_VARS.fd exist in the VM data directory
+func (r *VMRunner) ValidateOVMFFiles() error {
+	vmDataDir := r.getVMDataDir()
+
+	codePath := filepath.Join(vmDataDir, "OVMF_CODE.fd")
+	varsPath := filepath.Join(vmDataDir, "OVMF_VARS.fd")
+
+	if _, err := os.Stat(codePath); err != nil {
+		return fmt.Errorf("OVMF_CODE.fd not found in %s: %w", vmDataDir, err)
+	}
+	if _, err := os.Stat(varsPath); err != nil {
+		return fmt.Errorf("OVMF_VARS.fd not found in %s: %w", vmDataDir, err)
+	}
+
+	return nil
+}
+
+// getVMDataDir returns the data directory for this VM
+func (r *VMRunner) getVMDataDir() string {
+	return filepath.Join(r.cfg.DataFolder, "vms", r.vm.ID)
+}
+
+// Start launches the QEMU process and connects QMP
+func (r *VMRunner) Start() error {
+	r.mu.Lock()
+	if r.running {
+		r.mu.Unlock()
+		return fmt.Errorf("VM %s is already running", r.vm.Name)
+	}
+	r.mu.Unlock()
+
+	// Validate OVMF files
+	if err := r.ValidateOVMFFiles(); err != nil {
+		return err
+	}
+
+	// Execute start script (block VM start if it fails)
+	if err := r.executeStartScript(); err != nil {
+		return fmt.Errorf("start script failed: %w", err)
+	}
+
+	vmDataDir := r.getVMDataDir()
+	r.socketPath = filepath.Join("/tmp", fmt.Sprintf("dkvm-%s.sock", r.vm.ID))
+
+	// Clean up stale socket
+	os.Remove(r.socketPath)
+
+	// Build QEMU arguments
+	args := r.buildQEMUArgs(vmDataDir)
+
+	if debugMode || r.dryRun {
+		log.Printf("[DEBUG] QEMU command: %s %s", r.cfg.QEMUPath, strings.Join(args, " "))
+	}
+
+	if r.dryRun {
+		filtered := filterPassthroughArgs(args)
+		fullCmd := fmt.Sprintf("%s %s", r.cfg.QEMUPath, strings.Join(args, " "))
+		filteredCmd := fmt.Sprintf("%s %s", r.cfg.QEMUPath, strings.Join(filtered, " "))
+		log.Printf("[DRY-RUN] Full command: %s", fullCmd)
+		log.Printf("[DRY-RUN] Filtered command: %s", filteredCmd)
+		r.logChan <- "[DRY-RUN] Full QEMU command:"
+		r.logChan <- fullCmd
+		r.logChan <- "[DRY-RUN] Filtered QEMU command (no passthrough):"
+		r.logChan <- filteredCmd
+		return nil
+	}
+
+	// Create command
+	r.cmd = exec.Command(r.cfg.QEMUPath, args...)
+
+	// Set up stdout pipe
+	stdout, err := r.cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("failed to create stdout pipe: %w", err)
+	}
+
+	// Set up stderr pipe
+	stderr, err := r.cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("failed to create stderr pipe: %w", err)
+	}
+
+	// Start QEMU
+	if err := r.cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start QEMU: %w", err)
+	}
+
+	r.mu.Lock()
+	r.running = true
+	r.cmdProcess = r.cmd.Process
+	r.startTime = time.Now()
+	r.mu.Unlock()
+
+	// Read stdout/stderr in background
+	go r.readOutput(stdout, "stdout")
+	go r.readOutput(stderr, "stderr")
+
+	// Monitor process exit
+	go r.monitorProcess()
+
+	// Wait for QMP socket and connect
+	go r.connectQMP()
+
+	return nil
+}
+
+// Stop gracefully shuts down the VM via QMP quit command
+func (r *VMRunner) Stop() error {
+	r.mu.Lock()
+	client := r.qmpClient
+	running := r.running
+	r.cmdProcess = r.cmd.Process
+	r.mu.Unlock()
+
+	if !running {
+		return fmt.Errorf("VM %s is not running", r.vm.Name)
+	}
+
+	if client != nil {
+		if err := client.Quit(); err != nil {
+			// If QMP quit fails, kill the process
+			r.mu.Lock()
+			proc := r.cmdProcess
+			r.mu.Unlock()
+			if proc != nil {
+				proc.Kill()
+			}
+			return fmt.Errorf("QMP quit failed, killed process: %w", err)
+		}
+	} else {
+		r.mu.Lock()
+		proc := r.cmdProcess
+		r.mu.Unlock()
+		// No QMP client, kill directly
+		if proc != nil {
+			proc.Kill()
+		}
+	}
+
+	return nil
+}
+
+// ForceStop kills the QEMU process immediately
+func (r *VMRunner) ForceStop() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if !r.running || r.cmd == nil || r.cmd.Process == nil {
+		return fmt.Errorf("VM %s is not running", r.vm.Name)
+	}
+
+	return r.cmd.Process.Kill()
+}
+
+// Cleanup removes stale resources (socket files, etc.)
+func (r *VMRunner) Cleanup() {
+	if r.socketPath != "" {
+		os.Remove(r.socketPath)
+	}
+}
+
+// readOutput reads lines from a pipe and sends them to the log channel
+func (r *VMRunner) readOutput(pipe io.Reader, source string) {
+	scanner := bufio.NewScanner(pipe)
+	for scanner.Scan() {
+		line := scanner.Text()
+		prefix := ""
+		if source == "stderr" {
+			prefix = "[stderr] "
+		}
+		// Log output when debug mode is enabled
+		if debugMode {
+			log.Printf("[DEBUG] [%s] %s", source, line)
+		}
+		select {
+		case r.logChan <- prefix + line:
+		default:
+			// Channel full, drop oldest
+			select {
+			case <-r.logChan:
+			default:
+			}
+			r.logChan <- prefix + line
+		}
+	}
+}
+
+// readScriptOutput reads lines from a script pipe and writes them to the debug log
+func (r *VMRunner) readScriptOutput(pipe io.Reader, source string) {
+	scanner := bufio.NewScanner(pipe)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if debugMode {
+			log.Printf("[DEBUG] %s: %s", source, line)
+		}
+	}
+}
+
+// monitorProcess waits for the QEMU process to exit
+func (r *VMRunner) monitorProcess() {
+	err := r.cmd.Wait()
+
+	r.mu.Lock()
+	r.running = false
+	r.exitErr = err
+	client := r.qmpClient
+	r.qmpClient = nil // Clear to prevent race with Stop()
+	r.mu.Unlock()
+
+	// Clean up QMP (outside lock to avoid holding lock during I/O)
+	if client != nil {
+		client.Close()
+	}
+
+	// Clean up socket
+	os.Remove(r.socketPath)
+
+	// Execute stop script (non-blocking - don't fail if it errors)
+	r.executeStopScript()
+
+	close(r.done)
+
+	if debugMode {
+		log.Printf("[DEBUG] QEMU process exited for VM %s: %v", r.vm.Name, err)
+	}
+}
+
+// connectQMP waits for the QMP socket to appear, then negotiates
+func (r *VMRunner) connectQMP() {
+	maxAttempts := 30
+	for i := 0; i < maxAttempts; i++ {
+		if _, err := os.Stat(r.socketPath); err == nil {
+			// Socket exists, try to connect
+			time.Sleep(500 * time.Millisecond) // Brief wait for QEMU to be ready
+
+			client, err := NewQMPClient(r.socketPath)
+			if err != nil {
+				if debugMode {
+					log.Printf("[DEBUG] QMP connect attempt %d failed: %v", i+1, err)
+				}
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			// Negotiate
+			greeting, err := client.Negotiate()
+			if err != nil {
+				client.Close()
+				if debugMode {
+					log.Printf("[DEBUG] QMP negotiate attempt %d failed: %v", i+1, err)
+				}
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			if debugMode {
+				log.Printf("[DEBUG] QMP connected: QEMU %d.%d.%d",
+					greeting.QMP.Version.QEMU.Major,
+					greeting.QMP.Version.QEMU.Minor,
+					greeting.QMP.Version.QEMU.Micro)
+			}
+
+			r.mu.Lock()
+			r.qmpClient = client
+			r.mu.Unlock()
+
+			r.logChan <- "[QMP] Connected to QEMU monitor"
+			if err := r.ApplyVCPUPinning(r.vcpuPinning); err != nil {
+				r.logChan <- fmt.Sprintf("[vCPU pinning] WARNING: %v", err)
+			}
+			return
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	r.logChan <- "[QMP] WARNING: Failed to connect to QMP after timeout"
+}
+
+// filterPassthroughArgs removes PCI/USB passthrough and drive ROM arguments
+// from the QEMU argument list. It returns a new slice without mutating the input.
+// Removed patterns:
+//   - -device vfio-pci,... (PCI passthrough)
+//   - -device usb-host,... (USB passthrough)
+//   - -drive ...romfile=... pairs (drive with ROM file)
+func filterPassthroughArgs(args []string) []string {
+	filtered := make([]string, 0, len(args))
+	i := 0
+	for i < len(args) {
+		if args[i] == "-device" && i+1 < len(args) {
+			val := args[i+1]
+			if strings.Contains(val, "vfio-pci") || strings.Contains(val, "usb-host") {
+				i += 2 // skip flag and value
+				continue
+			}
+		}
+		if args[i] == "-drive" && i+1 < len(args) {
+			if strings.Contains(args[i+1], "romfile=") {
+				i += 2 // skip flag and value
+				continue
+			}
+		}
+		filtered = append(filtered, args[i])
+		i++
+	}
+	return filtered
+}
+
+// executeStartScript executes the start script before QEMU launches
+func (r *VMRunner) executeStartScript() error {
+	// Skip if no custom script config
+	if r.startStopScript.StartScript == "" && r.startStopScript.UseBuiltin {
+		// Use builtin but no PCI devices configured - that's ok
+		return nil
+	}
+
+	if r.startStopScript.UseBuiltin {
+		// Generate builtin script from PCI devices
+		script, err := GenerateBuiltinScript(r.pciPassthroughConfig.Devices)
+		if err != nil {
+			return fmt.Errorf("failed to generate builtin script: %w", err)
+		}
+
+		// Write to temp file
+		scriptPath := fmt.Sprintf("/tmp/dkvm-builtin-%s.sh", r.vm.ID)
+		if err := os.WriteFile(scriptPath, []byte(script), 0755); err != nil {
+			return fmt.Errorf("failed to write builtin script: %w", err)
+		}
+
+		// Execute the script
+		cmd := exec.Command("/bin/bash", scriptPath)
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			return fmt.Errorf("failed to get stdout pipe: %w", err)
+		}
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			return fmt.Errorf("failed to get stderr pipe: %w", err)
+		}
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("failed to start script: %w", err)
+		}
+
+		// Read output in goroutines to avoid blocking
+		go r.readScriptOutput(stdout, "start script stdout")
+		go r.readScriptOutput(stderr, "start script stderr")
+
+		if err := cmd.Wait(); err != nil {
+			if debugMode {
+				log.Printf("[DEBUG] start script failed: %v", err)
+			}
+			r.logChan <- fmt.Sprintf("[start script] failed: %v", err)
+			return fmt.Errorf("start script execution failed: %w", err)
+		}
+
+		r.logChan <- fmt.Sprintf("[start script] executed builtin script: %s", scriptPath)
+		if debugMode {
+			log.Printf("[DEBUG] start script executed builtin script: %s", scriptPath)
+		}
+
+		// Clean up temp file
+		os.Remove(scriptPath)
+
+	} else if r.startStopScript.StartScript != "" {
+		// Custom script - pass PCI devices as command-line arguments
+		args := []string{"/bin/bash", r.startStopScript.StartScript, "start"}
+		for _, dev := range r.pciPassthroughConfig.Devices {
+			args = append(args, dev.Address)
+		}
+		cmd := exec.Command(args[0], args[1:]...)
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			return fmt.Errorf("failed to get stdout pipe: %w", err)
+		}
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			return fmt.Errorf("failed to get stderr pipe: %w", err)
+		}
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("failed to start script: %w", err)
+		}
+
+		// Read output in goroutines to avoid blocking
+		go r.readScriptOutput(stdout, "start script stdout")
+		go r.readScriptOutput(stderr, "start script stderr")
+
+		if err := cmd.Wait(); err != nil {
+			if debugMode {
+				log.Printf("[DEBUG] start script failed: %v", err)
+			}
+			r.logChan <- fmt.Sprintf("[start script] failed: %v", err)
+			return fmt.Errorf("start script execution failed: %w", err)
+		}
+
+		r.logChan <- fmt.Sprintf("[start script] executed: %s", r.startStopScript.StartScript)
+		if debugMode {
+			log.Printf("[DEBUG] start script executed: %s", r.startStopScript.StartScript)
+		}
+	}
+
+	return nil
+}
+
+// executeStopScript executes the stop script after QEMU exits (non-blocking)
+func (r *VMRunner) executeStopScript() {
+	// Skip if no custom script config
+	if r.startStopScript.StopScript == "" && r.startStopScript.UseBuiltin {
+		return
+	}
+
+	if r.startStopScript.UseBuiltin {
+		// Generate builtin stop script
+		script := GenerateBuiltinStopScript()
+
+		// Write to temp file
+		scriptPath := fmt.Sprintf("/tmp/dkvm-builtin-stop-%s.sh", r.vm.ID)
+		if err := os.WriteFile(scriptPath, []byte(script), 0755); err != nil {
+			log.Printf("[stop script] WARNING: failed to write builtin script: %v", err)
+			return
+		}
+
+		// Execute the script
+		cmd := exec.Command("/bin/bash", scriptPath)
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			log.Printf("[stop script] WARNING: failed to get stdout pipe: %v", err)
+			os.Remove(scriptPath)
+			return
+		}
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			log.Printf("[stop script] WARNING: failed to get stderr pipe: %v", err)
+			os.Remove(scriptPath)
+			return
+		}
+		if err := cmd.Start(); err != nil {
+			log.Printf("[stop script] WARNING: failed to start script: %v", err)
+			os.Remove(scriptPath)
+			return
+		}
+
+		// Read output in goroutines to avoid blocking
+		go r.readScriptOutput(stdout, "stop script stdout")
+		go r.readScriptOutput(stderr, "stop script stderr")
+
+		if err := cmd.Wait(); err != nil {
+			if debugMode {
+				log.Printf("[DEBUG] stop script failed: %v", err)
+			}
+			r.logChan <- fmt.Sprintf("[stop script] WARNING: %v", err)
+		}
+
+		// Clean up temp file
+		os.Remove(scriptPath)
+
+	} else if r.startStopScript.StopScript != "" {
+		// Custom stop script (non-blocking) - pass PCI devices as CLI args
+		args := []string{"/bin/bash", r.startStopScript.StopScript, "stop"}
+		for _, dev := range r.pciPassthroughConfig.Devices {
+			args = append(args, dev.Address)
+		}
+		cmd := exec.Command(args[0], args[1:]...)
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			if debugMode {
+				log.Printf("[DEBUG] stop script stdout pipe error: %v", err)
+			}
+			return
+		}
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			if debugMode {
+				log.Printf("[DEBUG] stop script stderr pipe error: %v", err)
+			}
+			return
+		}
+		if err := cmd.Start(); err != nil {
+			if debugMode {
+				log.Printf("[DEBUG] stop script start error: %v", err)
+			}
+			return
+		}
+
+		// Read output in goroutines to avoid blocking
+		go r.readScriptOutput(stdout, "stop script stdout")
+		go r.readScriptOutput(stderr, "stop script stderr")
+
+		if err := cmd.Wait(); err != nil {
+			if debugMode {
+				log.Printf("[DEBUG] stop script failed: %v", err)
+			}
+			r.logChan <- fmt.Sprintf("[stop script] WARNING: %v", err)
+		}
+	}
+}

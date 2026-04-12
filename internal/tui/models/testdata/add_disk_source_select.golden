@@ -1,0 +1,12 @@
+DKVM Manager                                                              v0.0.1
+
+                        Add Hard Disk                                      
+                        ────────                                                   
+
+Select source type:
+
+  Disk image file
+> Block device
+  LVM Logical Volume
+
+Space/Enter Select  ESC Cancel

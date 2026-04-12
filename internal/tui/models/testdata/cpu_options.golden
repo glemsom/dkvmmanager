@@ -1,0 +1,40 @@
+CPU Options                                                           Configuration
+
+                    Start VM | Configuration | Power                        
+                    ────────                                         
+ == Hypervisor Stealth ==                                         
+                                                                      
+   [ON]  Hides VM from guest                                       
+   [OFF] Custom hypervisor vendor ID                                
+                                                                      
+ == Hyper-V Enlightenments ==                                      
+                                                                      
+   [OFF] Expose TSC/APIC frequencies                               
+   [OFF] Disable watchdog timeouts                                  
+ > [OFF] Guest reset capability                                    ← focused
+   [OFF] Track stolen CPU time                                     
+   [ON]  Paravirtualized spinlocks                                 
+   [OFF] Synthetic timers                                           
+   [OFF] Synthetic interrupt controller                            
+   [OFF] Fast clocksources                                         
+   [OFF] Exit-less EOI processing                                  
+   [OFF] Virtual CPU index                                          
+   [OFF] No non-arch core sharing                                   
+   [OFF] Paravirtualized TLB flush                                 
+   [OFF] Extended TLB flush ranges                                 
+   [OFF] Paravirtualized IPI                                        
+   [OFF] Hardware APIC virtualization                               
+                                                                      
+ == Advanced CPU Features ==                                      
+                                                                      
+   [ON]  AMD topology extension                                     
+   [ON]  Expose host L3 cache info                                 
+   [ON]  x2APIC mode (>255 vCPUs)                                  
+   [ON]  Disable vCPU migration                                     
+   [ON]  Invariant TSC                                             
+   [ON]  Use UTC time for RTC                                       
+                                                                      
+   [Space/Enter] Save    [ESC] Cancel                               
+                                                                      
+Tab/Shift+Tab Navigate  Space/Enter Toggle/Save  ESC Cancel       
+◌ Ready                                                     VMs: 0
