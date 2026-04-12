@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `RebootMsg` type in `internal/tui/models/types.go`
   - Added `runReboot` handler in `internal/tui/models/debug.go`
   - Added key handler in `internal/tui/models/key_handlers.go`
+- Power off system functionality from Power menu in TUI
+  - Added `PowerOffMsg` type in `internal/tui/models/types.go`
+  - Added `runPowerOff` handler in `internal/tui/models/debug.go`
+  - Added key handler in `internal/tui/models/key_handlers.go`
 
 ### Changed
 -
