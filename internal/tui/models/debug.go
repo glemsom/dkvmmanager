@@ -27,6 +27,24 @@ func runLBUCommit() tea.Cmd {
 	}
 }
 
+// runReboot executes the reboot command asynchronously
+func runReboot() tea.Cmd {
+	return func() tea.Msg {
+		if dryRunMode {
+			return RebootMsg{
+				Output:  "running: reboot",
+				Success: true,
+			}
+		}
+		cmd := exec.Command("/sbin/reboot")
+		err := cmd.Start()
+		return RebootMsg{
+				Output:  "Reboot initiated",
+				Success: err == nil,
+			}
+	}
+}
+
 // RunTestScenario runs a test scenario in non-interactive mode
 // This is used by the debug agent to test specific application states
 func (m *MainModel) RunTestScenario(scenario string) {
