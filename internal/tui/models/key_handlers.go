@@ -104,6 +104,16 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Handle reboot completion
+	if rm, ok := msg.(RebootMsg); ok {
+		if rm.Success {
+			m.statusBar.SetMessage("Reboot: " + rm.Output)
+		} else {
+			m.statusBar.SetMessage("Reboot failed: " + rm.Output)
+		}
+		return m, nil
+	}
+
 	// If we're in VM creation view, delegate to that model
 	if m.currentView == ViewVMCreate && m.vmCreateModel != nil {
 		// Forward file/disk selection messages to sub-view
@@ -553,7 +563,8 @@ func (m *MainModel) handlePowerSelection() (tea.Model, tea.Cmd) {
 	selectedIndex := m.powerList.Index()
 	switch selectedIndex {
 	case 0:
-		m.statusBar.SetMessage("Reboot system: Feature coming soon")
+		// Reboot system
+		return m, runReboot()
 	case 1:
 		m.statusBar.SetMessage("Power off system: Feature coming soon")
 	}

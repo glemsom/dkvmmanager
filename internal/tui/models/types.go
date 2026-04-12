@@ -52,6 +52,12 @@ type LBUCommitMsg struct {
 	Success bool
 }
 
+// RebootMsg is sent when a reboot operation completes
+type RebootMsg struct {
+	Output  string
+	Success bool
+}
+
 // MainModel is the main model for the application
 type MainModel struct {
 	// Current view
