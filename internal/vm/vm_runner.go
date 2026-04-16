@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
+	"github.com/glemsom/dkvmmanager/internal/hugepages"
 	"github.com/glemsom/dkvmmanager/internal/models"
 )
 
@@ -164,6 +165,29 @@ func (r *VMRunner) Start() error {
 		return fmt.Errorf("VM %s is already running", r.vm.Name)
 	}
 	r.mu.Unlock()
+
+	// Check hugepages availability for 8GB VM memory
+	hugepagesCfg := hugepages.NewConfig()
+	result, err := hugepages.Check()
+	if err != nil {
+		return fmt.Errorf("hugepages check failed: %w", err)
+	}
+
+	result.RequiredPages = hugepagesCfg.RequiredPages()
+	result.IsSufficient = result.AvailablePages >= result.RequiredPages
+	if !result.IsSufficient {
+		// Try to allocate hugepages
+		result, err = hugepages.Ensure(hugepagesCfg)
+		if err != nil || !result.IsSufficient {
+			return fmt.Errorf(
+				"insufficient hugepages for VM %q: have %d pages (8GB × 2MB pages), need %d pages (try: echo %d > /proc/sys/vm/nr_hugepages)",
+				r.vm.Name,
+				result.AvailablePages,
+				result.RequiredPages,
+				result.RequiredPages,
+			)
+		}
+	}
 
 	// Validate OVMF files
 	if err := r.ValidateOVMFFiles(); err != nil {

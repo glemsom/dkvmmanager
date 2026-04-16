@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Hugepages allocation check and management for GPU passthrough VMs
+  - Added `internal/hugepages/` module for hugepages allocation
+  - Added hugepages validation in VM startup (`internal/vm/vm_runner.go`)
 - Reboot system functionality from Power menu in TUI
   - Added `RebootMsg` type in `internal/tui/models/types.go`
   - Added `runReboot` handler in `internal/tui/models/debug.go`
