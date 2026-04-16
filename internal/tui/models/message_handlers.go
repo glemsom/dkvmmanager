@@ -163,5 +163,20 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		m.breadcrumbs.Clear()
 		return m, nil
 	}
+	if _, ok := nextMsg.(LVCreateUpdatedMsg); ok {
+		if m.lvCreateFormModel != nil && m.lvCreateFormModel.preview != "" {
+			m.statusBar.SetMessage(m.lvCreateFormModel.preview)
+		} else {
+			m.statusBar.SetMessage("Logical volume created successfully")
+		}
+		m.lvCreateFormModel = nil
+		m.currentView = ViewConfigMenu
+		m.breadcrumbs.Clear()
+		return m, nil
+	}
+	if em, ok := nextMsg.(lvCreateErrorMsg); ok {
+		m.statusBar.SetMessage("LV create failed: " + em.err)
+		return m, nil
+	}
 	return m, nil
 }

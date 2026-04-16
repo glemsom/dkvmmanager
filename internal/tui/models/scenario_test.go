@@ -229,9 +229,9 @@ func TestScenarioLBUCommitDryRun(t *testing.T) {
 	dryRunMode = true
 	defer func() { dryRunMode = false }()
 
-	// Switch to Configuration tab, select "Save changes" (index 10)
+	// Switch to Configuration tab, select "Save changes" (index 11)
 	m = sendKeys(t, m, tea.KeyTab)
-	m.configSelectedIndex = 10
+	m.configSelectedIndex = 11
 
 	model, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = model.(*MainModel)
@@ -332,11 +332,15 @@ func TestScenarioComingSoonItems(t *testing.T) {
 	m.tabModel.SetActiveTab(components.TabConfiguration)
 
 	// Just verify no panic on menu selection
-	for i := 0; i <= 10; i++ {
+	for i := 0; i <= 9; i++ {
 		m.configSelectedIndex = i
 		model, _ := m.handleMenuSelection()
 		_ = model.(*MainModel)
 	}
+	// Skip index 10 (Create LV) here because it triggers a vgs command.
+	m.configSelectedIndex = 11
+	model, _ := m.handleMenuSelection()
+	_ = model.(*MainModel)
 }
 
 // TestScenarioViewChangeMsg verifies ViewChangeMsg handling through Update() Phase 2.

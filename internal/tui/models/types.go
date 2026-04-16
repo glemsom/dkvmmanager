@@ -29,6 +29,7 @@ const (
 	ViewVCPUPinning   = "vcpu_pinning"
 	ViewSSHPassword     = "ssh_password"
 	ViewStartStopScript = "start_stop_script"
+	ViewLVCreate        = "lv_create"
 )
 
 // Package-level debug mode flag
@@ -125,6 +126,9 @@ type MainModel struct {
 
 	// Start/Stop script form model
 	startStopScriptFormModel *StartStopScriptFormModel
+
+	// LVM LV create form model
+	lvCreateFormModel *LVCreateFormModel
 
 	// VM list for selection
 	vmListForSelection []models.VM

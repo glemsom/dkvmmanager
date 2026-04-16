@@ -125,6 +125,11 @@ func (m *MainModel) renderActiveContent() string {
 			return m.startStopScriptFormModel.View()
 		}
 		return "Loading..."
+	case ViewLVCreate:
+		if m.lvCreateFormModel != nil {
+			return m.lvCreateFormModel.View()
+		}
+		return "Loading..."
 	case ViewVMRunning:
 		if m.vmRunningModel != nil {
 			return m.vmRunningModel.View()

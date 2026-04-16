@@ -1,0 +1,12 @@
+Create Logical Volume                                              
+────────────────────────────────────────────────────────────────
+
+Volume Group: [ubuntu-vg            ▼]                            
+Volume Name:  [my-data-volume       ]                            
+Size:         [100                   ▼]  GiB                     
+
+Options:                                                         
+  [ ] Thin pool              [ ] Contiguous                      
+  [ ] Read-only                                                 
+
+[Space/Enter] Create    [ESC] Cancel                             
