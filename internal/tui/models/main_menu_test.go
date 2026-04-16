@@ -153,11 +153,15 @@ func TestHandleConfigMenuSelectionComingSoon(t *testing.T) {
 	m.tabModel.SetActiveTab(components.TabConfiguration)
 
 	// Test that accessing menu items doesn't panic
-	for i := 0; i <= 10; i++ {
+	for i := 0; i <= 9; i++ {
 		m.configSelectedIndex = i
 		model, _ := m.handleMenuSelection()
 		_ = model.(*MainModel)
 	}
+	// Skip index 10 (Create LV) here because it triggers a vgs command.
+	m.configSelectedIndex = 11
+	model, _ := m.handleMenuSelection()
+	_ = model.(*MainModel)
 }
 
 func TestHandlePCIPassthroughSelection(t *testing.T) {
@@ -201,7 +205,7 @@ func TestHandleCustomScriptSelection(t *testing.T) {
 func TestHandleConfigMenuSelectionSave(t *testing.T) {
 	m := setupTestModel(t)
 	m.tabModel.SetActiveTab(components.TabConfiguration)
-	m.configSelectedIndex = 10 // "LBU Commit"
+	m.configSelectedIndex = 11 // "LBU Commit"
 
 	dryRunMode = true
 	defer func() { dryRunMode = false }()
@@ -229,7 +233,7 @@ func TestHandleConfigMenuSelectionSave(t *testing.T) {
 func TestHandleConfigMenuSelectionLBUCommitDryRun(t *testing.T) {
 	m := setupTestModel(t)
 	m.tabModel.SetActiveTab(components.TabConfiguration)
-	m.configSelectedIndex = 10 // "LBU Commit"
+	m.configSelectedIndex = 11 // "LBU Commit"
 
 	dryRunMode = true
 	defer func() { dryRunMode = false }()
@@ -290,8 +294,8 @@ func TestHandleVMSelectionOutOfBounds(t *testing.T) {
 func TestBuildConfigListAdapter(t *testing.T) {
 	items := buildConfigListAdapter()
 
-	if len(items) != 11 {
-		t.Errorf("Expected 11 config items, got %d", len(items))
+	if len(items) != 12 {
+		t.Errorf("Expected 12 config items, got %d", len(items))
 	}
 
 	expectedTitles := []string{
@@ -305,6 +309,7 @@ func TestBuildConfigListAdapter(t *testing.T) {
 		"Edit Start/Stop Script",
 		"Edit CPU Options",
 		"Set SSH Password",
+		"Create Logical Volume",
 		"Save changes",
 	}
 

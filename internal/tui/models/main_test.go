@@ -118,8 +118,8 @@ func TestMainModelConfigListInitialized(t *testing.T) {
 	m := setupTestModel(t)
 
 	items := m.configList.Items()
-	if len(items) != 11 {
-		t.Errorf("Expected 11 config menu items, got %d", len(items))
+	if len(items) != 12 {
+		t.Errorf("Expected 12 config menu items, got %d", len(items))
 	}
 
 	// Check first item
@@ -178,10 +178,11 @@ func TestViewConstants(t *testing.T) {
 		ViewVMEdit:        true,
 		ViewVMSelect:      true,
 		ViewVMDelete:      true,
+		ViewLVCreate:      true,
 	}
 
-	if len(views) != 10 {
-		t.Errorf("Expected 10 unique view constants, got %d", len(views))
+	if len(views) != 11 {
+		t.Errorf("Expected 11 unique view constants, got %d", len(views))
 	}
 }
 

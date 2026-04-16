@@ -264,6 +264,19 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// If we're in LV create view, delegate all incoming messages (including async lvVGsLoadedMsg)
+	if m.currentView == ViewLVCreate && m.lvCreateFormModel != nil {
+		inner, cmd := m.lvCreateFormModel.Update(msg)
+		if f, ok := inner.(*LVCreateFormModel); ok {
+			m.lvCreateFormModel = f
+		}
+		if cmd != nil {
+			nextMsg := cmd()
+			return m.handleSubViewOutput(nextMsg)
+		}
+		return m, nil
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.handleKeyPress(msg)
@@ -318,6 +331,10 @@ func (m *MainModel) forwardWindowSizeToSubView(msg tea.WindowSizeMsg) {
 	case ViewVMRunning:
 		if m.vmRunningModel != nil {
 			m.vmRunningModel.SetSize(msg.Width-4, contentH-2)
+		}
+	case ViewLVCreate:
+		if m.lvCreateFormModel != nil {
+			m.lvCreateFormModel.SetSize(msg.Width-4, contentH-2)
 		}
 	}
 }
@@ -494,7 +511,15 @@ func (m *MainModel) handleConfigMenuSelection() (tea.Model, tea.Cmd) {
 		m.breadcrumbs.AddItem("Configuration", "config", 1)
 		m.breadcrumbs.AddItem("Set SSH Password", "ssh_password", 1)
 		return m, nil
-	case 10: // LBU COMMIT
+	case 10: // Create Logical Volume
+		m.lvCreateFormModel = NewLVCreateFormModel()
+		m.lvCreateFormModel.SetSize(m.windowWidth-4, m.contentHeight()-2)
+		m.currentView = ViewLVCreate
+		m.breadcrumbs.Clear()
+		m.breadcrumbs.AddItem("Configuration", "config", 1)
+		m.breadcrumbs.AddItem("Create Logical Volume", "lv_create", 1)
+		return m, m.lvCreateFormModel.Init()
+	case 11: // LBU COMMIT
 		return m, runLBUCommit()
 	}
 	return m, nil
@@ -585,7 +610,7 @@ func (m *MainModel) handlePowerSelection() (tea.Model, tea.Cmd) {
 // isSubViewActive returns true if a sub-view (create/edit/delete/select/running) is active
 func (m *MainModel) isSubViewActive() bool {
 	switch m.currentView {
-	case ViewVMCreate, ViewVMEdit, ViewVMDelete, ViewVMSelect, ViewCPUOptions, ViewVMRunning, ViewPCIPassthrough, ViewUSBPassthrough, ViewCPUTopology, ViewVCPUPinning, ViewSSHPassword, ViewStartStopScript:
+	case ViewVMCreate, ViewVMEdit, ViewVMDelete, ViewVMSelect, ViewCPUOptions, ViewVMRunning, ViewPCIPassthrough, ViewUSBPassthrough, ViewCPUTopology, ViewVCPUPinning, ViewSSHPassword, ViewStartStopScript, ViewLVCreate:
 		return true
 	}
 	return false
@@ -618,7 +643,7 @@ func (m *MainModel) returnFromSubView() (tea.Model, tea.Cmd) {
 
 	// Determine which tab to return to
 	switch prevView {
-	case ViewVMCreate, ViewVMEdit, ViewVMDelete, ViewVMSelect, ViewCPUOptions, ViewPCIPassthrough, ViewUSBPassthrough, ViewCPUTopology, ViewVCPUPinning, ViewSSHPassword, ViewStartStopScript:
+	case ViewVMCreate, ViewVMEdit, ViewVMDelete, ViewVMSelect, ViewCPUOptions, ViewPCIPassthrough, ViewUSBPassthrough, ViewCPUTopology, ViewVCPUPinning, ViewSSHPassword, ViewStartStopScript, ViewLVCreate:
 		m.tabModel.SetActiveTab(components.TabConfiguration)
 	case ViewVMRunning:
 		m.vmRunningModel = nil
@@ -789,6 +814,10 @@ func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
 			nextMsg := cmd()
 			return m.handleSubViewOutput(nextMsg)
 		}
+		return m, nil
+	case ViewLVCreate:
+		// LV create is handled earlier in MainModel.update() so it can receive
+		// asynchronous non-key messages (e.g., lvVGsLoadedMsg) reliably.
 		return m, nil
 	case ViewVMRunning:
 		if m.vmRunningModel != nil {

@@ -93,6 +93,20 @@ func TestGoldenPowerTab(t *testing.T) {
 	assertGolden(t, "power_tab", view)
 }
 
+// TestGoldenLVCreateForm verifies LV create form rendering.
+func TestGoldenLVCreateForm(t *testing.T) {
+	m := setupTestModelForScenarios(t)
+	m.tabModel.SetActiveTab(components.TabConfiguration)
+	m.lvCreateFormModel = NewLVCreateFormModel()
+	m.lvCreateFormModel.SetSize(m.windowWidth-4, m.contentHeight()-2)
+	m.currentView = ViewLVCreate
+	m.breadcrumbs.AddItem("Configuration", "config", 1)
+	m.breadcrumbs.AddItem("Create Logical Volume", "lv_create", 1)
+
+	view := m.View()
+	assertGolden(t, "lv_create_form", view)
+}
+
 // TestGoldenVMSelectEdit verifies VM selection view for editing.
 func TestGoldenVMSelectEdit(t *testing.T) {
 	m := setupTestModelForScenarios(t)

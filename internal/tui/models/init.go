@@ -109,6 +109,7 @@ func buildConfigListAdapter() []list.Item {
 		{Title: "Edit Start/Stop Script", Type: "INT_CONFIG"},
 		{Title: "Edit CPU Options", Type: "INT_CONFIG"},
 		{Title: "Set SSH Password", Type: "INT_CONFIG"},
+		{Title: "Create Logical Volume", Type: "INT_CONFIG"},
 		{Title: "Save changes", Type: "INT_CONFIG"},
 	}
 	listItems := make([]list.Item, len(items))

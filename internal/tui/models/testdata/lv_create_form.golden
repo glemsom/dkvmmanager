@@ -1,0 +1,12 @@
+Create Logical Volume
+────────────────────────────────────────────────────────────────
+
+Volume Group: [                     ▼]
+Volume Name:  [my-data-volume       ]
+Size:         [100                   ▼]  GiB
+
+Options:
+  [ ] Thin pool              [ ] Contiguous
+  [ ] Read-only
+
+[Enter on Create] Create    [ESC] Cancel

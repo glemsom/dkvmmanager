@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Hugepages allocation check and management for GPU passthrough VMs
+- VG dropdown in Create Logical Volume form - press Enter on Volume Group to open selection list
+- Loading spinner state in LV create form
+- VG dropdown open rendering in LV create form
   - Added `internal/hugepages/` module for hugepages allocation
   - Added hugepages validation in VM startup (`internal/vm/vm_runner.go`)
 - Reboot system functionality from Power menu in TUI

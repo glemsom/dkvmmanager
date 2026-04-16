@@ -1,0 +1,13 @@
+Create Logical Volume
+────────────────────────────────────────────────────────────────
+
+DBG: vgs=1 selected=vg_nvme idx=0 open=false focus=0
+Volume Group: [vg_nvme              ▼]
+Volume Name:  [my-data-volume       ]
+Size:         [100                   ▼]  GiB
+
+Options:
+  [ ] Thin pool              [ ] Contiguous
+  [ ] Read-only
+
+[Enter on Create] Create    [ESC] Cancel
