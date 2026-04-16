@@ -264,6 +264,19 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// If we're in LV create view, delegate all incoming messages (including async lvVGsLoadedMsg)
+	if m.currentView == ViewLVCreate && m.lvCreateFormModel != nil {
+		inner, cmd := m.lvCreateFormModel.Update(msg)
+		if f, ok := inner.(*LVCreateFormModel); ok {
+			m.lvCreateFormModel = f
+		}
+		if cmd != nil {
+			nextMsg := cmd()
+			return m.handleSubViewOutput(nextMsg)
+		}
+		return m, nil
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.handleKeyPress(msg)
@@ -803,16 +816,8 @@ func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case ViewLVCreate:
-		if m.lvCreateFormModel != nil {
-			inner, cmd := m.lvCreateFormModel.Update(msg)
-			if f, ok := inner.(*LVCreateFormModel); ok {
-				m.lvCreateFormModel = f
-			}
-			if cmd != nil {
-				nextMsg := cmd()
-				return m.handleSubViewOutput(nextMsg)
-			}
-		}
+		// LV create is handled earlier in MainModel.update() so it can receive
+		// asynchronous non-key messages (e.g., lvVGsLoadedMsg) reliably.
 		return m, nil
 	case ViewVMRunning:
 		if m.vmRunningModel != nil {

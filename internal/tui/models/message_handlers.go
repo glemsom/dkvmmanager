@@ -163,6 +163,11 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		m.breadcrumbs.Clear()
 		return m, nil
 	}
+	if _, ok := nextMsg.(lvVGsLoadedMsg); ok {
+		// lvVGsLoadedMsg is handled directly by LVCreateFormModel.Update()
+		// when the view is active - no need to forward here
+		return m, nil
+	}
 	if _, ok := nextMsg.(LVCreateUpdatedMsg); ok {
 		if m.lvCreateFormModel != nil && m.lvCreateFormModel.preview != "" {
 			m.statusBar.SetMessage(m.lvCreateFormModel.preview)
