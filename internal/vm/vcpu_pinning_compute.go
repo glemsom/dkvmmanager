@@ -28,13 +28,11 @@ func ComputePinningFromTopology(topo models.CPUTopology, host models.HostCPUTopo
 	}
 
 	var threads []hostThread
-	dieSet := make(map[int]bool)
 	for _, die := range host.Dies {
 		for _, core := range die.CoreDetails {
 			for threadIdx, cpuID := range core.Threads {
 				if selected[cpuID] {
 					threads = append(threads, hostThread{dieID: die.ID, coreID: core.ID, thread: threadIdx, hostCPU: cpuID})
-					dieSet[die.ID] = true
 				}
 			}
 		}
@@ -43,10 +41,6 @@ func ComputePinningFromTopology(topo models.CPUTopology, host models.HostCPUTopo
 	if len(threads) != len(topo.SelectedCPUs) {
 		return result, fmt.Errorf("selected CPUs do not match detected host topology")
 	}
-	if len(dieSet) > 1 {
-		return result, fmt.Errorf("cannot mix dies in one VM topology")
-	}
-
 	sort.Slice(threads, func(i, j int) bool {
 		if threads[i].dieID != threads[j].dieID {
 			return threads[i].dieID < threads[j].dieID

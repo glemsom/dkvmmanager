@@ -49,11 +49,26 @@ func TestComputePinningFromTopology(t *testing.T) {
 	}
 }
 
-func TestComputePinningFromTopologyRejectMixedDies(t *testing.T) {
+func TestComputePinningFromTopologyMixedDies(t *testing.T) {
 	host := testHostTopoTwoDies()
 	topo := models.CPUTopology{Enabled: true, SelectedCPUs: []int{0, 1, 8, 9}}
-	if _, err := ComputePinningFromTopology(topo, host); err == nil {
-		t.Fatal("expected mixed-die error")
+	pin, err := ComputePinningFromTopology(topo, host)
+	if err != nil {
+		t.Fatalf("ComputePinningFromTopology: %v", err)
+	}
+	if len(pin.Mappings) != 4 {
+		t.Fatalf("mappings=%d want=4", len(pin.Mappings))
+	}
+	// Verify sorted by die -> core -> thread
+	// Die 0, Core 0, Threads 0,1 then Die 1, Core 4, Threads 8,9
+	wantHostCPUs := []int{0, 1, 8, 9}
+	for i, m := range pin.Mappings {
+		if m.VCPUID != i {
+			t.Fatalf("mapping[%d].VCPUID=%d want=%d", i, m.VCPUID, i)
+		}
+		if m.HostCPUID != wantHostCPUs[i] {
+			t.Fatalf("mapping[%d].HostCPUID=%d want=%d", i, m.HostCPUID, wantHostCPUs[i])
+		}
 	}
 }
 

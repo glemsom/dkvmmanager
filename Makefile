@@ -60,12 +60,12 @@ test: ## Run all tests and show summary
 		echo "Failed:  $$FAIL"; \
 		echo "Skipped: $$SKIP"; \
 		echo "==================="; \
-		if [ $$FAIL -gt 0 ]; then \
+		if [ "$$FAIL" -gt 0 ]; then \
 			echo ""; \
 			echo "Failed tests:"; \
 			grep "^--- FAIL:" /tmp/test_output.txt | sed "s/^--- FAIL: //"; \
 		fi; \
-		if [ $$FAIL -gt 0 ]; then \
+		if [ "$$FAIL" -gt 0 ]; then \
 			exit 1; \
 		fi'
 
