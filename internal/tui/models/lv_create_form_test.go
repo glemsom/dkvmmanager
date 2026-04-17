@@ -210,7 +210,6 @@ func TestLVCreateUpDownNavigatesVGDropdown(t *testing.T) {
 
 func TestLVCreateRenderNoHardcodedVGFallback(t *testing.T) {
 	m := NewLVCreateFormModel()
-	m.loadingVGs = false
 	m.SetSize(76, 18)
 
 	view := m.View()
@@ -224,7 +223,6 @@ func TestLVCreateRenderNoHardcodedVGFallback(t *testing.T) {
 
 func TestLVCreateRenderDropdownOpen(t *testing.T) {
 	m := NewLVCreateFormModel()
-	m.loadingVGs = false
 	m.SetSize(76, 18)
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g"}, {Name: "vg0", Free: "10.00g"}}
 	m.vgIndex = 0
@@ -233,13 +231,4 @@ func TestLVCreateRenderDropdownOpen(t *testing.T) {
 
 	view := stripANSI(m.View())
 	assertGolden(t, "lv_create_form_vg_dropdown_open", view)
-}
-
-func TestLVCreateRenderLoading(t *testing.T) {
-	m := NewLVCreateFormModel()
-	m.SetSize(76, 18)
-	m.spinnerIndex = 0
-
-	view := stripANSI(m.View())
-	assertGolden(t, "lv_create_form_loading", view)
 }
