@@ -51,9 +51,9 @@ test: ## Run all tests and show summary
 	@echo "Running tests..."
 	@docker run --rm -w /build -v $(shell pwd):/build golang:1.26-alpine sh -c '\
 		go test -v ./... 2>&1 | tee /tmp/test_output.txt; \
-		PASS=$$(grep -c "^--- PASS:" /tmp/test_output.txt); \
-		FAIL=$$(grep -c "^--- FAIL:" /tmp/test_output.txt); \
-		SKIP=$$(grep -c "^--- SKIP:" /tmp/test_output.txt); \
+		PASS=$$(grep -c "^--- PASS:" /tmp/test_output.txt || echo 0); \
+		FAIL=$$(grep -c "^--- FAIL:" /tmp/test_output.txt || echo 0); \
+		SKIP=$$(grep -c "^--- SKIP:" /tmp/test_output.txt || echo 0); \
 		echo ""; \
 		echo "=== Test Summary ==="; \
 		echo "Passed:  $$PASS"; \
