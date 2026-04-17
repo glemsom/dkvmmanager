@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -49,8 +48,6 @@ type LVCreateFormModel struct {
 	vgIndex          int
 	vgDropdownOpen   bool
 	vgDropdownIndex  int
-	loadingVGs       bool
-	spinnerIndex     int
 	volumeName       string
 	sizeValue        string
 	unitIndex        int
@@ -69,7 +66,6 @@ type LVCreateFormModel struct {
 
 func NewLVCreateFormModel() *LVCreateFormModel {
 	return &LVCreateFormModel{
-		loadingVGs: true,
 		volumeName: "my-data-volume",
 		sizeValue:  "100",
 		errors:     map[string]string{},
@@ -77,7 +73,7 @@ func NewLVCreateFormModel() *LVCreateFormModel {
 }
 
 func (m *LVCreateFormModel) Init() tea.Cmd {
-	return tea.Batch(m.loadVolumeGroupsCmd(), m.spinnerTickCmd())
+	return m.loadVolumeGroupsCmd()
 }
 
 func (m *LVCreateFormModel) SetSize(w, h int) {
@@ -97,7 +93,6 @@ func (m *LVCreateFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 	case lvVGsLoadedMsg:
-		m.loadingVGs = false
 		m.volumeGroups = msg.vgs
 		if msg.err != nil {
 			m.errors["vg"] = "Failed to load VGs: " + msg.err.Error()
@@ -117,12 +112,6 @@ func (m *LVCreateFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.syncViewport()
-	case lvVGSpinnerTickMsg:
-		if m.loadingVGs {
-			m.spinnerIndex = (m.spinnerIndex + 1) % len(lvSpinnerFrames)
-			m.syncViewport()
-			return m, m.spinnerTickCmd()
-		}
 	}
 	return m, nil
 }
@@ -137,16 +126,6 @@ func (m *LVCreateFormModel) View() string {
 type lvVGsLoadedMsg struct {
 	vgs []VolumeGroup
 	err error
-}
-
-type lvVGSpinnerTickMsg struct{}
-
-var lvSpinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-
-func (m *LVCreateFormModel) spinnerTickCmd() tea.Cmd {
-	return tea.Tick(120*time.Millisecond, func(time.Time) tea.Msg {
-		return lvVGSpinnerTickMsg{}
-	})
 }
 
 func (m *LVCreateFormModel) loadVolumeGroupsCmd() tea.Cmd {
@@ -279,7 +258,7 @@ func (m *LVCreateFormModel) selectedVG() string {
 }
 
 func (m *LVCreateFormModel) openVGDropdown() {
-	if m.loadingVGs || len(m.volumeGroups) == 0 {
+	if len(m.volumeGroups) == 0 {
 		return
 	}
 	m.vgDropdownOpen = true
@@ -414,12 +393,6 @@ func (m *LVCreateFormModel) renderLines() []string {
 		"",
 	}
 	vg := m.selectedVG()
-	if m.loadingVGs && vg == "" {
-		vg = "loading..."
-	}
-	if m.loadingVGs {
-		lines = append(lines, fmt.Sprintf("Loading volume groups... %s", lvSpinnerFrames[m.spinnerIndex]))
-	}
 	vgMarker := "▼"
 	if m.vgDropdownOpen {
 		vgMarker = "▲"
