@@ -26,7 +26,7 @@ RUN CGO_ENABLED=0 go build \
 
 FROM alpine:3.19
 
-RUN apk add --no-cache ca-certificates gawk go
+RUN apk add --no-cache ca-certificates gawk go yq jq
 
 WORKDIR /app
 
