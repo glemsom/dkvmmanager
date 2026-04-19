@@ -8,7 +8,7 @@ import (
 )
 
 func TestParseVGSOutput(t *testing.T) {
-	out := "ubuntu-vg\t500.00g\t300.00g\t2\nvg0\t100.00g\t10.00g\t5\n"
+	out := "ubuntu-vg\t500.00g\t300.00g\t2\t1\nvg0\t100.00g\t10.00g\t5\t3\n"
 	vgs, err := parseVGSOutput(out)
 	if err != nil {
 		t.Fatalf("parseVGSOutput() error: %v", err)
@@ -18,11 +18,14 @@ func TestParseVGSOutput(t *testing.T) {
 	}
 	if vgs[0].Name != "ubuntu-vg" || vgs[1].Name != "vg0" {
 		t.Fatalf("unexpected vg parse result: %#v", vgs)
+	}
+	if vgs[0].PVCount != 1 || vgs[1].PVCount != 3 {
+		t.Fatalf("unexpected pv count: %#v", vgs)
 	}
 }
 
 func TestParseVGSOutputWhitespaceAndEmptyLines(t *testing.T) {
-	out := "\n  ubuntu-vg\t500.00g\t300.00g\t2\n\t\ninvalid line\n  vg0\t100.00g\t10.00g\t5\n"
+	out := "\n  ubuntu-vg\t500.00g\t300.00g\t2\t2\n\t\ninvalid line\n  vg0\t100.00g\t10.00g\t5\t1\n"
 	vgs, err := parseVGSOutput(out)
 	if err != nil {
 		t.Fatalf("parseVGSOutput() error: %v", err)
@@ -33,10 +36,13 @@ func TestParseVGSOutputWhitespaceAndEmptyLines(t *testing.T) {
 	if vgs[0].Name != "ubuntu-vg" || vgs[1].Name != "vg0" {
 		t.Fatalf("unexpected vg parse result: %#v", vgs)
 	}
+	if vgs[0].PVCount != 2 || vgs[1].PVCount != 1 {
+		t.Fatalf("unexpected pv count: %#v", vgs)
+	}
 }
 
 func TestParseVGSOutputLiteralEscapedTabSeparator(t *testing.T) {
-	out := "vg_nvme\\t7452.04g\\t2798.04g\\t6\n"
+	out := "vg_nvme\\t7452.04g\\t2798.04g\\t6\\t4\n"
 	vgs, err := parseVGSOutput(out)
 	if err != nil {
 		t.Fatalf("parseVGSOutput() error: %v", err)
@@ -44,14 +50,14 @@ func TestParseVGSOutputLiteralEscapedTabSeparator(t *testing.T) {
 	if len(vgs) != 1 {
 		t.Fatalf("expected 1 VG, got %d", len(vgs))
 	}
-	if vgs[0].Name != "vg_nvme" || vgs[0].Free != "2798.04g" || vgs[0].LVCount != 6 {
+	if vgs[0].Name != "vg_nvme" || vgs[0].Free != "2798.04g" || vgs[0].LVCount != 6 || vgs[0].PVCount != 4 {
 		t.Fatalf("unexpected vg parse result: %#v", vgs[0])
 	}
 }
 
 func TestLVCreateValidate(t *testing.T) {
 	m := NewLVCreateFormModel()
-	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "10.00g"}}
+	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "10.00g", PVCount: 1}}
 	m.vgIndex = 0
 	m.volumeName = "ok-name"
 	m.sizeValue = "2"
@@ -73,7 +79,7 @@ func TestLVCreateValidate(t *testing.T) {
 func TestLVCreateFormNavigationAndToggle(t *testing.T) {
 	m := NewLVCreateFormModel()
 	m.SetSize(76, 18)
-	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "100.00g"}}
+	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "100.00g", PVCount: 1}}
 
 	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab, Runes: []rune{'\t'}}) // name
 	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab, Runes: []rune{'\t'}}) // size
@@ -95,7 +101,7 @@ func TestLVCreateDryRunCreate(t *testing.T) {
 
 	m := NewLVCreateFormModel()
 	m.SetSize(76, 18)
-	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "100.00g"}}
+	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "100.00g", PVCount: 1}}
 	m.vgIndex = 0
 	m.volumeName = "data"
 	m.sizeValue = "10"
@@ -121,7 +127,7 @@ func TestLVCreateEnterSubmitsFromNonCreateFocus(t *testing.T) {
 
 	m := NewLVCreateFormModel()
 	m.SetSize(76, 18)
-	m.volumeGroups = []VolumeGroup{{Name: "vg0", Free: "100.00g"}}
+	m.volumeGroups = []VolumeGroup{{Name: "vg0", Free: "100.00g", PVCount: 1}}
 	m.vgIndex = 0
 	m.volumeName = "data"
 	m.sizeValue = "10"
@@ -143,7 +149,7 @@ func TestLVCreateEnterSubmitsFromNonCreateFocus(t *testing.T) {
 func TestLVCreateEnterOnVGOpensDropdown(t *testing.T) {
 	m := NewLVCreateFormModel()
 	m.SetSize(76, 18)
-	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g"}, {Name: "vg0", Free: "10.00g"}}
+	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 1}, {Name: "vg0", Free: "10.00g", PVCount: 1}}
 	m.vgIndex = 0
 	m.focusIndex = int(lvFocusVG)
 
@@ -159,7 +165,7 @@ func TestLVCreateEnterOnVGOpensDropdown(t *testing.T) {
 func TestLVCreateEnterOnVGWhenOpenConfirmsSelection(t *testing.T) {
 	m := NewLVCreateFormModel()
 	m.SetSize(76, 18)
-	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g"}, {Name: "vg0", Free: "10.00g"}}
+	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 2}, {Name: "vg0", Free: "10.00g", PVCount: 1}}
 	m.vgIndex = 0
 	m.focusIndex = int(lvFocusVG)
 	m.vgDropdownOpen = true
@@ -177,7 +183,7 @@ func TestLVCreateEnterOnVGWhenOpenConfirmsSelection(t *testing.T) {
 func TestLVCreateEscClosesDropdownOnly(t *testing.T) {
 	m := NewLVCreateFormModel()
 	m.SetSize(76, 18)
-	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g"}}
+	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 1}}
 	m.focusIndex = int(lvFocusVG)
 	m.vgDropdownOpen = true
 
@@ -193,7 +199,7 @@ func TestLVCreateEscClosesDropdownOnly(t *testing.T) {
 func TestLVCreateUpDownNavigatesVGDropdown(t *testing.T) {
 	m := NewLVCreateFormModel()
 	m.SetSize(76, 18)
-	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g"}, {Name: "vg0", Free: "10.00g"}}
+	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 1}, {Name: "vg0", Free: "10.00g", PVCount: 1}}
 	m.focusIndex = int(lvFocusVG)
 	m.vgDropdownOpen = true
 	m.vgDropdownIndex = 0
@@ -223,7 +229,7 @@ func TestLVCreateRenderNoHardcodedVGFallback(t *testing.T) {
 
 func TestLVCreateRenderDropdownOpen(t *testing.T) {
 	m := NewLVCreateFormModel()
-	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g"}, {Name: "vg0", Free: "10.00g"}}
+	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 1}, {Name: "vg0", Free: "10.00g", PVCount: 1}}
 	m.vgIndex = 0
 	m.vgDropdownOpen = true
 	m.vgDropdownIndex = 0
@@ -231,4 +237,75 @@ func TestLVCreateRenderDropdownOpen(t *testing.T) {
 
 	view := stripANSI(m.View())
 	assertGolden(t, "lv_create_form_vg_dropdown_open", view)
+}
+
+func TestLVCreateStrippedAutoEnabledWithMultiplePVs(t *testing.T) {
+	m := NewLVCreateFormModel()
+	m.SetSize(76, 18)
+	// VG with 2 PVs should have stripped auto-enabled
+	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 2}}
+	m.vgIndex = 0
+
+	// Simulate loading VGs (triggers auto-enable)
+	_, _ = m.Update(lvVGsLoadedMsg{
+		vgs: []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 2}},
+	})
+	if !m.isStripped {
+		t.Fatal("expected stripped to be auto-enabled for VG with 2 PVs")
+	}
+}
+
+func TestLVCreateStrippedNotShownWithSinglePV(t *testing.T) {
+	m := NewLVCreateFormModel()
+	m.SetSize(76, 18)
+	// VG with 1 PV should NOT show stripped option
+	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 1}}
+	m.vgIndex = 0
+
+	view := m.View()
+	if strings.Contains(view, "Stripped") {
+		t.Fatal("expected Stripped option hidden for VG with 1 PV")
+	}
+}
+
+func TestLVCreateStrippedShownWithMultiplePVs(t *testing.T) {
+	m := NewLVCreateFormModel()
+	m.SetSize(76, 18)
+	// VG with 2 PVs should show stripped option
+	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 2, LVCount: 3}}
+	m.vgIndex = 0
+	m.isStripped = true
+
+	view := m.View()
+	if !strings.Contains(view, "Stripped") {
+		t.Fatal("expected Stripped option shown for VG with 2 PVs")
+	}
+}
+
+func TestLVCreateBuildCommandWithStripes(t *testing.T) {
+	m := NewLVCreateFormModel()
+	m.volumeGroups = []VolumeGroup{{Name: "vg0", Free: "100.00g", PVCount: 2}}
+	m.vgIndex = 0
+	m.volumeName = "mylv"
+	m.sizeValue = "50"
+	m.isStripped = true
+
+	cmd := m.buildCommand()
+	if !strings.Contains(cmd, "--stripes") {
+		t.Fatalf("expected --stripes in command, got: %s", cmd)
+	}
+}
+
+func TestLVCreateBuildCommandWithoutStripes(t *testing.T) {
+	m := NewLVCreateFormModel()
+	m.volumeGroups = []VolumeGroup{{Name: "vg0", Free: "100.00g", PVCount: 1}}
+	m.vgIndex = 0
+	m.volumeName = "mylv"
+	m.sizeValue = "50"
+	m.isStripped = false
+
+	cmd := m.buildCommand()
+	if strings.Contains(cmd, "--stripes") {
+		t.Fatalf("expected no --stripes in command, got: %s", cmd)
+	}
 }
