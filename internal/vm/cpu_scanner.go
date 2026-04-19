@@ -371,3 +371,20 @@ func parseCacheSizeKB(s string) int {
 		return v / 1024
 	}
 }
+
+// CPUIndexToTopology maps a logical CPU index to host topology coordinates.
+// Uses HostCPUTopology to find die-id, core-id, thread-id.
+// Returns error if CPU ID is not found in the topology.
+func CPUIndexToTopology(cpuID int, host models.HostCPUTopology) (dieID, coreID, threadID int, err error) {
+	// Search through all dies and cores for this CPU
+	for _, die := range host.Dies {
+		for _, core := range die.CoreDetails {
+			for i, t := range core.Threads {
+				if t == cpuID {
+					return die.ID, core.ID, i, nil
+				}
+			}
+		}
+	}
+	return 0, 0, 0, fmt.Errorf("CPU %d not found in host topology", cpuID)
+}

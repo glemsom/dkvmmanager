@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/glemsom/dkvmmanager/internal/models"
 )
 
 // createMockSysfs creates a fake sysfs tree for testing CPU topology detection.
@@ -283,5 +285,90 @@ func TestCPUScannerAsymmetricL3(t *testing.T) {
 	}
 	if topo.Dies[1].L3CacheKB != 98304 {
 		t.Errorf("Die[1].L3CacheKB = %d, want 98304 (96M)", topo.Dies[1].L3CacheKB)
+	}
+}
+
+func TestCPUIndexToTopology(t *testing.T) {
+	// Build a mock host topology matching the mock sysfs created by createMockSysfs
+	hostTopo := models.HostCPUTopology{
+		TotalCores:      8,
+		TotalCPUs:     16,
+		ThreadsPerCore: 2,
+		Dies: []models.CPUDie{
+			{
+				ID:     0,
+				Cores:  4,
+				Threads: 2,
+				CoreDetails: []models.CPUCore{
+					{ID: 0, DieID: 0, Threads: []int{0, 1}},
+					{ID: 1, DieID: 0, Threads: []int{2, 3}},
+					{ID: 2, DieID: 0, Threads: []int{4, 5}},
+					{ID: 3, DieID: 0, Threads: []int{6, 7}},
+				},
+			},
+			{
+				ID:     1,
+				Cores:  4,
+				Threads: 2,
+				CoreDetails: []models.CPUCore{
+					{ID: 0, DieID: 1, Threads: []int{8, 9}},
+					{ID: 1, DieID: 1, Threads: []int{10, 11}},
+					{ID: 2, DieID: 1, Threads: []int{12, 13}},
+					{ID: 3, DieID: 1, Threads: []int{14, 15}},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name       string
+		cpuID      int
+		wantDie   int
+		wantCore  int
+		wantThread int
+		wantErr   bool
+	}{
+		{"CPU 0", 0, 0, 0, 0, false},
+		{"CPU 1", 1, 0, 0, 1, false},
+		{"CPU 2", 2, 0, 1, 0, false},
+		{"CPU 3", 3, 0, 1, 1, false},
+		{"CPU 7", 7, 0, 3, 1, false},
+		{"CPU 8", 8, 1, 0, 0, false},
+		{"CPU 15", 15, 1, 3, 1, false},
+		{"invalid CPU", 99, 0, 0, 0, true},
+		{"negative CPU", -1, 0, 0, 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dieID, coreID, threadID, err := CPUIndexToTopology(tt.cpuID, hostTopo)
+			if tt.wantErr {
+				if err == nil {
+					t.Error("Expected error for CPU %d", tt.cpuID)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Unexpected error for CPU %d: %v", tt.cpuID, err)
+			}
+			if dieID != tt.wantDie {
+				t.Errorf("CPU %d: dieID = %d, want %d", tt.cpuID, dieID, tt.wantDie)
+			}
+			if coreID != tt.wantCore {
+				t.Errorf("CPU %d: coreID = %d, want %d", tt.cpuID, coreID, tt.wantCore)
+			}
+			if threadID != tt.wantThread {
+				t.Errorf("CPU %d: threadID = %d, want %d", tt.cpuID, threadID, tt.wantThread)
+			}
+		})
+	}
+}
+
+func TestCPUIndexToTopologyEmpty(t *testing.T) {
+	hostTopo := models.HostCPUTopology{}
+
+	_, _, _, err := CPUIndexToTopology(0, hostTopo)
+	if err == nil {
+		t.Error("Expected error for empty topology")
 	}
 }

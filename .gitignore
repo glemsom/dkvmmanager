@@ -21,3 +21,6 @@ go.work.sum
 AGENTS.md
 PROJECT_STRUCTURE.md
 .lean-ctx
+
+# Debug artifacts
+debug.log
