@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"log"
 	"sort"
 
 	"github.com/glemsom/dkvmmanager/internal/models"
@@ -38,6 +39,11 @@ func (r *VMRunner) ApplyVCPUPinning(pinning models.VCPUPinningGlobal) error {
 		mappingByVCPU[m.VCPUID] = m.HostCPUID
 	}
 
+	if debugMode {
+		log.Printf("[DEBUG] vCPU pinning: starting for VM %q with %d vCPUs, %d mappings",
+			r.vm.Name, len(vcpus), len(pinning.Mappings))
+	}
+
 	guestDie := -1
 	for idx, v := range vcpus {
 		hostCPU, ok := mappingByVCPU[idx]
@@ -49,9 +55,20 @@ func (r *VMRunner) ApplyVCPUPinning(pinning models.VCPUPinningGlobal) error {
 		} else if guestDie != v.Props.DieID {
 			return fmt.Errorf("guest vcpu dies mixed in running VM: %d and %d", guestDie, v.Props.DieID)
 		}
+
+		if debugMode {
+			log.Printf("[DEBUG] vCPU pinning: vCPU %d (ThreadID=%d) -> host CPU %d",
+				idx, v.ThreadID, hostCPU)
+		}
+
 		if err := PinThreadToCores(v.ThreadID, []int{hostCPU}); err != nil {
 			return fmt.Errorf("vcpu %d thread %d pin to host cpu %d: %w", idx, v.ThreadID, hostCPU, err)
 		}
 	}
+
+	if debugMode {
+		log.Printf("[DEBUG] vCPU pinning: completed for VM %q", r.vm.Name)
+	}
+
 	return nil
 }

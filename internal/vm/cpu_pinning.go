@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,6 +17,17 @@ func PinThreadToCores(pid int, cores []int) error {
 	if len(cores) == 0 {
 		return fmt.Errorf("no cores specified")
 	}
+
+	// Debug: capture affinity BEFORE pinning
+	if debugMode {
+		before, err := GetThreadAffinity(pid)
+		if err != nil {
+			log.Printf("[DEBUG] vCPU pinning: could not get current affinity for PID %d: %v", pid, err)
+		} else {
+			log.Printf("[DEBUG] vCPU pinning: BEFORE - PID %d, current affinity: %v", pid, before)
+		}
+	}
+
 	var set unix.CPUSet
 	set.Zero()
 	for _, core := range cores {
@@ -27,6 +39,17 @@ func PinThreadToCores(pid int, cores []int) error {
 	if err := unix.SchedSetaffinity(pid, &set); err != nil {
 		return fmt.Errorf("sched_setaffinity(%d): %w", pid, err)
 	}
+
+	// Debug: capture affinity AFTER pinning
+	if debugMode {
+		after, err := GetThreadAffinity(pid)
+		if err != nil {
+			log.Printf("[DEBUG] vCPU pinning: could not verify new affinity for PID %d: %v", pid, err)
+		} else {
+			log.Printf("[DEBUG] vCPU pinning: AFTER - PID %d, new affinity: %v", pid, after)
+		}
+	}
+
 	return nil
 }
 

@@ -130,7 +130,12 @@ func TestGoldenVMSelectDelete(t *testing.T) {
 
 	m.currentView = ViewVMSelect
 	m.selectionMode = "delete"
-	m.vmListForSelection, _ = m.vmManager.ListVMs()
+	vms, _ := m.vmManager.ListVMs()
+	// Sort VMs by ID to match production behavior in showVMSelectionWithMode()
+	sort.Slice(vms, func(i, j int) bool {
+		return vms[i].ID < vms[j].ID
+	})
+	m.vmListForSelection = vms
 
 	view := m.View()
 	assertGolden(t, "vm_select_delete", view)

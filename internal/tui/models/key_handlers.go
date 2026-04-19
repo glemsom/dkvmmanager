@@ -569,6 +569,10 @@ func (m *MainModel) handleVMSelection() (tea.Model, tea.Cmd) {
 		if scriptCfg, err := m.vmManager.GetStartStopScript(); err == nil {
 			runner.SetStartStopScript(scriptCfg)
 		}
+		// Load and inject vCPU pinning config
+		if vcpuPinning, err := m.vmManager.GetVCPUPinningGlobal(); err == nil {
+			runner.SetVCPUPinning(vcpuPinning)
+		}
 		if err := runner.Start(); err != nil {
 			m.statusBar.SetMessage("Error starting VM: " + err.Error())
 			return m, nil
