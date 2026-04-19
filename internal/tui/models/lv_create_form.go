@@ -288,7 +288,7 @@ func (m *LVCreateFormModel) selectedVGPVCount() int {
 
 // nextFocus returns the next focus index, skipping Stripped if VG has <= 1 PV.
 func (m *LVCreateFormModel) nextFocus(delta int) int {
-	maxFocus := 9
+	maxFocus := 10
 	pvCount := m.selectedVGPVCount()
 	hasStrippedFocus := pvCount > 1
 
@@ -343,6 +343,10 @@ func (m *LVCreateFormModel) confirmVGSelection() {
 		m.isStripped = true
 	} else {
 		m.isStripped = false
+	}
+	// Adjust focus if we moved off Stripped option while it was enabled
+	if !m.isStripped && m.focusIndex >= int(lvFocusStripped) && m.focusIndex < int(lvFocusContig) {
+		m.focusIndex = int(lvFocusContig)
 	}
 	m.closeVGDropdown()
 }
