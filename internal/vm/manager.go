@@ -64,7 +64,7 @@ func (m *Manager) CreateVM(name string) (*models.VM, error) {
 
 	// Copy OVMF files to VM directory
 	if err := m.copyOVMFFiles(vmDir); err != nil {
-		log.Printf("[WARN] Failed to copy OVMF files: %v", err)
+		return nil, fmt.Errorf("failed to copy OVMF files: %w", err)
 	}
 
 	// Create VM config
@@ -99,7 +99,7 @@ func (m *Manager) CreateVMWithMAC(name, mac string) (*models.VM, error) {
 
 	// Copy OVMF files to VM directory
 	if err := m.copyOVMFFiles(vmDir); err != nil {
-		log.Printf("[WARN] Failed to copy OVMF files: %v", err)
+		return nil, fmt.Errorf("failed to copy OVMF files: %w", err)
 	}
 
 	// Create VM config with specified MAC
@@ -249,7 +249,7 @@ func copyFile(src, dst string) error {
 	// Open source file
 	srcFile, err := os.Open(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open source file %s: %w", src, err)
 	}
 	defer srcFile.Close()
 
@@ -257,19 +257,19 @@ func copyFile(src, dst string) error {
 	// Create destination file
 	dstFile, err := os.Create(dst)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create destination file %s: %w", dst, err)
 	}
 	defer dstFile.Close()
 
 
 	// Copy content
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
-		return err
+		return fmt.Errorf("failed to copy content from %s to %s: %w", src, dst, err)
 	}
 
 	// Sync to ensure data is written
 	if err := dstFile.Sync(); err != nil {
-		return err
+		return fmt.Errorf("failed to sync destination file %s: %w", dst, err)
 	}
 
 	return nil
