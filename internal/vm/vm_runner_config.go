@@ -211,13 +211,13 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 		busName := fmt.Sprintf("root_port%d", portNum)
 		funcNum := extractFunctionNumber(dev.Address)
 
-		// Detect multifunction: check if next device shares same bus:device
+		// Detect multifunction: check if this device shares same bus:device with prev OR next
 		isMultifunctionGroup := false
+		if i > 0 {
+			isMultifunctionGroup = isMultifunctionGroup || IsMultifunction(pciDevices[i-1].Address, dev.Address)
+		}
 		if i+1 < len(pciDevices) {
-			isMultifunctionGroup = IsMultifunction(dev.Address, pciDevices[i+1].Address)
-		} else if i > 0 {
-			// Check if previous device was same bus:device (this is the last function)
-			isMultifunctionGroup = IsMultifunction(pciDevices[i-1].Address, dev.Address)
+			isMultifunctionGroup = isMultifunctionGroup || IsMultifunction(dev.Address, pciDevices[i+1].Address)
 		}
 
 		// Build device args
