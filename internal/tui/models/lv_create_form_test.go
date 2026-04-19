@@ -234,6 +234,7 @@ func TestLVCreateRenderDropdownOpen(t *testing.T) {
 	m.vgDropdownOpen = true
 	m.vgDropdownIndex = 0
 	m.SetSize(76, 18)
+	m.syncViewport()
 
 	view := stripANSI(m.View())
 	assertGolden(t, "lv_create_form_vg_dropdown_open", view)
@@ -261,6 +262,7 @@ func TestLVCreateStrippedNotShownWithSinglePV(t *testing.T) {
 	// VG with 1 PV should NOT show stripped option
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 1}}
 	m.vgIndex = 0
+	m.syncViewport()
 
 	view := m.View()
 	if strings.Contains(view, "Stripped") {
@@ -275,6 +277,7 @@ func TestLVCreateStrippedShownWithMultiplePVs(t *testing.T) {
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 2, LVCount: 3}}
 	m.vgIndex = 0
 	m.isStripped = true
+	m.syncViewport()
 
 	view := m.View()
 	if !strings.Contains(view, "Stripped") {
