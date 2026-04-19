@@ -7,37 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.1] - 2025-04-19
+
 ### Added
-- VG dropdown in Create Logical Volume form - press Enter on Volume Group to open selection list
-- Loading spinner state in LV create form
-- VG dropdown open rendering in LV create form
-  - Added `internal/hugepages/` module for hugepages allocation
-  - Added hugepages validation in VM startup (`internal/vm/vm_runner.go`)
-- Reboot system functionality from Power menu in TUI
-  - Added `RebootMsg` type in `internal/tui/models/types.go`
-  - Added `runReboot` handler in `internal/tui/models/debug.go`
-  - Added key handler in `internal/tui/models/key_handlers.go`
-- Power off system functionality from Power menu in TUI
-  - Added `PowerOffMsg` type in `internal/tui/models/types.go`
-  - Added `runPowerOff` handler in `internal/tui/models/debug.go`
-  - Added key handler in `internal/tui/models/key_handlers.go`
 
-### Changed
--
-
-### Deprecated
--
-
-### Removed
--
+- **vCPU pinning support**: VMs can now be pinned to specific vCPUs for optimal performance
+- **Multi-die vCPU pinning**: Support for pinning VMs across multiple CPU dies
+- **Multifunction PCI device passthrough**: Proper handling of multifunction PCI devices (e.g., GPUs with audio functions)
+- **Copy OVMF firmware**: Option to copy OVMF firmware files to VM directories
+- **Create Logical Volume form**: UI in Configuration tab for creating LVMs
+- **Power off system**: Power off the host system from the Power menu
+- **Reboot system**: Reboot the host system from the Power menu
+- **Hugepages allocation check**: Validates hugepages allocation for GPU passthrough VMs
+- **Lean context compression**: Integrated leanctx for improved context handling
 
 ### Fixed
--
 
-### Security
--
+- Multifunction PCI device address allocation for secondary functions
+- Silent failures and inconsistent error wrapping in OVMF file operations
+- Test summary counts when no tests match
+- Golden file formatting in config tab
 
-## [0.0.1] - 2026-04-12
+### Changed
 
-### Added
-- Initial release
+- Added yq and jq to Docker image for improved scripting
+
+<!-- Links -->
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/glemsom/dkvmmanager/tree/v0.0.1
