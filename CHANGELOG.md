@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- VM name input: spaces can now be typed in text fields
 - Multifunction PCI device address allocation for secondary functions
 - Silent failures and inconsistent error wrapping in OVMF file operations
 - Test summary counts when no tests match
