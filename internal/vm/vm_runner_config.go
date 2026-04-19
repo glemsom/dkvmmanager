@@ -201,7 +201,7 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 	// Create PCIe root ports for each unique base device
 	for portNum := 1; portNum <= portCount; portNum++ {
 		busName := fmt.Sprintf("root_port%d", portNum)
-		portArgs := fmt.Sprintf("pcie-root-port,id=%s,slot=%d,chassis=1", busName, portNum)
+		portArgs := fmt.Sprintf("pcie-root-port,id=%s,slot=%d,chassis=%d", busName, portNum, portNum)
 		args = append(args, "-device", portArgs)
 	}
 
@@ -220,8 +220,10 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 			isMultifunctionGroup = IsMultifunction(pciDevices[i-1].Address, dev.Address)
 		}
 
-		// Build device args: only primary function (func 0) gets addr= when multifunction is enabled
-		// Secondary functions (func 1+) in a multifunction group auto-attach to parent, no addr needed
+		// Build device args
+		// - Primary function (func 0) in multifunction group: addr=00.0,multifunction=on
+		// - Secondary functions (func 1+) in multifunction group: addr=00.N where N is function number
+		// - Single function devices: addr=00.0
 		devArgs := fmt.Sprintf("vfio-pci,host=%s,bus=%s", dev.Address, busName)
 		if funcNum == 0 {
 			// Primary function gets the slot address
@@ -230,8 +232,8 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 				devArgs += ",multifunction=on"
 			}
 		} else if funcNum > 0 && isMultifunctionGroup {
-			// Secondary functions in multifunction group: omit addr (auto-attach to parent)
-			// No additional flags needed
+			// Secondary functions in multifunction group: use addr=00.N
+			devArgs += fmt.Sprintf(",addr=00.%d", funcNum)
 		}
 		// Non-multifunction devices (single function) also get addr=00.0
 		if funcNum != 0 && !isMultifunctionGroup {
