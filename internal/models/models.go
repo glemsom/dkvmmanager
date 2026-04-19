@@ -99,8 +99,9 @@ type HostCPUTopology struct {
 
 // CPUTopology represents the global CPU topology configuration
 type CPUTopology struct {
-	Enabled      bool  `json:"enabled" yaml:"enabled"`             // Whether custom topology is enabled
-	SelectedCPUs []int `json:"selected_cpus" yaml:"selected_cpus"` // Logical CPU IDs allocated to VMs
+	Enabled        bool  `json:"enabled" yaml:"enabled"`             // Whether custom topology is enabled
+	SelectedCPUs  []int `json:"selected_cpus" yaml:"selected_cpus"` // Logical CPU IDs allocated to VMs
+	UseHostTopology bool `json:"use_host_topology" yaml:"use_host_topology"` // Use host topology layout (dies/sockets) vs flat
 }
 
 // VCPUPinningGlobal holds global vCPU pinning configuration.

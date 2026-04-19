@@ -573,6 +573,14 @@ func (m *MainModel) handleVMSelection() (tea.Model, tea.Cmd) {
 		if vcpuPinning, err := m.vmManager.GetVCPUPinningGlobal(); err == nil {
 			runner.SetVCPUPinning(vcpuPinning)
 		}
+		// Load and inject CPU topology config
+		if cpuTopo, err := m.vmManager.GetCPUTopology(); err == nil {
+			runner.SetCPUTopology(cpuTopo)
+		}
+		// Load host CPU topology for topology-aware allocation
+		if hostTopo, err := m.vmManager.ScanCPUTopology(); err == nil {
+			runner.SetHostCPUTopology(hostTopo)
+		}
 		if err := runner.Start(); err != nil {
 			m.statusBar.SetMessage("Error starting VM: " + err.Error())
 			return m, nil

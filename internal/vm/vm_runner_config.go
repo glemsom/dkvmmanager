@@ -143,7 +143,45 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 	// CPU topology - use global CPUTopology if enabled
 	if r.cpuTopology.Enabled && len(r.cpuTopology.SelectedCPUs) > 0 {
 		numCPUs := len(r.cpuTopology.SelectedCPUs)
-		args = append(args, "-smp", fmt.Sprintf("%d,sockets=1,cores=%d,threads=1", numCPUs, numCPUs))
+		hostTopo := r.hostCPUTopology
+
+		// Check if we should use host topology with explicit CPU devices
+		if r.cpuTopology.UseHostTopology && len(hostTopo.Dies) > 0 && hostTopo.TotalCPUs > 0 {
+			// Approach: Use maxcpus with explicit -device host-x86_64-cpu
+			// This allows guest OS to see full topology and enables proper vCPU pinning
+			maxCPUs := hostTopo.TotalCPUs
+			dies := len(hostTopo.Dies)
+			threadsPerCore := hostTopo.ThreadsPerCore
+			if threadsPerCore == 0 {
+				threadsPerCore = 1
+			}
+			coresPerDie := hostTopo.TotalCores / dies
+			if coresPerDie == 0 {
+				coresPerDie = numCPUs
+			}
+
+			// Generate -smp with maxcpus
+			// online CPUs = numCPUs, max = maxCPUs, sockets=1, dies=dies, cores=coresPerDie, threads=threadsPerCore
+			args = append(args, "-smp", fmt.Sprintf("%d,maxcpus=%d,sockets=1,dies=%d,cores=%d,threads=%d",
+				numCPUs, maxCPUs, dies, coresPerDie, threadsPerCore))
+
+			// Generate -device host-x86_64-cpu for each selected CPU
+			for i, cpuID := range r.cpuTopology.SelectedCPUs {
+				dieID, coreID, threadID, err := CPUIndexToTopology(cpuID, hostTopo)
+				if err != nil {
+					// CPU not found in host topology — skip and log warning
+					log.Printf("[WARNING] VM %s: CPU %d not found in host topology: %v", r.vm.Name, cpuID, err)
+					continue
+				}
+				cpuIDStr := fmt.Sprintf("cpu-host%d", i)
+				args = append(args, "-device", fmt.Sprintf(
+						"host-x86_64-cpu,socket-id=0,die-id=%d,core-id=%d,thread-id=%d,id=%s",
+						dieID, coreID, threadID, cpuIDStr))
+			}
+		} else {
+			// Fallback: flat topology (current behavior)
+			args = append(args, "-smp", fmt.Sprintf("%d,sockets=1,cores=%d,threads=1", numCPUs, numCPUs))
+		}
 	}
 
 	// OVMF firmware

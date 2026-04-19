@@ -15,6 +15,7 @@ func (r *Repository) GetCPUTopology() (models.CPUTopology, error) {
 	data := r.vip.GetStringMap("cpu_topology")
 	topo.Enabled = getBool(data, "enabled")
 	topo.SelectedCPUs = parseIntSlice(data, "selected_cpus")
+	topo.UseHostTopology = getBool(data, "use_host_topology")
 
 	return topo, nil
 }
@@ -27,8 +28,9 @@ func (r *Repository) SaveCPUTopology(topo models.CPUTopology) error {
 	}
 
 	data := map[string]interface{}{
-		"enabled":       topo.Enabled,
-		"selected_cpus": selectedCPUs,
+		"enabled":          topo.Enabled,
+		"selected_cpus":    selectedCPUs,
+		"use_host_topology": topo.UseHostTopology,
 	}
 
 	r.vip.Set("cpu_topology", data)

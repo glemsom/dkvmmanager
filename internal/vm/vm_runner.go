@@ -59,6 +59,7 @@ type VMRunner struct {
 	usbPassthroughConfig models.USBPassthroughConfig
 	cpuOptions           models.CPUOptions
 	cpuTopology          models.CPUTopology
+	hostCPUTopology      models.HostCPUTopology
 	vcpuPinning          models.VCPUPinningGlobal
 	startStopScript      models.StartStopScript
 }
@@ -90,6 +91,11 @@ func (r *VMRunner) SetStartStopScript(cfg models.StartStopScript) {
 // SetVCPUPinning sets global vCPU pinning configuration for this run.
 func (r *VMRunner) SetVCPUPinning(p models.VCPUPinningGlobal) {
 	r.vcpuPinning = p
+}
+
+// SetHostCPUTopology sets the detected host CPU topology for topology-aware CPU allocation
+func (r *VMRunner) SetHostCPUTopology(topo models.HostCPUTopology) {
+	r.hostCPUTopology = topo
 }
 
 // LogChan returns a read-only channel that receives QEMU stdout/stderr lines

@@ -661,3 +661,113 @@ func TestSetCPUOptions(t *testing.T) {
 		t.Error("SetCPUOptions failed to set VendorID")
 	}
 }
+
+func TestBuildQEMUArgsWithHostTopology(t *testing.T) {
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+	os.WriteFile(filepath.Join(vmDir, "OVMF_CODE.fd"), []byte("fake"), 0644)
+	os.WriteFile(filepath.Join(vmDir, "OVMF_VARS.fd"), []byte("fake"), 0644)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+
+	vm := &models.VM{
+		ID:   "1",
+		Name: "test-vm",
+	}
+
+	// Create host topology: 2 dies, 4 cores per die, 2 threads per core
+	hostTopo := models.HostCPUTopology{
+		TotalCores:      8,
+		TotalCPUs:     16,
+		ThreadsPerCore: 2,
+		Dies: []models.CPUDie{
+			{ID: 0, Threads: 2, Cores: 4},
+			{ID: 1, Threads: 2, Cores: 4},
+		},
+	}
+
+	runner := NewVMRunner(vm, cfg)
+	runner.SetHostCPUTopology(hostTopo)
+	runner.SetCPUTopology(models.CPUTopology{
+		Enabled:         true,
+		SelectedCPUs:    []int{0, 1, 2, 3},
+		UseHostTopology: true,
+	})
+
+	args := runner.buildQEMUArgs(vmDir)
+	argStr := string(joinArgs(args))
+
+	// Should use -smp with maxcpus and topology params
+	if !containsString(argStr, "maxcpus=16") {
+		t.Error("Expected maxcpus=16 in -smp args")
+	}
+	if !containsString(argStr, "dies=2") {
+		t.Error("Expected dies=2 in -smp args")
+	}
+	if !containsString(argStr, "cores=4") {
+		t.Error("Expected cores=4 in -smp args")
+	}
+	if !containsString(argStr, "threads=2") {
+		t.Error("Expected threads=2 in -smp args")
+	}
+
+	// Should have host-x86_64-cpu devices for each selected CPU
+	if !containsString(argStr, "host-x86_64-cpu") {
+		t.Error("Expected host-x86_64-cpu device in args")
+	}
+}
+
+func TestBuildQEMUArgsWithHostTopologyInvalidCPU(t *testing.T) {
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+	os.WriteFile(filepath.Join(vmDir, "OVMF_CODE.fd"), []byte("fake"), 0644)
+	os.WriteFile(filepath.Join(vmDir, "OVMF_VARS.fd"), []byte("fake"), 0644)
+
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+
+	vm := &models.VM{
+		ID:   "1",
+		Name: "test-vm",
+	}
+
+	// Create host topology: 2 dies, 4 cores per die, 2 threads per core
+	hostTopo := models.HostCPUTopology{
+		TotalCores:      8,
+		TotalCPUs:     16,
+		ThreadsPerCore: 2,
+		Dies: []models.CPUDie{
+			{ID: 0, Threads: 2, Cores: 4},
+			{ID: 1, Threads: 2, Cores: 4},
+		},
+	}
+
+	runner := NewVMRunner(vm, cfg)
+	runner.SetHostCPUTopology(hostTopo)
+	// Include invalid CPU (99) in selected CPUs
+	runner.SetCPUTopology(models.CPUTopology{
+		Enabled:         true,
+		SelectedCPUs:    []int{0, 99},
+		UseHostTopology: true,
+	})
+
+	// Should not panic - just skip invalid CPU and continue
+	args := runner.buildQEMUArgs(vmDir)
+	if len(args) == 0 {
+		t.Error("Expected args to be generated even with invalid CPU")
+	}
+
+	argStr := string(joinArgs(args))
+	// Should still have -smp args
+	if !containsString(argStr, "-smp") {
+		t.Error("Expected -smp args even when some CPUs are invalid")
+	}
+}
