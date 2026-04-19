@@ -23,6 +23,7 @@ type VolumeGroup struct {
 	Size    string
 	Free    string
 	LVCount int
+	PVCount int
 }
 
 type lvCreateFocus int
@@ -33,6 +34,7 @@ const (
 	lvFocusSize
 	lvFocusUnit
 	lvFocusThin
+	lvFocusStripped
 	lvFocusContig
 	lvFocusRO
 	lvFocusCreate
@@ -52,6 +54,7 @@ type LVCreateFormModel struct {
 	sizeValue        string
 	unitIndex        int
 	isThinPool       bool
+	isStripped       bool
 	isContiguous     bool
 	isReadOnly       bool
 	focusIndex       int
@@ -110,6 +113,10 @@ func (m *LVCreateFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.vgDropdownIndex < 0 || m.vgDropdownIndex >= len(m.volumeGroups) {
 				m.vgDropdownIndex = m.vgIndex
 			}
+			// Auto-enable stripped if first VG has more than 1 PV
+			if m.selectedVGPVCount() > 1 {
+				m.isStripped = true
+			}
 		}
 		m.syncViewport()
 	}
@@ -139,12 +146,22 @@ func (m *LVCreateFormModel) loadVolumeGroupsCmd() tea.Cmd {
 			log.Printf("[DEBUG] LV create: uid=%d euid=%d", os.Getuid(), os.Geteuid())
 		}
 
-		argsPrimary := []string{"--noheadings", "-o", "vg_name,vg_size,vg_free,lv_count", "--units", "g", "--separator", "\t"}
+		// Use literal tab character (not "\t" string) for --separator
+		argsPrimary := []string{"--noheadings", "-o", "vg_name,vg_size,vg_free,lv_count,pv_count", "--units", "g", "--separator", "\t"}
+		// Convert actual tab to string for logging display
+		argsPrimaryDisplay := make([]string, len(argsPrimary))
+		for i, a := range argsPrimary {
+			if a == "\t" {
+				argsPrimaryDisplay[i] = "'<TAB>'"
+			} else {
+				argsPrimaryDisplay[i] = a
+			}
+		}
 		cmd := exec.Command("vgs", argsPrimary...)
 		cmd.Env = append(os.Environ(), "LVM_SUPPRESS_FD_WARNINGS=1")
 		out, err := cmd.CombinedOutput()
 		if debugMode {
-			log.Printf("[DEBUG] LV create: running: vgs %s", strings.Join(argsPrimary, " "))
+			log.Printf("[DEBUG] LV create: running: vgs %s", strings.Join(argsPrimaryDisplay, " "))
 			log.Printf("[DEBUG] LV create: primary output raw=%q", strings.TrimSpace(string(out)))
 		}
 		if err != nil {
@@ -170,7 +187,7 @@ func (m *LVCreateFormModel) loadVolumeGroupsCmd() tea.Cmd {
 		}
 
 		// Fallback for environments that ignore separator flags or format unexpectedly.
-		argsFallback := []string{"--noheadings", "-o", "vg_name,vg_size,vg_free,lv_count", "--units", "g"}
+		argsFallback := []string{"--noheadings", "-o", "vg_name,vg_size,vg_free,lv_count,pv_count", "--units", "g"}
 		fallbackCmd := exec.Command("vgs", argsFallback...)
 		fallbackCmd.Env = append(os.Environ(), "LVM_SUPPRESS_FD_WARNINGS=1")
 		fallbackOut, fallbackErr := fallbackCmd.CombinedOutput()
@@ -210,7 +227,7 @@ func parseVGSOutput(output string) ([]VolumeGroup, error) {
 		if debugMode {
 			log.Printf("[DEBUG] LV create: parse line=%q parts=%q", line, parts)
 		}
-		if len(parts) < 4 {
+		if len(parts) < 5 {
 			continue
 		}
 
@@ -227,11 +244,16 @@ func parseVGSOutput(output string) ([]VolumeGroup, error) {
 		if cntErr != nil {
 			continue
 		}
+		pvCnt, pvErr := strconv.Atoi(strings.TrimSpace(parts[4]))
+		if pvErr != nil {
+			pvCnt = 1
+		}
 		out = append(out, VolumeGroup{
 			Name:    name,
 			Size:    size,
 			Free:    free,
 			LVCount: cnt,
+			PVCount: pvCnt,
 		})
 	}
 	return out, nil
@@ -255,6 +277,37 @@ func (m *LVCreateFormModel) selectedVG() string {
 		return m.volumeGroups[m.vgIndex].Name
 	}
 	return ""
+}
+
+func (m *LVCreateFormModel) selectedVGPVCount() int {
+	if m.vgIndex >= 0 && m.vgIndex < len(m.volumeGroups) {
+		return m.volumeGroups[m.vgIndex].PVCount
+	}
+	return 0
+}
+
+// nextFocus returns the next focus index, skipping Stripped if VG has <= 1 PV.
+func (m *LVCreateFormModel) nextFocus(delta int) int {
+	maxFocus := 10
+	pvCount := m.selectedVGPVCount()
+	hasStrippedFocus := pvCount > 1
+
+	newFocus := m.focusIndex + delta
+	if newFocus < 0 {
+		newFocus = maxFocus - 1
+	} else if newFocus >= maxFocus {
+		newFocus = 0
+	}
+
+	// If we're on Stripped focus but VG has <= 1 PV, skip it
+	if newFocus == int(lvFocusStripped) && !hasStrippedFocus {
+		if delta > 0 {
+			newFocus = int(lvFocusContig)
+		} else {
+			newFocus = int(lvFocusThin)
+		}
+	}
+	return newFocus
 }
 
 func (m *LVCreateFormModel) openVGDropdown() {
@@ -285,6 +338,16 @@ func (m *LVCreateFormModel) confirmVGSelection() {
 		m.vgDropdownIndex = len(m.volumeGroups) - 1
 	}
 	m.vgIndex = m.vgDropdownIndex
+	// Auto-enable stripped if VG has more than 1 PV
+	if m.selectedVGPVCount() > 1 {
+		m.isStripped = true
+	} else {
+		m.isStripped = false
+	}
+	// Adjust focus if we moved off Stripped option while it was enabled
+	if !m.isStripped && m.focusIndex >= int(lvFocusStripped) && m.focusIndex < int(lvFocusContig) {
+		m.focusIndex = int(lvFocusContig)
+	}
 	m.closeVGDropdown()
 }
 
@@ -321,6 +384,14 @@ func (m *LVCreateFormModel) buildCommand() string {
 	cmd := fmt.Sprintf("lvcreate -L %s%s -n %s %s", m.sizeValue, suffix, m.volumeName, vg)
 	if m.isThinPool {
 		cmd += " --type thin"
+	}
+	if m.isStripped {
+		// Auto-stripes uses number of PVs in the VG
+		stripeCount := m.selectedVGPVCount()
+		if stripeCount < 2 {
+			stripeCount = 2 // Minimum 2 stripes if enabled
+		}
+		cmd += fmt.Sprintf(" --stripes %d", stripeCount)
 	}
 	if m.isContiguous {
 		cmd += " --contiguous y"
@@ -430,8 +501,11 @@ func (m *LVCreateFormModel) renderLines() []string {
 	}
 	lines = append(lines,
 		fmt.Sprintf("  %s Thin pool              %s Contiguous", cb(m.isThinPool, m.focusIndex == int(lvFocusThin)), cb(m.isContiguous, m.focusIndex == int(lvFocusContig))),
-		fmt.Sprintf("  %s Read-only", cb(m.isReadOnly, m.focusIndex == int(lvFocusRO))),
 	)
+	if m.selectedVGPVCount() > 1 {
+		lines = append(lines, fmt.Sprintf("  %s Stripped", cb(m.isStripped, m.focusIndex == int(lvFocusStripped))))
+	}
+	lines = append(lines, fmt.Sprintf("  %s Read-only", cb(m.isReadOnly, m.focusIndex == int(lvFocusRO))))
 	if len(m.errors) > 0 {
 		lines = append(lines, "")
 		for _, k := range []string{"vg", "name", "size"} {
@@ -464,30 +538,24 @@ func (m *LVCreateFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.vgDropdownOpen {
 			m.closeVGDropdown()
 		}
-		m.focusIndex = (m.focusIndex + 1) % 9
+		m.focusIndex = m.nextFocus(1)
 	case "shift+tab":
 		if m.vgDropdownOpen {
 			m.closeVGDropdown()
 		}
-		m.focusIndex--
-		if m.focusIndex < 0 {
-			m.focusIndex = 8
-		}
+		m.focusIndex = m.nextFocus(-1)
 	case "down":
 		if m.focusIndex == int(lvFocusVG) && m.vgDropdownOpen {
 			m.moveVGSelection(1)
 			break
 		}
-		m.focusIndex = (m.focusIndex + 1) % 9
+		m.focusIndex = m.nextFocus(1)
 	case "up":
 		if m.focusIndex == int(lvFocusVG) && m.vgDropdownOpen {
 			m.moveVGSelection(-1)
 			break
 		}
-		m.focusIndex--
-		if m.focusIndex < 0 {
-			m.focusIndex = 8
-		}
+		m.focusIndex = m.nextFocus(-1)
 	case "left":
 		switch lvCreateFocus(m.focusIndex) {
 		case lvFocusVG:
@@ -520,6 +588,8 @@ func (m *LVCreateFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch lvCreateFocus(m.focusIndex) {
 		case lvFocusThin:
 			m.isThinPool = !m.isThinPool
+		case lvFocusStripped:
+			m.isStripped = !m.isStripped
 		case lvFocusContig:
 			m.isContiguous = !m.isContiguous
 		case lvFocusRO:
