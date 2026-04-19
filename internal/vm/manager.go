@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"time"

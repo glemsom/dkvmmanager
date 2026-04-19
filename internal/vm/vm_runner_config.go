@@ -209,20 +209,35 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 		baseDev := extractBaseDevice(dev.Address)
 		portNum := baseDeviceToPort[baseDev]
 		busName := fmt.Sprintf("root_port%d", portNum)
+		funcNum := extractFunctionNumber(dev.Address)
 
 		// Detect multifunction: check if next device shares same bus:device
-		multifunction := false
+		isMultifunctionGroup := false
 		if i+1 < len(pciDevices) {
-			multifunction = IsMultifunction(dev.Address, pciDevices[i+1].Address)
+			isMultifunctionGroup = IsMultifunction(dev.Address, pciDevices[i+1].Address)
 		} else if i > 0 {
 			// Check if previous device was same bus:device (this is the last function)
-			multifunction = IsMultifunction(pciDevices[i-1].Address, dev.Address)
+			isMultifunctionGroup = IsMultifunction(pciDevices[i-1].Address, dev.Address)
 		}
 
-		devArgs := fmt.Sprintf("vfio-pci,host=%s,bus=%s,addr=00.0", dev.Address, busName)
-		if multifunction {
-			devArgs += ",multifunction=on"
+		// Build device args: only primary function (func 0) gets addr= when multifunction is enabled
+		// Secondary functions (func 1+) in a multifunction group auto-attach to parent, no addr needed
+		devArgs := fmt.Sprintf("vfio-pci,host=%s,bus=%s", dev.Address, busName)
+		if funcNum == 0 {
+			// Primary function gets the slot address
+			devArgs += ",addr=00.0"
+			if isMultifunctionGroup {
+				devArgs += ",multifunction=on"
+			}
+		} else if funcNum > 0 && isMultifunctionGroup {
+			// Secondary functions in multifunction group: omit addr (auto-attach to parent)
+			// No additional flags needed
 		}
+		// Non-multifunction devices (single function) also get addr=00.0
+		if funcNum != 0 && !isMultifunctionGroup {
+			devArgs += ",addr=00.0"
+		}
+
 		if dev.ROMPath != "" {
 			devArgs += fmt.Sprintf(",romfile=%s", dev.ROMPath)
 		}
@@ -336,4 +351,19 @@ func extractBaseDevice(addr string) string {
 		return addr // Return as-is if not in expected format
 	}
 	return parts[0]
+}
+
+// extractFunctionNumber extracts the function number from a PCI address.
+// Returns -1 if invalid. E.g., "0000:03:00.1" -> 1
+func extractFunctionNumber(addr string) int {
+	parts := strings.Split(addr, ".")
+	if len(parts) != 2 {
+		return -1 // Invalid format
+	}
+	var fn int
+	_, err := fmt.Sscanf(parts[1], "%d", &fn)
+	if err != nil {
+		return -1
+	}
+	return fn
 }
