@@ -110,7 +110,17 @@ func (m *VMFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "down":
 		m.moveFocus(1)
 		m.syncViewport()
-	case "enter", " ":
+	case " ":
+		pos := m.currentPos()
+		if pos.kind == focusText && pos.fieldName != "hardDisks_label" && pos.fieldName != "cdroms_label" {
+			// Insert space in text fields
+			m.handleCharInput(" ")
+			m.syncViewport()
+		} else {
+			// Act like enter on buttons/toggles/labels
+			return m.handleEnter()
+		}
+	case "enter":
 		return m.handleEnter()
 	case "backspace":
 		m.handleBackspace()
