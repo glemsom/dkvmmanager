@@ -4,6 +4,8 @@ package vm
 import (
 	"crypto/rand"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -60,6 +62,11 @@ func (m *Manager) CreateVM(name string) (*models.VM, error) {
 		return nil, err
 	}
 
+	// Copy OVMF files to VM directory
+	if err := m.copyOVMFFiles(vmDir); err != nil {
+		log.Printf("[WARN] Failed to copy OVMF files: %v", err)
+	}
+
 	// Create VM config
 	vm := models.VM{
 		ID:        fmt.Sprintf("%d", vmID),
@@ -88,6 +95,11 @@ func (m *Manager) CreateVMWithMAC(name, mac string) (*models.VM, error) {
 	vmDir := m.GetVMDataPath(vmID)
 	if err := os.MkdirAll(vmDir, 0755); err != nil {
 		return nil, err
+	}
+
+	// Copy OVMF files to VM directory
+	if err := m.copyOVMFFiles(vmDir); err != nil {
+		log.Printf("[WARN] Failed to copy OVMF files: %v", err)
 	}
 
 	// Create VM config with specified MAC
@@ -208,6 +220,59 @@ func (m *Manager) GetStartStopScript() (models.StartStopScript, error) {
 // SaveStartStopScript saves the start/stop script configuration
 func (m *Manager) SaveStartStopScript(cfg models.StartStopScript) error {
 	return m.repository.SaveStartStopScript(cfg)
+}
+
+// copyOVMFFiles copies OVMF_CODE.fd and OVMF_VARS.fd from the configured
+// BIOS paths to the VM directory.
+func (m *Manager) copyOVMFFiles(vmDir string) error {
+	// Copy BIOS code file
+	if err := copyFile(m.cfg.BIOSCode, filepath.Join(vmDir, "OVMF_CODE.fd")); err != nil {
+		return fmt.Errorf("failed to copy OVMF_CODE.fd: %w", err)
+	}
+
+	// Copy BIOS vars file
+	if err := copyFile(m.cfg.BIOSVars, filepath.Join(vmDir, "OVMF_VARS.fd")); err != nil {
+		return fmt.Errorf("failed to copy OVMF_VARS.fd: %w", err)
+	}
+
+	return nil
+}
+
+// copyFile copies a single file from src to dst. It returns nil if the
+// source file doesn't exist (allows tests to work without real BIOS files).
+func copyFile(src, dst string) error {
+	// Check if source exists
+	if _, err := os.Stat(src); os.IsNotExist(err) {
+		return nil // Source doesn't exist, skip copy
+	}
+
+	// Open source file
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+
+	// Create destination file
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+
+	// Copy content
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return err
+	}
+
+	// Sync to ensure data is written
+	if err := dstFile.Sync(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func generateMAC() string {
