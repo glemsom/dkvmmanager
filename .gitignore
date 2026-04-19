@@ -20,3 +20,4 @@ go.work.sum
 # Do not include custom AGENTS.md
 AGENTS.md
 PROJECT_STRUCTURE.md
+.lean-ctx
