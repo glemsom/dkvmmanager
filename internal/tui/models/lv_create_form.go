@@ -146,12 +146,22 @@ func (m *LVCreateFormModel) loadVolumeGroupsCmd() tea.Cmd {
 			log.Printf("[DEBUG] LV create: uid=%d euid=%d", os.Getuid(), os.Geteuid())
 		}
 
+		// Use literal tab character (not "\t" string) for --separator
 		argsPrimary := []string{"--noheadings", "-o", "vg_name,vg_size,vg_free,lv_count,pv_count", "--units", "g", "--separator", "\t"}
+		// Convert actual tab to string for logging display
+		argsPrimaryDisplay := make([]string, len(argsPrimary))
+		for i, a := range argsPrimary {
+			if a == "\t" {
+				argsPrimaryDisplay[i] = "'<TAB>'"
+			} else {
+				argsPrimaryDisplay[i] = a
+			}
+		}
 		cmd := exec.Command("vgs", argsPrimary...)
 		cmd.Env = append(os.Environ(), "LVM_SUPPRESS_FD_WARNINGS=1")
 		out, err := cmd.CombinedOutput()
 		if debugMode {
-			log.Printf("[DEBUG] LV create: running: vgs %s", strings.Join(argsPrimary, " "))
+			log.Printf("[DEBUG] LV create: running: vgs %s", strings.Join(argsPrimaryDisplay, " "))
 			log.Printf("[DEBUG] LV create: primary output raw=%q", strings.TrimSpace(string(out)))
 		}
 		if err != nil {
@@ -372,7 +382,12 @@ func (m *LVCreateFormModel) buildCommand() string {
 		cmd += " --type thin"
 	}
 	if m.isStripped {
-		cmd += " --stripes"
+		// Auto-stripes uses number of PVs in the VG
+		stripeCount := m.selectedVGPVCount()
+		if stripeCount < 2 {
+			stripeCount = 2 // Minimum 2 stripes if enabled
+		}
+		cmd += fmt.Sprintf(" --stripes %d", stripeCount)
 	}
 	if m.isContiguous {
 		cmd += " --contiguous y"
