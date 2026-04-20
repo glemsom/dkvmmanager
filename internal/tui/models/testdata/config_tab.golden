@@ -1,27 +1,30 @@
 DKVM Manager                                                              v0.0.1
 
-                        Start VM | Configuration | Power
-                                   ─────────────
- >  Add new VM
-    Edit VM
-    Delete VM
-    Edit CPU Topology
-    Edit vCPU Pinning
-    Edit PCI Passthrough
-    Edit USB Passthrough
+                        Start VM | Configuration | Power                        
+                                   ─────────────                                
+ >  Add new VM            
+    Edit VM               
+    Delete VM             
+    Edit CPU Topology     
+    Edit vCPU Pinning     
+    Edit PCI Passthrough  
+    Edit USB Passthrough  
     Edit Start/Stop Script
-    Edit CPU Options
-    Set SSH Password
-    Create Logical Volume
+    Edit CPU Options      
+    Set SSH Password      
+    Create Logical Volume 
     Save changes          
+                          
+                          
+                          
+                          
+                          
+                          
+                          
+                          
+                          
+                          
+                          
 
 
-
-
-
-
-
-
-
-
-◌ Ready                                                     ■ Stopped
+◌ Ready                                                                ■ Stopped

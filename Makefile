@@ -26,6 +26,7 @@ update-golden: ## Update golden test files (UPDATE_GOLDEN=1)
 	@echo "Updating golden files..."
 	@docker run --rm -w /build -v $(shell pwd):/build --user $$(id -u):$$(id -g) \
 		-e UPDATE_GOLDEN=1 \
+		-e GOCACHE=/tmp/go-cache \
 		golang:1.26-alpine go test -v ./internal/tui/models/...
 	@echo "Golden files updated."
 
