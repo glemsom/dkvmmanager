@@ -50,6 +50,8 @@ func (m *MainModel) handleVMDeletedMsg(vdm VMDeletedMsg) (tea.Model, tea.Cmd) {
 // handleVMStoppedMsg handles VMStoppedMsg from running model
 func (m *MainModel) handleVMStoppedMsg(vsm VMStoppedMsg) (tea.Model, tea.Cmd) {
 	m.statusBar.SetMessage(fmt.Sprintf("VM '%s' stopped: %s", vsm.VMName, vsm.Reason))
+	// Update running count to 0
+	m.statusBar.SetStats(len(m.menuItems), 0)
 	return m, nil
 }
 

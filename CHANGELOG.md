@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Stripped logical volumes**: Option to create striped LVMs when Volume Group has multiple PVs (auto-enabled by default)
 
+### Changed
+
+- **Status bar display**: Status bar now shows VM execution state (▶ Running / ■ Stopped) instead of VM counts
+
 ## [0.0.1] - 2025-04-19
 
 ### Added

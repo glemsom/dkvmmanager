@@ -165,11 +165,18 @@ func TestRenderRightSection(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "Stats only",
+			name:     "VM stopped",
 			vmCount:  5,
-			running:  3,
+			running:  0,
 			help:     "",
-			expected: "VMs: 5 (▶ 3 running)",
+			expected: "■ Stopped",
+		},
+		{
+			name:     "VM running",
+			vmCount:  5,
+			running:  1,
+			help:     "",
+			expected: "▶ Running",
 		},
 		{
 			name:     "Help only",
@@ -181,9 +188,9 @@ func TestRenderRightSection(t *testing.T) {
 		{
 			name:     "Stats and help",
 			vmCount:  10,
-			running:  7,
+			running:  1,
 			help:     "Press ? for help",
-			expected: "VMs: 10 (▶ 7 running) | Press ? for help",
+			expected: "▶ Running | Press ? for help",
 		},
 		{
 			name:     "Empty",
@@ -233,7 +240,7 @@ func TestRender(t *testing.T) {
 			mode:    "Editing",
 			message: "",
 			vmCount: 10,
-			running: 7,
+			running: 1,
 			help:    "Press ? for help",
 		},
 		{
@@ -289,11 +296,16 @@ func TestRender(t *testing.T) {
 				t.Errorf("Render result does not contain message '%s'", tt.message)
 			}
 
-			// Check that result contains stats if vmCount > 0
+			// Check that result contains Running/Stopped status if vmCount > 0
 			if tt.vmCount > 0 {
-				statsText := "VMs:"
-				if !strings.Contains(result, statsText) {
-					t.Error("Render result does not contain stats")
+				if tt.running > 0 {
+					if !strings.Contains(result, "Running") {
+						t.Error("Render result does not contain Running status")
+					}
+				} else {
+					if !strings.Contains(result, "Stopped") {
+						t.Error("Render result does not contain Stopped status")
+					}
 				}
 			}
 

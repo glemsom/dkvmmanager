@@ -37,9 +37,9 @@ func TestRebuildMenuListUpdatesStatusBar(t *testing.T) {
 	m.windowWidth = 80
 	m.windowHeight = 30
 	view := m.View()
-	// Status bar should show count of VMs
-	if !strings.Contains(view, "VMs: 3") {
-		t.Logf("Status bar view content may vary, checking for VM count update")
+	// Status bar should show Stopped status (no VMs running)
+	if !strings.Contains(view, "Stopped") {
+		t.Logf("Status bar view content may vary, checking for VM status update")
 	}
 }
 

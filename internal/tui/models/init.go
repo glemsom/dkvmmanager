@@ -184,5 +184,5 @@ func buildMenuItems(mgr *vm.Manager) []MenuItem {
 func (m *MainModel) rebuildMenuList() {
 	m.menuItems = buildMenuItems(m.vmManager)
 	m.menuList.SetItems(buildMenuListAdapter(m.menuItems))
-	m.statusBar.SetStats(len(m.menuItems), 0) // TODO: count running VMs
+	m.statusBar.SetStats(len(m.menuItems), 0) // Running count is updated in handleVMSelection and handleVMStoppedMsg
 }

@@ -586,6 +586,9 @@ func (m *MainModel) handleVMSelection() (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+		// Update status bar to show this VM is running
+		m.statusBar.SetStats(len(m.menuItems), 1)
+
 		// Create running model
 		m.vmRunningModel = NewVMRunningModel(vmObj, runner)
 		m.vmRunningModel.SetSize(m.windowWidth-4, m.contentHeight()-2)

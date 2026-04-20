@@ -116,13 +116,21 @@ func (s *StatusBar) renderModeIndicator() string {
 func (s *StatusBar) renderRightSection() string {
 	parts := []string{}
 
-	// Add VM stats with Unicode icons
-	if s.vmCount > 0 || s.running > 0 {
-		runningIcon := lipgloss.NewStyle().
-			Foreground(styles.StatusColors.Running).
-			Render("▶")
-		stats := fmt.Sprintf("VMs: %d (%s %d running)", s.vmCount, runningIcon, s.running)
-		parts = append(parts, stats)
+	// Add VM status: Running (green ▶) or Stopped (red ■)
+	if s.vmCount > 0 {
+		var status string
+		if s.running > 0 {
+			runningIcon := lipgloss.NewStyle().
+				Foreground(styles.StatusColors.Running).
+				Render("▶")
+			status = fmt.Sprintf("%s Running", runningIcon)
+		} else {
+			stoppedIcon := lipgloss.NewStyle().
+				Foreground(styles.StatusColors.Stopped).
+				Render("■")
+			status = fmt.Sprintf("%s Stopped", stoppedIcon)
+		}
+		parts = append(parts, status)
 	}
 
 	// Add help text if available
