@@ -86,6 +86,10 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Handle VM stopped messages from running model
 	if vsm, ok := msg.(VMStoppedMsg); ok {
 		m.statusBar.SetMessage(fmt.Sprintf("VM '%s' stopped: %s", vsm.VMName, vsm.Reason))
+		// Return to main menu when VM stops
+		m.currentView = ViewMainMenu
+		m.rebuildMenuList()
+		m.breadcrumbs.Clear()
 		return m, nil
 	}
 

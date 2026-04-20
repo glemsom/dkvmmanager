@@ -416,13 +416,26 @@ func TestScenarioFullEditFlowViaUpdate(t *testing.T) {
 func TestScenarioVMStoppedMsg(t *testing.T) {
 	m := setupTestModelForScenarios(t)
 
+	// Simulate being in the running VM view
+	m.currentView = ViewVMRunning
+
 	model, _ := m.Update(VMStoppedMsg{VMName: "running-vm", Reason: "exited"})
 	m = model.(*MainModel)
 
-	// VMStoppedMsg updates the status bar message
+	// VMStoppedMsg returns to main menu
+	if m.currentView != ViewMainMenu {
+		t.Errorf("Expected currentView=ViewMainMenu after VM stopped, got %s", m.currentView)
+	}
+
+	// Status bar should mention the stopped VM
 	view := m.statusBar.Render(m.windowWidth)
 	if !strings.Contains(view, "running-vm") {
 		t.Errorf("Expected status bar to mention VM name, got '%s'", view)
+	}
+
+	// Running count should be 0
+	if !strings.Contains(view, "0 running") {
+		t.Errorf("Expected status bar to show 0 running, got '%s'", view)
 	}
 }
 

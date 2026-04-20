@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Breadcrumbs navigation**: Shows current UI location (e.g., Configuration > Delete VM) in sub-views
 - **Stripped logical volumes**: Option to create striped LVMs when Volume Group has multiple PVs (auto-enabled by default)
 
 ### Changed
