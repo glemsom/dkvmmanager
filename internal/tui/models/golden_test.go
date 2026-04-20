@@ -110,15 +110,21 @@ func TestGoldenLVCreateForm(t *testing.T) {
 // TestGoldenVMSelectEdit verifies VM selection view for editing.
 func TestGoldenVMSelectEdit(t *testing.T) {
 	m := setupTestModelForScenarios(t)
+	m.windowWidth = 80
+	m.windowHeight = 30
 
 	m.currentView = ViewVMSelect
 	m.selectionMode = "edit"
+
 	vms, _ := m.vmManager.ListVMs()
-	// Sort VMs by ID to match production behavior in showVMSelectionWithMode()
-	sort.Slice(vms, func(i, j int) bool {
-		return vms[i].ID < vms[j].ID
-	})
+	sort.Slice(vms, func(i, j int) bool { return vms[i].ID < vms[j].ID })
 	m.vmListForSelection = vms
+
+	m.vmSelectList.SetSize(m.windowWidth-4, m.contentHeight()-2)
+
+	m.breadcrumbs.Clear()
+	m.breadcrumbs.AddItem("Configuration", "config", 1)
+	m.breadcrumbs.AddItem("Edit VM", "vm_edit", 1)
 
 	view := m.View()
 	assertGolden(t, "vm_select_edit", view)
@@ -127,15 +133,21 @@ func TestGoldenVMSelectEdit(t *testing.T) {
 // TestGoldenVMSelectDelete verifies VM selection view for deletion.
 func TestGoldenVMSelectDelete(t *testing.T) {
 	m := setupTestModelForScenarios(t)
+	m.windowWidth = 80
+	m.windowHeight = 30
 
 	m.currentView = ViewVMSelect
 	m.selectionMode = "delete"
+
 	vms, _ := m.vmManager.ListVMs()
-	// Sort VMs by ID to match production behavior in showVMSelectionWithMode()
-	sort.Slice(vms, func(i, j int) bool {
-		return vms[i].ID < vms[j].ID
-	})
+	sort.Slice(vms, func(i, j int) bool { return vms[i].ID < vms[j].ID })
 	m.vmListForSelection = vms
+
+	m.vmSelectList.SetSize(m.windowWidth-4, m.contentHeight()-2)
+
+	m.breadcrumbs.Clear()
+	m.breadcrumbs.AddItem("Configuration", "config", 1)
+	m.breadcrumbs.AddItem("Delete VM", "vm_delete", 1)
 
 	view := m.View()
 	assertGolden(t, "vm_select_delete", view)
