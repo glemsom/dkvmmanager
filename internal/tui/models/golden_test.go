@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"testing"
 
@@ -113,18 +112,7 @@ func TestGoldenVMSelectEdit(t *testing.T) {
 	m.windowWidth = 80
 	m.windowHeight = 30
 
-	m.currentView = ViewVMSelect
-	m.selectionMode = "edit"
-
-	vms, _ := m.vmManager.ListVMs()
-	sort.Slice(vms, func(i, j int) bool { return vms[i].ID < vms[j].ID })
-	m.vmListForSelection = vms
-
-	m.vmSelectList.SetSize(m.windowWidth-4, m.contentHeight()-2)
-
-	m.breadcrumbs.Clear()
-	m.breadcrumbs.AddItem("Configuration", "config", 1)
-	m.breadcrumbs.AddItem("Edit VM", "vm_edit", 1)
+	m.showVMSelectionWithMode("edit", "No VMs available to edit")
 
 	view := m.View()
 	assertGolden(t, "vm_select_edit", view)
@@ -136,18 +124,7 @@ func TestGoldenVMSelectDelete(t *testing.T) {
 	m.windowWidth = 80
 	m.windowHeight = 30
 
-	m.currentView = ViewVMSelect
-	m.selectionMode = "delete"
-
-	vms, _ := m.vmManager.ListVMs()
-	sort.Slice(vms, func(i, j int) bool { return vms[i].ID < vms[j].ID })
-	m.vmListForSelection = vms
-
-	m.vmSelectList.SetSize(m.windowWidth-4, m.contentHeight()-2)
-
-	m.breadcrumbs.Clear()
-	m.breadcrumbs.AddItem("Configuration", "config", 1)
-	m.breadcrumbs.AddItem("Delete VM", "vm_delete", 1)
+	m.showVMSelectionWithMode("delete", "No VMs available to delete")
 
 	view := m.View()
 	assertGolden(t, "vm_select_delete", view)

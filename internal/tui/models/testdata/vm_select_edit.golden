@@ -2,6 +2,7 @@ DKVM Manager                                                              v0.0.1
                                                                                 
                         Start VM | Configuration | Power                        
                         ────────                                                
+Configuration > Edit VM                                                         
  >  test-vm-1                                                                   
     test-vm-2                                                                   
                                                                                 
@@ -25,7 +26,6 @@ DKVM Manager                                                              v0.0.1
                                                                                 
                                                                                 
                                                                                 
-                                                                                
 ↑/↓ Navigate  Space/Enter Select  ESC Cancel                                    
                                                                                 
-◌ Ready                                                     ■ Stopped
+◌ Ready                                                                ■ Stopped

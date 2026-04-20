@@ -1,11 +1,31 @@
 DKVM Manager                                                              v0.0.1
-
-                        Start VM | Configuration | Power
-                        ────────
- >  test-vm-1
-    test-vm-2
-
-
-↑/↓ Navigate  Space/Enter Select  ESC Cancel
-
-◌ Ready                                                     ■ Stopped
+                                                                                
+                        Start VM | Configuration | Power                        
+                        ────────                                                
+Configuration > Delete VM                                                       
+ >  test-vm-1                                                                   
+    test-vm-2                                                                   
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+↑/↓ Navigate  Space/Enter Select  ESC Cancel                                    
+                                                                                
+◌ Ready                                                                ■ Stopped
