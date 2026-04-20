@@ -21,6 +21,14 @@ DOCKER_GO := docker run --rm -w /build -v $(shell pwd):/build golang:1.26-alpine
 # Targets
 # ============================================================================
 
+.PHONY: update-golden
+update-golden: ## Update golden test files (UPDATE_GOLDEN=1)
+	@echo "Updating golden files..."
+	@docker run --rm -w /build -v $(shell pwd):/build --user $$(id -u):$$(id -g) \
+		-e UPDATE_GOLDEN=1 \
+		golang:1.26-alpine go test -v ./internal/tui/models/...
+	@echo "Golden files updated."
+
 .PHONY: generate-mod
 generate-mod: ## Generate go.mod and go.sum in Docker, copy to host
 	@echo "Generating go.mod and go.sum in Docker container..."
