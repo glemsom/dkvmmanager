@@ -114,6 +114,11 @@ func (t *TabModel) PrevTab() Tab {
 // Active tab is bold and colored, inactive tabs are muted.
 // A positioned underline bar highlights the active tab.
 func (t *TabModel) RenderTabs(width int) string {
+	// Ensure minimum width for proper rendering
+	if width < 20 {
+		width = 20
+	}
+
 	separator := lipgloss.NewStyle().
 		Foreground(styles.Colors.Muted).
 		Render(" | ")
@@ -150,6 +155,9 @@ func (t *TabModel) RenderTabs(width int) string {
 
 	// Center the tab bar within the requested width
 	rowWidth := lipgloss.Width(contentRow)
+	if rowWidth == 0 {
+		rowWidth = offset
+	}
 	padding := 0
 	if rowWidth < width {
 		padding = (width - rowWidth) / 2

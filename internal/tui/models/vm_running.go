@@ -60,9 +60,6 @@ type VMRunningModel struct {
 	// Dimensions
 	width  int
 	height int
-
-	// Debug mode
-	debugMode bool
 }
 
 // NewVMRunningModel creates a new VM running model
@@ -71,7 +68,6 @@ func NewVMRunningModel(vmObj *models.VM, runner *vm.VMRunner) *VMRunningModel {
 		vm:          vmObj,
 		runner:      runner,
 		maxLogLines: 500,
-		debugMode:   debugMode,
 	}
 }
 

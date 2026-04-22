@@ -124,6 +124,9 @@ type MainModel struct {
 	// SSH password model
 	sshPasswordModel *SSHPasswordModel
 
+	// Running VM ID - tracks the currently running VM to persist across rebuildMenuList calls
+	runningVMID string
+
 	// Start/Stop script form model
 	startStopScriptFormModel *StartStopScriptFormModel
 
