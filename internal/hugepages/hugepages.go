@@ -90,36 +90,6 @@ func NewAutoConfig() (*Config, error) {
 	}, nil
 }
 
-// NewAutoConfig creates a config with automatically detected memory.
-// It reads total system memory from /proc/meminfo, subtracts ReservedOSMemoryMB (4GB),
-// and aligns the result down to the nearest 2MB boundary.
-func NewAutoConfig() (*Config, error) {
-	totalMB, err := GetTotalSystemMemoryMB()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get total system memory: %w", err)
-	}
-
-	// Reserve 4GB for OS
-	availableMB := totalMB - ReservedOSMemoryMB
-	if availableMB <= 0 {
-		return nil, fmt.Errorf("insufficient memory after reserving %d MB for OS (total: %d MB)", ReservedOSMemoryMB, totalMB)
-	}
-
-	// Align down to 2MB boundary (hugepage size)
-	// Since hugepages are 2MB, ensure memory size is a multiple of 2MB
-	alignedMB := (availableMB / 2) * 2
-
-	// Ensure at least 1 hugepage (2MB) is available
-	if alignedMB < 2 {
-		return nil, fmt.Errorf("not enough memory for VM after alignment: %d MB", alignedMB)
-	}
-
-	return &Config{
-		MemMB:    alignedMB,
-		PageSize: HugepageSize2MB,
-	}, nil
-}
-
 // RequiredPages returns the number of hugepages needed for the configured memory
 func (c *Config) RequiredPages() int64 {
 	return (c.MemMB * 1024 * 1024) / c.PageSize
