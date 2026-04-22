@@ -2,6 +2,7 @@ package hugepages
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -109,5 +110,64 @@ func TestFormatError(t *testing.T) {
 	expected := "insufficient hugepages: have 1000, need 4096 (try: echo 4096 > /proc/sys/vm/nr_hugepages)"
 	if errMsg != expected {
 		t.Errorf("Expected error message %q, got %q", expected, errMsg)
+	}
+}
+
+func TestGetTotalSystemMemoryMB(t *testing.T) {
+	totalMB, err := GetTotalSystemMemoryMB()
+	if err != nil {
+		// Skip if /proc/meminfo not available (e.g., non-Linux)
+		if os.IsNotExist(err) {
+			t.Skip("/proc/meminfo not available")
+		}
+		t.Fatalf("GetTotalSystemMemoryMB failed: %v", err)
+	}
+
+	if totalMB <= 0 {
+		t.Errorf("Expected positive total memory, got %d", totalMB)
+	}
+
+	// Sanity check: total memory should be at least a few GB on modern systems
+	// Allow small embedded systems but warn
+	if totalMB < 1024 {
+		t.Logf("Warning: total memory (%d MB) seems low", totalMB)
+	}
+}
+
+func TestNewAutoConfig(t *testing.T) {
+	cfg, err := NewAutoConfig()
+	if err != nil {
+		// Skip if cannot read memory (non-Linux or no /proc/meminfo)
+		if os.IsNotExist(err) || strings.Contains(err.Error(), "failed to read /proc/meminfo") {
+			t.Skip("Cannot read /proc/meminfo: ", err)
+		}
+		t.Fatalf("NewAutoConfig failed: %v", err)
+	}
+
+	// Verify memory is reasonable
+	if cfg.MemMB <= 0 {
+		t.Errorf("Expected positive MemMB, got %d", cfg.MemMB)
+	}
+
+	// Verify page size is 2MB
+	if cfg.PageSize != HugepageSize2MB {
+		t.Errorf("Expected PageSize=%d, got %d", HugepageSize2MB, cfg.PageSize)
+	}
+
+	// Verify memory is aligned to 2MB boundary
+	if cfg.MemMB%2 != 0 {
+		t.Errorf("MemMB should be aligned to 2MB boundary, got %d", cfg.MemMB)
+	}
+
+	// Get total memory to verify reserve logic
+	totalMB, err := GetTotalSystemMemoryMB()
+	if err != nil {
+		t.Skip("Cannot verify reserve: cannot read total memory")
+	}
+
+	// VM memory should be <= total - 4GB (with alignment)
+	expectedMax := (totalMB - ReservedOSMemoryMB) / 2 * 2
+	if cfg.MemMB > expectedMax {
+		t.Errorf("MemMB (%d) exceeds expected max (%d) after reserving %d MB", cfg.MemMB, expectedMax, ReservedOSMemoryMB)
 	}
 }

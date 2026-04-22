@@ -62,6 +62,7 @@ type VMRunner struct {
 	hostCPUTopology      models.HostCPUTopology
 	vcpuPinning          models.VCPUPinningGlobal
 	startStopScript      models.StartStopScript
+	memMB                int64 // Memory in MB for VM (dynamically allocated)
 }
 
 // NewVMRunner creates a new VM runner for the given VM
@@ -71,6 +72,7 @@ func NewVMRunner(vm *models.VM, cfg *config.Config) *VMRunner {
 		cfg:     cfg,
 		logChan: make(chan string, 256),
 		done:    make(chan struct{}),
+		memMB:   hugepages.DefaultMemoryMB, // default, overridden by Start()
 	}
 	if dryRunMode {
 		r.dryRun = true
@@ -172,8 +174,14 @@ func (r *VMRunner) Start() error {
 	}
 	r.mu.Unlock()
 
-	// Check hugepages availability for 8GB VM memory
-	hugepagesCfg := hugepages.NewConfig()
+	// Check hugepages availability for VM memory
+	hugepagesCfg, err := hugepages.NewAutoConfig()
+	if err != nil {
+		return fmt.Errorf("failed to configure VM memory: %w", err)
+	}
+	// Store memory size for QEMU args
+	r.memMB = hugepagesCfg.MemMB
+
 	result, err := hugepages.Check()
 	if err != nil {
 		return fmt.Errorf("hugepages check failed: %w", err)
@@ -186,9 +194,10 @@ func (r *VMRunner) Start() error {
 		result, err = hugepages.Ensure(hugepagesCfg)
 		if err != nil || !result.IsSufficient {
 			return fmt.Errorf(
-				"insufficient hugepages for VM %q: have %d pages (8GB × 2MB pages), need %d pages (try: echo %d > /proc/sys/vm/nr_hugepages)",
+				"insufficient hugepages for VM %q: have %d pages (%dMB × 2MB pages), need %d pages (try: echo %d > /proc/sys/vm/nr_hugepages)",
 				r.vm.Name,
 				result.AvailablePages,
+				r.memMB,
 				result.RequiredPages,
 				result.RequiredPages,
 			)
