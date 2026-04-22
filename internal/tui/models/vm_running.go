@@ -60,6 +60,9 @@ type VMRunningModel struct {
 	// Dimensions
 	width  int
 	height int
+
+	// Info panel height (calculated)
+	infoHeight int
 }
 
 // NewVMRunningModel creates a new VM running model
@@ -73,6 +76,11 @@ func NewVMRunningModel(vmObj *models.VM, runner *vm.VMRunner) *VMRunningModel {
 
 // Init initializes the model
 func (m *VMRunningModel) Init() tea.Cmd {
+	// Guard against nil runner
+	if m.runner == nil {
+		return nil
+	}
+
 	return tea.Batch(
 		m.waitForLog(),
 		m.waitForVMExit(),
@@ -83,6 +91,11 @@ func (m *VMRunningModel) Init() tea.Cmd {
 // waitForLog returns a tea.Cmd that reads one log line from the runner
 func (m *VMRunningModel) waitForLog() tea.Cmd {
 	return func() tea.Msg {
+		// Guard against nil runner and nil channel
+		if m.runner == nil {
+			return VMLogMsg{Line: ""}
+		}
+
 		line, ok := <-m.runner.LogChan()
 		if !ok {
 			return VMLogMsg{Line: ""}
@@ -94,6 +107,15 @@ func (m *VMRunningModel) waitForLog() tea.Cmd {
 // waitForVMExit returns a tea.Cmd that waits for the VM process to exit
 func (m *VMRunningModel) waitForVMExit() tea.Cmd {
 	return func() tea.Msg {
+		// Guard against nil runner
+		if m.runner == nil {
+			return VMStoppedMsg{
+				VMName: m.vm.Name,
+				VMID:   m.vm.ID,
+				Reason: "no runner",
+			}
+		}
+
 		<-m.runner.Done()
 		err := m.runner.ExitError()
 		reason := "exited"
@@ -111,6 +133,11 @@ func (m *VMRunningModel) waitForVMExit() tea.Cmd {
 // pollStatus returns a tea.Cmd that polls VM status periodically
 func (m *VMRunningModel) pollStatus() tea.Cmd {
 	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+		// Guard against nil runner (shouldn't happen in practice but defensive)
+		if m.runner == nil {
+			return VMStatusUpdateMsg{Status: "starting"}
+		}
+
 		client := m.runner.QMPClient()
 		if client == nil {
 			return VMStatusUpdateMsg{Status: "starting"}
@@ -143,13 +170,7 @@ func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		if !m.ready {
-			m.vp = viewport.New(msg.Width, m.height)
-			m.ready = true
-		} else {
-			m.vp.Width = msg.Width
-			m.vp.Height = m.height
-		}
+		m.calculateLayout()
 		return m, nil
 
 	case VMLogMsg:
@@ -212,9 +233,60 @@ func (m *VMRunningModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// calculateLayout calculates the info panel height and adjusts viewport
+func (m *VMRunningModel) calculateLayout() {
+	// Ensure minimum dimensions
+	if m.width < 10 {
+		m.width = 80 // Default terminal width
+	}
+
+	if !m.ready {
+		// Initial setup
+		infoHeight := m.calculateInfoHeight()
+		m.infoHeight = infoHeight
+		availableHeight := m.height - infoHeight - 3 // -3 for footer and separators
+		if availableHeight < 5 {
+			availableHeight = 5
+		}
+		m.vp = viewport.New(m.width, availableHeight)
+		m.vp.HighPerformance = true
+		m.ready = true
+	} else {
+		// Update layout
+		m.infoHeight = m.calculateInfoHeight()
+		availableHeight := m.height - m.infoHeight - 3
+		if availableHeight < 5 {
+			availableHeight = 5
+		}
+		m.vp.Width = m.width
+		m.vp.Height = availableHeight
+	}
+	m.updateViewport()
+}
+
+// calculateInfoHeight returns the height needed for the info panel
+func (m *VMRunningModel) calculateInfoHeight() int {
+	// Minimum base height
+	height := 4 // Base: status line + vCPU info + blank + separator
+
+	// Add lines for PCI devices (if runner available)
+	if m.runner != nil {
+		if len(m.runner.PCIPassthroughDevices()) > 0 {
+			height += 1 + len(m.runner.PCIPassthroughDevices())
+		}
+
+		// Add lines for USB devices
+		if len(m.runner.USBPassthroughDevices()) > 0 {
+			height += 1 + len(m.runner.USBPassthroughDevices())
+		}
+	}
+
+	return height
+}
+
 // updateViewport syncs the log content to the viewport
 func (m *VMRunningModel) updateViewport() {
-	content := m.renderContent()
+	content := m.renderLogContent()
 	m.vp.SetContent(content)
 }
 
@@ -223,11 +295,24 @@ func (m *VMRunningModel) View() string {
 	if !m.ready {
 		return "Loading..."
 	}
-	return m.vp.View()
+
+	// Render info panel
+	infoPanel := m.renderInfoPanel()
+
+	// Render log viewport
+	logView := m.vp.View()
+
+	// Combine with separator
+	return infoPanel + "\n" + logView
 }
 
-// renderContent builds the full content string
-func (m *VMRunningModel) renderContent() string {
+// renderInfoPanel renders the VM information panel at the top
+func (m *VMRunningModel) renderInfoPanel() string {
+	mutedStyle := lipgloss.NewStyle().Foreground(styles.Colors.Muted)
+	labelStyle := lipgloss.NewStyle().Foreground(styles.Colors.Muted).Bold(false)
+	valueStyle := lipgloss.NewStyle().Foreground(styles.Colors.NormalText)
+
+	// Status styles
 	statusRunning := lipgloss.NewStyle().
 		Foreground(styles.Colors.Success).
 		Bold(true)
@@ -240,15 +325,14 @@ func (m *VMRunningModel) renderContent() string {
 		Foreground(styles.Colors.Warning).
 		Bold(true)
 
-	mutedStyle := lipgloss.NewStyle().
-		Foreground(styles.Colors.Muted)
+	var b strings.Builder
 
-	logStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252"))
+	// === Section 1: VM Name and Status ===
+	b.WriteString(labelStyle.Render("VM: "))
+	b.WriteString(valueStyle.Render(m.vm.Name))
+	b.WriteString("  ")
 
-	var output strings.Builder
-
-	// Status line
+	// Status
 	var statusStr string
 	switch m.status {
 	case "running":
@@ -260,40 +344,113 @@ func (m *VMRunningModel) renderContent() string {
 	default:
 		statusStr = statusStarting.Render("[STARTING]")
 	}
-	output.WriteString(fmt.Sprintf("Status: %s", statusStr))
+	b.WriteString(labelStyle.Render("Status: "))
+	b.WriteString(statusStr)
 
 	// Uptime
 	if !m.startTime.IsZero() && m.runner != nil && m.runner.IsRunning() {
 		uptime := time.Since(m.startTime).Truncate(time.Second)
-		output.WriteString(fmt.Sprintf("  Uptime: %s", mutedStyle.Render(uptime.String())))
+		b.WriteString("  ")
+		b.WriteString(labelStyle.Render("Uptime: "))
+		b.WriteString(valueStyle.Render(uptime.String()))
 	}
-	output.WriteString("\n")
+	b.WriteString("\n")
 
-	// Thread info with progress bar
-	if len(m.threads) > 0 {
-		threadStrs := make([]string, len(m.threads))
-		for i, t := range m.threads {
-			threadStrs[i] = fmt.Sprintf("%d", t)
+	// === Section 2: Guest Resources ===
+	// Only show resource info if runner is available
+	if m.runner != nil {
+		b.WriteString(labelStyle.Render("Memory: "))
+		memMB := m.runner.MemoryMB()
+		memGB := memMB / 1024
+		if memMB%1024 == 0 {
+			b.WriteString(valueStyle.Render(fmt.Sprintf("%d GB", memGB)))
+		} else {
+			b.WriteString(valueStyle.Render(fmt.Sprintf("%.1f GB", float64(memMB)/1024.0)))
 		}
-		output.WriteString(fmt.Sprintf("vCPU Threads: %s\n",
-			mutedStyle.Render(strings.Join(threadStrs, ", "))))
 
-		// Show log activity as a progress bar (log lines / max capacity)
-		logFraction := float64(len(m.logLines)) / float64(m.maxLogLines)
-		if logFraction > 1 {
-			logFraction = 1
+		// vCPU count
+		vcpuCount := m.runner.VCpuCount()
+		b.WriteString("  ")
+		b.WriteString(labelStyle.Render("vCPUs: "))
+		b.WriteString(valueStyle.Render(fmt.Sprintf("%d", vcpuCount)))
+
+		// vCPU pinning
+		pinning := m.runner.VCPUPinning()
+		if pinning.Enabled && len(pinning.Mappings) > 0 {
+			b.WriteString("  ")
+			b.WriteString(labelStyle.Render("Pinning: "))
+			// Show first few mappings, summarize if many
+			mappings := make([]string, 0, len(pinning.Mappings))
+			for i, mp := range pinning.Mappings {
+				if i >= 4 {
+					mappings = append(mappings, fmt.Sprintf("+%d more", len(pinning.Mappings)-4))
+					break
+				}
+				mappings = append(mappings, fmt.Sprintf("v%d→h%d", mp.VCPUID, mp.HostCPUID))
+			}
+			b.WriteString(valueStyle.Render(strings.Join(mappings, ", ")))
 		}
-		output.WriteString(styles.RenderProgressBar(
-			logFraction, 20, "Log Buffer",
-			fmt.Sprintf("%d/%d lines", len(m.logLines), m.maxLogLines),
-		))
-		output.WriteString("\n")
+		b.WriteString("\n")
+
+		// === Section 3: PCI Passthrough ===
+		pciDevices := m.runner.PCIPassthroughDevices()
+		if len(pciDevices) > 0 {
+			b.WriteString(labelStyle.Render("PCI: "))
+			for i, dev := range pciDevices {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(valueStyle.Render(dev.Address))
+				if dev.Name != "" && len(dev.Name) <= 30 {
+					b.WriteString(mutedStyle.Render(" (" + dev.Name + ")"))
+				}
+			}
+			b.WriteString("\n")
+		}
+
+		// === Section 4: USB Passthrough ===
+		usbDevices := m.runner.USBPassthroughDevices()
+		if len(usbDevices) > 0 {
+			b.WriteString(labelStyle.Render("USB: "))
+			for i, dev := range usbDevices {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(valueStyle.Render(dev.BusID))
+				if dev.Name != "" && len(dev.Name) <= 30 {
+					b.WriteString(mutedStyle.Render(" (" + dev.Name + ")"))
+				}
+			}
+			b.WriteString("\n")
+		}
+	} else {
+		// Runner not available, show placeholder values
+		b.WriteString(labelStyle.Render("Memory: "))
+		b.WriteString(valueStyle.Render("N/A"))
+		b.WriteString("  ")
+		b.WriteString(labelStyle.Render("vCPUs: "))
+		b.WriteString(valueStyle.Render("N/A"))
+		b.WriteString("\n")
 	}
 
-	output.WriteString("\n")
+	// === Separator line ===
+	b.WriteString(mutedStyle.Render("─── VM Output ───"))
 
-	// Log separator
-	output.WriteString(mutedStyle.Render("─── QEMU Output ───"))
+	return b.String()
+}
+
+// renderLogContent renders the log content for the viewport
+func (m *VMRunningModel) renderLogContent() string {
+	mutedStyle := lipgloss.NewStyle().
+		Foreground(styles.Colors.Muted)
+
+	logStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("252"))
+
+	var output strings.Builder
+
+	// Separator (moved inside viewport so it's visible when scrolling back up)
+	output.WriteString(mutedStyle.Render("─── VM Output ───"))
 	output.WriteString("\n\n")
 
 	// Log lines
@@ -310,9 +467,9 @@ func (m *VMRunningModel) renderContent() string {
 	// Footer
 	output.WriteString("\n")
 	if m.runner != nil && m.runner.IsRunning() {
-		output.WriteString(mutedStyle.Render("q: Stop VM  Ctrl+C: Force Kill  Scroll: ↑/↓"))
+		output.WriteString(mutedStyle.Render("q: Stop VM  Ctrl+C: Force Kill  ↑/↓: Scroll"))
 	} else {
-		output.WriteString(mutedStyle.Render("q: Exit view  ↑/↓: Scroll"))
+		output.WriteString(mutedStyle.Render("q: Exit  ↑/↓: Scroll"))
 	}
 
 	return output.String()
@@ -322,14 +479,7 @@ func (m *VMRunningModel) renderContent() string {
 func (m *VMRunningModel) SetSize(w, h int) {
 	m.width = w
 	m.height = h
-	if !m.ready {
-		m.vp = viewport.New(w, h)
-		m.ready = true
-	} else {
-		m.vp.Width = w
-		m.vp.Height = h
-	}
-	m.updateViewport()
+	m.calculateLayout()
 }
 
 // Runner returns the underlying VM runner

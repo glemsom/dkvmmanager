@@ -143,6 +143,40 @@ func (r *VMRunner) Done() <-chan struct{} {
 	return r.done
 }
 
+// MemoryMB returns the allocated memory in MB
+func (r *VMRunner) MemoryMB() int64 {
+	return r.memMB
+}
+
+// VCpuCount returns the number of vCPUs allocated to the VM
+func (r *VMRunner) VCpuCount() int {
+	// First try to get from CPU topology
+	if r.cpuTopology.Enabled && len(r.cpuTopology.SelectedCPUs) > 0 {
+		return len(r.cpuTopology.SelectedCPUs)
+	}
+	// Fall back to vCPU pinning mappings count
+	if r.vcpuPinning.Enabled && len(r.vcpuPinning.Mappings) > 0 {
+		return len(r.vcpuPinning.Mappings)
+	}
+	// Default: return 0 if not configured
+	return 0
+}
+
+// VCPUPinning returns the vCPU pinning configuration
+func (r *VMRunner) VCPUPinning() models.VCPUPinningGlobal {
+	return r.vcpuPinning
+}
+
+// PCIPassthroughDevices returns the PCI passthrough devices
+func (r *VMRunner) PCIPassthroughDevices() []models.PCIPassthroughDevice {
+	return r.pciPassthroughConfig.Devices
+}
+
+// USBPassthroughDevices returns the USB passthrough devices
+func (r *VMRunner) USBPassthroughDevices() []models.USBPassthroughDevice {
+	return r.usbPassthroughConfig.Devices
+}
+
 // ValidateOVMFFiles checks that OVMF_CODE.fd and OVMF_VARS.fd exist in the VM data directory
 func (r *VMRunner) ValidateOVMFFiles() error {
 	vmDataDir := r.getVMDataDir()
