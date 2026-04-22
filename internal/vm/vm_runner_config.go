@@ -98,9 +98,8 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 	}
 
 	// Hugepages
-	memMB := 8192 // Default 8GB
 	args = append(args,
-		"-object", fmt.Sprintf("memory-backend-memfd,id=mem,size=%dM,hugetlb=on,hugetlbsize=2M,prealloc=on", memMB),
+		"-object", fmt.Sprintf("memory-backend-memfd,id=mem,size=%dM,hugetlb=on,hugetlbsize=2M,prealloc=on", r.memMB),
 		"-machine", "memory-backend=mem",
 	)
 

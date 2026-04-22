@@ -3,6 +3,7 @@
 package hugepages
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"os"
@@ -16,6 +17,9 @@ const (
 
 	// DefaultMemoryMB is the default memory size: 8GB
 	DefaultMemoryMB = 8192
+
+	// ReservedOSMemoryMB is memory reserved for the host OS: 4GB
+	ReservedOSMemoryMB = 4096
 )
 
 // Config holds hugepages configuration
@@ -24,12 +28,96 @@ type Config struct {
 	PageSize int64 // Hugepage size (default: 2MB)
 }
 
-// NewConfig creates a config for default 8GB hugepages
-func NewConfig() *Config {
-	return &Config{
-		MemMB:    DefaultMemoryMB,
-		PageSize: HugepageSize2MB,
+// GetTotalSystemMemoryMB reads /proc/meminfo and returns the total system memory in MB.
+func GetTotalSystemMemoryMB() (int64, error) {
+	data, err := os.ReadFile("/proc/meminfo")
+	if err != nil {
+		return 0, fmt.Errorf("failed to read /proc/meminfo: %w", err)
 	}
+
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "MemTotal:") {
+			// Extract the value in kB (MemTotal is in kilobytes)
+			fields := strings.Fields(line)
+			if len(fields) < 2 {
+				continue
+			}
+			kb, err := strconv.ParseInt(fields[1], 10, 64)
+			if err != nil {
+				return 0, fmt.Errorf("failed to parse MemTotal: %w", err)
+			}
+			// Convert kB to MB
+			return kb / 1024, nil
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return 0, fmt.Errorf("error scanning meminfo: %w", err)
+	}
+
+	return 0, errors.New("MemTotal not found in /proc/meminfo")
+}
+
+// NewAutoConfig creates a config with automatically detected memory.
+// It reads total system memory from /proc/meminfo, subtracts ReservedOSMemoryMB (4GB),
+// and aligns the result down to the nearest 2MB boundary.
+func NewAutoConfig() (*Config, error) {
+	totalMB, err := GetTotalSystemMemoryMB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get total system memory: %w", err)
+	}
+
+	// Reserve 4GB for OS
+	availableMB := totalMB - ReservedOSMemoryMB
+	if availableMB <= 0 {
+		return nil, fmt.Errorf("insufficient memory after reserving %d MB for OS (total: %d MB)", ReservedOSMemoryMB, totalMB)
+	}
+
+	// Align down to 2MB boundary (hugepage size)
+	// Since hugepages are 2MB, ensure memory size is a multiple of 2MB
+	alignedMB := (availableMB / 2) * 2
+
+	// Ensure at least 1 hugepage (2MB) is available
+	if alignedMB < 2 {
+		return nil, fmt.Errorf("not enough memory for VM after alignment: %d MB", alignedMB)
+	}
+
+	return &Config{
+		MemMB:    alignedMB,
+		PageSize: HugepageSize2MB,
+	}, nil
+}
+
+// NewAutoConfig creates a config with automatically detected memory.
+// It reads total system memory from /proc/meminfo, subtracts ReservedOSMemoryMB (4GB),
+// and aligns the result down to the nearest 2MB boundary.
+func NewAutoConfig() (*Config, error) {
+	totalMB, err := GetTotalSystemMemoryMB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get total system memory: %w", err)
+	}
+
+	// Reserve 4GB for OS
+	availableMB := totalMB - ReservedOSMemoryMB
+	if availableMB <= 0 {
+		return nil, fmt.Errorf("insufficient memory after reserving %d MB for OS (total: %d MB)", ReservedOSMemoryMB, totalMB)
+	}
+
+	// Align down to 2MB boundary (hugepage size)
+	// Since hugepages are 2MB, ensure memory size is a multiple of 2MB
+	alignedMB := (availableMB / 2) * 2
+
+	// Ensure at least 1 hugepage (2MB) is available
+	if alignedMB < 2 {
+		return nil, fmt.Errorf("not enough memory for VM after alignment: %d MB", alignedMB)
+	}
+
+	return &Config{
+		MemMB:    alignedMB,
+		PageSize: HugepageSize2MB,
+	}, nil
 }
 
 // RequiredPages returns the number of hugepages needed for the configured memory
