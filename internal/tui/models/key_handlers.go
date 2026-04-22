@@ -86,6 +86,8 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Handle VM stopped messages from running model
 	if vsm, ok := msg.(VMStoppedMsg); ok {
 		m.statusBar.SetMessage(fmt.Sprintf("VM '%s' stopped: %s", vsm.VMName, vsm.Reason))
+		// Clear running VM ID
+		m.runningVMID = ""
 		// Return to main menu when VM stops
 		m.currentView = ViewMainMenu
 		m.rebuildMenuList()
@@ -347,9 +349,14 @@ func (m *MainModel) forwardWindowSizeToSubView(msg tea.WindowSizeMsg) {
 func (m *MainModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	keyStr := msg.String()
 
-	// Global quit keys
+	// Global quit keys - check if a VM is running first
 	switch keyStr {
 	case "ctrl+c", "q":
+		// Check if a VM is running and warn user
+		if m.vmRunningModel != nil && m.vmRunningModel.Runner() != nil && m.vmRunningModel.Runner().IsRunning() {
+			m.statusBar.SetMessage("A VM is running. Press 'q' in the VM view to stop it first.")
+			return m, nil
+		}
 		m.quitting = true
 		return m, tea.Quit
 	}
@@ -592,11 +599,14 @@ func (m *MainModel) handleVMSelection() (tea.Model, tea.Cmd) {
 
 		// Update status bar to show this VM is running
 		m.statusBar.SetStats(len(m.menuItems), 1)
+		
+		// Track the running VM ID so status bar count survives rebuildMenuList
+		m.runningVMID = vmObj.ID
 
 		// Create running model
 		m.vmRunningModel = NewVMRunningModel(vmObj, runner)
+		m.vmRunningModel.startTime = time.Now() // Set before SetSize so uptime displays immediately
 		m.vmRunningModel.SetSize(m.windowWidth-4, m.contentHeight()-2)
-		m.vmRunningModel.startTime = time.Now()
 		m.currentView = ViewVMRunning
 		m.breadcrumbs.Clear()
 		m.breadcrumbs.AddItem("Start VM", "vms", 1)
@@ -665,7 +675,17 @@ func (m *MainModel) returnFromSubView() (tea.Model, tea.Cmd) {
 	case ViewVMCreate, ViewVMEdit, ViewVMDelete, ViewVMSelect, ViewCPUOptions, ViewPCIPassthrough, ViewUSBPassthrough, ViewCPUTopology, ViewVCPUPinning, ViewSSHPassword, ViewStartStopScript, ViewLVCreate:
 		m.tabModel.SetActiveTab(components.TabConfiguration)
 	case ViewVMRunning:
-		m.vmRunningModel = nil
+		// When leaving VMRunning view, keep the model if VM is still running 
+		// so we can track the running state, otherwise clear it
+		if m.vmRunningModel != nil && m.vmRunningModel.Runner() != nil && m.vmRunningModel.Runner().IsRunning() {
+			// VM is still running - keep the model and update runningVMID if needed
+			if m.runningVMID == "" {
+				m.runningVMID = m.vmRunningModel.Runner().VM().ID
+			}
+		} else {
+			m.vmRunningModel = nil
+			m.runningVMID = ""
+		}
 		m.tabModel.SetActiveTab(components.TabVMs)
 	default:
 		m.tabModel.SetActiveTab(components.TabVMs)

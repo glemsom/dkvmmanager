@@ -184,5 +184,11 @@ func buildMenuItems(mgr *vm.Manager) []MenuItem {
 func (m *MainModel) rebuildMenuList() {
 	m.menuItems = buildMenuItems(m.vmManager)
 	m.menuList.SetItems(buildMenuListAdapter(m.menuItems))
-	m.statusBar.SetStats(len(m.menuItems), 0) // Running count is updated in handleVMSelection and handleVMStoppedMsg
+	
+	// Check if the VM that was running is still running
+	runningCount := 0
+	if m.runningVMID != "" && m.vmRunningModel != nil && m.vmRunningModel.Runner() != nil && m.vmRunningModel.Runner().IsRunning() {
+		runningCount = 1
+	}
+	m.statusBar.SetStats(len(m.menuItems), runningCount)
 }
