@@ -42,6 +42,28 @@ generate-mod: ## Generate go.mod and go.sum in Docker, copy to host
 		go mod tidy'
 	@echo "Done: go.mod and go.sum generated."
 
+.PHONY: coverage
+coverage: ## Run tests with coverage (HTML report in coverage.html)
+	@echo "Running tests with coverage..."
+	@docker run --rm -w /build -v $(shell pwd):/build -e GOCACHE=/tmp/go-cache \
+		golang:1.26-alpine sh -c '\
+			go test -v -coverprofile=/build/coverage.out ./... 2>&1 | tee /tmp/coverage.log; \
+			if [ -f /build/coverage.out ]; then \
+				go tool cover -html=/build/coverage.out -o /build/coverage.html; \
+			fi; \
+		' || true
+	@echo ""; \
+	if [ -f coverage.out ]; then \
+		go tool cover -func=coverage.out | tail -1; \
+		echo "\nHTML report: file://$(shell pwd)/coverage.html"; \
+	else \
+		echo "Error: coverage.out not generated on host"; \
+	fi
+
+.PHONY: test-short
+test-short: ## Run tests with -short flag (skips integration tests)
+	@$(MAKE) test TEST_FLAGS="-short"
+
 .PHONY: build
 build: ## Build application in Docker using go.mod/go.sum from host
 	@echo "Building $(OUTPUT)..."
@@ -56,21 +78,31 @@ build: ## Build application in Docker using go.mod/go.sum from host
 	@echo "Built: $(OUTPUT)"
 
 .PHONY: test
-test: ## Run all tests and show summary only
+# Go test flags can be passed via TEST_FLAGS (e.g. make test TEST_FLAGS="-v -run TestName")
+# Use COVER=1 to enable coverage (e.g. make test COVER=1)
+test: ## Run all tests (COVER=1 for coverage, TEST_FLAGS for extra args)
 	@echo "Running tests..."
-	@docker run --rm -w /build -v $(shell pwd):/build golang:1.26-alpine sh -c '\
-	go test ./... 2>&1 | tee /tmp/test.txt; \
-	PASS=$$(awk "/^ok/{print 1}" /tmp/test.txt | wc -l); \
-	FAIL=$$(awk "/^FAIL/{print 1}" /tmp/test.txt | wc -l); \
-	echo ""; \
-	echo "=== Test Summary ==="; \
-	echo "Passed:  $$PASS"; \
-	echo "Failed:  $$FAIL"; \
-	echo "==================="; \
-	if [ "$$FAIL" -gt 0 ]; then \
-		awk "/^FAIL.*--- FAIL/{print}" /tmp/test.txt; \
-	fi; \
-	[ "$$FAIL" -eq 0 ]'
+	@docker run --rm -w /build -v $(shell pwd):/build -e GOCACHE=/tmp/go-cache \
+		golang:1.26-alpine \
+		sh -c '\
+			FLAGS="$(TEST_FLAGS)"; \
+			if [ "$(COVER)" = "1" ]; then FLAGS="$$FLAGS -cover"; fi; \
+			go test $$FLAGS ./... > /tmp/test.log 2>&1; \
+			EXIT=$$?; \
+			cat /tmp/test.log; \
+			PASS=$$(grep -c "^ok" /tmp/test.log || true); \
+			FAIL=$$(grep -c "^FAIL" /tmp/test.log || true); \
+			echo ""; \
+			echo "=== Test Summary ==="; \
+			echo "Passed:  $$PASS"; \
+			echo "Failed:  $$FAIL"; \
+			echo "==================="; \
+			if [ "$$FAIL" -gt 0 ]; then \
+				echo ""; \
+				grep "^FAIL" /tmp/test.log; \
+			fi; \
+			exit $$EXIT; \
+		'
 
 .PHONY: run-dry
 run-dry: build ## Build and run in dry-run mode (shows QEMU args without launching)
@@ -85,7 +117,7 @@ help: ## Show this help message
 	@echo ""
 	@echo "╔═══════════════════════════════════════════════════════════════╗"
 	@echo "║              DKVM Manager - Build Targets                     ║"
-	@echo "╚═════════════════════════════════════════════════��═════════════╝"
+	@echo "╚═══════════════════════════════════════════════════════════════╝"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make <target>    Run a build target"
