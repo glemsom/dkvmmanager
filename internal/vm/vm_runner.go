@@ -293,7 +293,10 @@ func (r *VMRunner) cleanupTPM() {
 	// Graceful termination with timeout
 	_ = proc.Signal(syscall.SIGTERM)
 	done := make(chan error, 1)
-	go func() { done <- proc.Wait() }()
+	go func() {
+		_, err := proc.Wait()
+		done <- err
+	}()
 	select {
 	case <-done:
 	case <-time.After(2 * time.Second):
@@ -365,12 +368,13 @@ func (r *VMRunner) Start() error {
 	os.Remove(r.socketPath)
 
 	// Start TPM if enabled
+	var qemuStarted bool
 	if r.vm.TPMEnabled {
 		if err := r.startTPM(vmDataDir); err != nil {
 			return fmt.Errorf("failed to start TPM: %w", err)
 		}
 		// Defer cleanup if we return error before QEMU starts
-		qemuStarted := false
+		qemuStarted = false
 		defer func() {
 			if !qemuStarted {
 				r.cleanupTPM()
