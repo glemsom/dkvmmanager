@@ -23,6 +23,7 @@ type VMFormModel struct {
 	macAddress  string
 	vncEnabled  bool
 	networkMode string // "bridge" or "nat"
+	tpmEnabled    bool
 
 	// Flat list of focusable positions
 	positions  []focusPos
@@ -64,6 +65,7 @@ func NewVMFormModel(vmManager *vm.Manager) *VMFormModel {
 		macAddress:    vmManager.GenerateMAC(),
 		vncEnabled:    true,
 		networkMode:   "nat",
+		tpmEnabled:    false,
 		hardDisks:     []string{""}, // start with one empty disk slot
 		cdroms:        []string{},
 		cursorOffsets: make(map[string]int),
@@ -97,6 +99,7 @@ func NewVMFormModelEdit(vmManager *vm.Manager, vmObj *models.VM) *VMFormModel {
 		macAddress:    vmObj.MAC,
 		vncEnabled:    vmObj.VNCListen != "",
 		networkMode:   netMode,
+		tpmEnabled:    vmObj.TPMEnabled,
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
 	}
@@ -129,6 +132,7 @@ func (m *VMFormModel) rebuildPositions() {
 	m.positions = append(m.positions, focusPos{kind: focusText, fieldName: "macAddress"})
 	m.positions = append(m.positions, focusPos{kind: focusToggle, fieldName: "vncEnabled"})
 	m.positions = append(m.positions, focusPos{kind: focusToggle, fieldName: "networkMode"})
+	m.positions = append(m.positions, focusPos{kind: focusToggle, fieldName: "tpmEnabled"})
 
 	// Save button
 	m.positions = append(m.positions, focusPos{kind: focusSaveBtn, fieldName: "save"})

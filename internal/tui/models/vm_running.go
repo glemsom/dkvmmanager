@@ -423,6 +423,13 @@ func (m *VMRunningModel) renderInfoPanel() string {
 			}
 			b.WriteString("\n")
 		}
+
+		// === Section 5: TPM ===
+		if m.vm.TPMEnabled {
+			b.WriteString(labelStyle.Render("TPM: "))
+			b.WriteString(valueStyle.Render("enabled"))
+			b.WriteString("\n")
+		}
 	} else {
 		// Runner not available, show placeholder values
 		b.WriteString(labelStyle.Render("Memory: "))

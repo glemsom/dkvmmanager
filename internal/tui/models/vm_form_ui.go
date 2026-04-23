@@ -151,6 +151,11 @@ func (m *VMFormModel) renderPosition(lines []string, lineIdx int, pos focusPos, 
 		label := m.fieldLabel(pos.fieldName)
 		rendered := m.renderToggle(label, pos.fieldName, focused)
 		lines = append(lines, rendered)
+		// Show inline error if present (e.g., TPM binary missing)
+		if errMsg, ok := m.errors[pos.fieldName]; ok {
+			lines = append(lines, "  "+styles.ErrorTextStyle().Render(errMsg))
+			return lines, lineIdx + 2
+		}
 		return lines, lineIdx + 1
 
 	case focusSaveBtn:
@@ -249,6 +254,8 @@ func (m *VMFormModel) fieldLabel(name string) string {
 		return "VNC"
 	case "networkMode":
 		return "Network"
+	case "tpmEnabled":
+		return "TPM"
 	}
 	return name
 }
@@ -283,6 +290,8 @@ func (m *VMFormModel) renderToggle(label, fieldName string, focused bool) string
 		switch fieldName {
 		case "vncEnabled":
 			on = m.vncEnabled
+		case "tpmEnabled":
+			on = m.tpmEnabled
 		}
 
 		if on {
@@ -300,5 +309,13 @@ func (m *VMFormModel) renderToggle(label, fieldName string, focused bool) string
 		}
 	}
 
-	return prefix + labelPart + valPart
+	toggleLine := prefix + labelPart + valPart
+
+	// Add hint for TPM toggle when enabled
+	if fieldName == "tpmEnabled" && m.tpmEnabled {
+		hint := "  " + styles.MutedTextStyle().Render("(requires swtpm binary)")
+		toggleLine += hint
+	}
+
+	return toggleLine
 }

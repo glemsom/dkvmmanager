@@ -21,6 +21,9 @@ type VM struct {
 	MAC         string `json:"mac" yaml:"mac"`
 	NetworkMode string `json:"network_mode" yaml:"network_mode"` // "bridge" or "nat" (default: "nat")
 	VNCListen   string `json:"vnc_listen" yaml:"vnc_listen"`     // VNC binding (e.g., "0.0.0.0:0")
+
+	// TPM
+	TPMEnabled bool `json:"tpm_enabled" yaml:"tpm_enabled"` // Enable emulated TPM via swtpm
 }
 
 // PCIDevice represents a PCI device discovered on the host

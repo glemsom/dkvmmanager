@@ -4,7 +4,6 @@ package vm
 import (
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -111,8 +110,8 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 	)
 
 	// TPM
-	tpmSock := filepath.Join(vmDataDir, "tpm.sock")
-	if _, err := os.Stat(tpmSock); err == nil {
+	if r.vm.TPMEnabled {
+		tpmSock := filepath.Join(vmDataDir, "tpm.sock")
 		args = append(args,
 			"-chardev", fmt.Sprintf("socket,id=chrtpm,path=%s,server=on,wait=off", tpmSock),
 			"-tpmdev", "emulator,id=tpm0,chardev=chrtpm",

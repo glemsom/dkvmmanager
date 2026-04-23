@@ -105,11 +105,16 @@ func (c *VMCardView) renderCard(vm models.VM, selected bool) string {
 		statusText = "Configured"
 	}
 
-	infoLine := fmt.Sprintf(" %s %s │ Disks: %d │ MAC: %s",
-		statusIcon, statusText, len(vm.HardDisks), vm.MAC)
+	tpmStatus := "No"
+	if vm.TPMEnabled {
+		tpmStatus = "Yes"
+	}
+
+	infoLine := fmt.Sprintf(" %s %s │ Disks: %d │ MAC: %s │ TPM: %s",
+		statusIcon, statusText, len(vm.HardDisks), vm.MAC, tpmStatus)
 	if vm.MAC == "" {
-		infoLine = fmt.Sprintf(" %s %s │ Disks: %d │ MAC: -",
-			statusIcon, statusText, len(vm.HardDisks))
+		infoLine = fmt.Sprintf(" %s %s │ Disks: %d │ MAC: - │ TPM: %s",
+			statusIcon, statusText, len(vm.HardDisks), tpmStatus)
 	}
 
 	// Pad the info line
