@@ -15,30 +15,26 @@ OUTPUT  := dkvmmanager
 # Docker Configuration
 # ============================================================================
 
-DOCKER_GO := docker run --rm -w /build -v $(shell pwd):/build golang:1.26-alpine go
+# Pinned digests for reproducible builds (updated: 2025-04-23)
+GOLANG_IMAGE := golang:1.26-alpine@sha256:f85330846cde1e57ca9ec309382da3b8e6ae3ab943d2739500e08c86393a21b1
+ALPINE_IMAGE := alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a3145eb11ca1
+
+DOCKER_GO := docker run --rm -w /build -v $(shell pwd):/build $(GOLANG_IMAGE) go
 
 # ============================================================================
 # Targets
 # ============================================================================
-
-.PHONY: update-golden
-update-golden: ## Update golden test files (UPDATE_GOLDEN=1)
-	@echo "Updating golden files..."
-	@docker run --rm -w /build -v $(shell pwd):/build --user $$(id -u):$$(id -g) \
-		-e UPDATE_GOLDEN=1 \
-		-e GOCACHE=/tmp/go-cache \
-		golang:1.26-alpine go test -v ./internal/tui/models/...
-	@echo "Golden files updated."
 
 .PHONY: generate-mod
 generate-mod: ## Generate go.mod and go.sum in Docker, copy to host
 	@echo "Generating go.mod and go.sum in Docker container..."
 	@docker run --rm -w /build -v $(shell pwd):/build --user $$(id -u):$$(id -g) \
 		-e GOCACHE=/tmp/go-cache \
-		golang:1.26-alpine sh -c '\
+		$(GOLANG_IMAGE) sh -c '\
 		if [ ! -f go.mod ]; then \
 			go mod init github.com/glemsom/dkvmmanager; \
 		fi; \
+		go mod download; \
 		go mod tidy'
 	@echo "Done: go.mod and go.sum generated."
 
@@ -80,10 +76,11 @@ build: ## Build application in Docker using go.mod/go.sum from host
 .PHONY: test
 # Go test flags can be passed via TEST_FLAGS (e.g. make test TEST_FLAGS="-v -run TestName")
 # Use COVER=1 to enable coverage (e.g. make test COVER=1)
-test: ## Run all tests (COVER=1 for coverage, TEST_FLAGS for extra args)
+test: generate-mod ## Run all tests (COVER=1 for coverage, TEST_FLAGS for extra args)
 	@echo "Running tests..."
 	@docker run --rm -w /build -v $(shell pwd):/build -e GOCACHE=/tmp/go-cache \
-		golang:1.26-alpine \
+		--user $$(id -u):$$(id -g) \
+		$(GOLANG_IMAGE) \
 		sh -c '\
 			FLAGS="$(TEST_FLAGS)"; \
 			if [ "$(COVER)" = "1" ]; then FLAGS="$$FLAGS -cover"; fi; \

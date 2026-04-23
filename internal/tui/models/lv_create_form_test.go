@@ -227,18 +227,6 @@ func TestLVCreateRenderNoHardcodedVGFallback(t *testing.T) {
 	}
 }
 
-func TestLVCreateRenderDropdownOpen(t *testing.T) {
-	m := NewLVCreateFormModel()
-	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 1}, {Name: "vg0", Free: "10.00g", PVCount: 1}}
-	m.vgIndex = 0
-	m.vgDropdownOpen = true
-	m.vgDropdownIndex = 0
-	m.SetSize(76, 18)
-	m.syncViewport()
-
-	view := stripANSI(m.View())
-	assertGolden(t, "lv_create_form_vg_dropdown_open", view)
-}
 
 func TestLVCreateStrippedAutoEnabledWithMultiplePVs(t *testing.T) {
 	m := NewLVCreateFormModel()

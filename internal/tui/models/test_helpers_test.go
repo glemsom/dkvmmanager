@@ -46,7 +46,7 @@ func sendKeysWithCmd(t *testing.T, m *MainModel, keys ...tea.KeyType) *MainModel
 }
 
 // setupTestModelWithTwoVMs creates a MainModel with exactly 2 VMs and standard test dimensions.
-// This is shared across scenario_test.go and golden_test.go.
+// This is shared across scenario tests.
 func setupTestModelForScenarios(t *testing.T) *MainModel {
 	t.Helper()
 	m := setupTestModelWithVMs(t)
