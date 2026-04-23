@@ -542,7 +542,7 @@ func (m *MainModel) handleConfigMenuSelection() (tea.Model, tea.Cmd) {
 		m.breadcrumbs.AddItem("Configuration", "config", 1)
 		m.breadcrumbs.AddItem("Create Logical Volume", "lv_create", 1)
 		return m, m.lvCreateFormModel.Init()
-	case 12: // LBU COMMIT
+	case 12: // Save changes
 		return m, runLBUCommit()
 	}
 	return m, nil
