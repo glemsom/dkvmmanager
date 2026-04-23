@@ -36,7 +36,13 @@ func TestGenerateMAC(t *testing.T) {
 }
 
 func TestNewManager(t *testing.T) {
-	cfg := config.DefaultConfig()
+	tmpDir := t.TempDir()
+
+	cfg := &config.Config{
+		DataFolder:    tmpDir,
+		VMsConfigFile: filepath.Join(tmpDir, "dkvmmanager", "vms.yaml"),
+	}
+
 	mgr, err := NewManager(cfg)
 	if err != nil {
 		t.Fatal(err)
