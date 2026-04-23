@@ -21,18 +21,10 @@ func mockRepositoryForTopology(t *testing.T) (*Repository, func()) {
 		t.Fatal(err)
 	}
 
-	cfg := &config.Config{
-		ConfigPath: configPath,
-	}
-	v := viper.New()
-	v.SetConfigFile(configPath)
-	if err := v.ReadInConfig(); err != nil {
+	// Create repository using the public constructor
+	repo, err := NewRepository(configPath)
+	if err != nil {
 		t.Fatal(err)
-	}
-
-	repo := &Repository{
-		vip: v,
-		cfg: cfg,
 	}
 
 	cleanup := func() {

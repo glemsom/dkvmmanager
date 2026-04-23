@@ -28,6 +28,14 @@ type Config struct {
 	PageSize int64 // Hugepage size (default: 2MB)
 }
 
+// NewConfig creates a default hugepages configuration.
+func NewConfig() *Config {
+	return &Config{
+		MemMB:    DefaultMemoryMB,
+		PageSize: HugepageSize2MB,
+	}
+}
+
 // GetTotalSystemMemoryMB reads /proc/meminfo and returns the total system memory in MB.
 func GetTotalSystemMemoryMB() (int64, error) {
 	data, err := os.ReadFile("/proc/meminfo")

@@ -249,7 +249,7 @@ func (m *VMRunningModel) calculateLayout() {
 			availableHeight = 5
 		}
 		m.vp = viewport.New(m.width, availableHeight)
-		m.vp.HighPerformance = true
+		// HighPerformanceMode setting removed (no longer supported in bubbles v1)
 		m.ready = true
 	} else {
 		// Update layout
@@ -310,7 +310,7 @@ func (m *VMRunningModel) View() string {
 func (m *VMRunningModel) renderInfoPanel() string {
 	mutedStyle := lipgloss.NewStyle().Foreground(styles.Colors.Muted)
 	labelStyle := lipgloss.NewStyle().Foreground(styles.Colors.Muted).Bold(false)
-	valueStyle := lipgloss.NewStyle().Foreground(styles.Colors.NormalText)
+	valueStyle := styles.NormalTextStyle()
 
 	// Status styles
 	statusRunning := lipgloss.NewStyle().

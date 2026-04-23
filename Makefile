@@ -45,7 +45,7 @@ generate-mod: ## Generate go.mod and go.sum in Docker, copy to host
 .PHONY: coverage
 coverage: ## Run tests with coverage (HTML report in coverage.html)
 	@echo "Running tests with coverage..."
-	@docker run --rm -w /build -v $(shell pwd):/build -e GOCACHE=/tmp/go-cache \
+	@docker run --rm -w /build -v $(shell pwd):/build \
 		golang:1.26-alpine sh -c '\
 			go test -v -coverprofile=/build/coverage.out ./... 2>&1 | tee /tmp/coverage.log; \
 			if [ -f /build/coverage.out ]; then \
