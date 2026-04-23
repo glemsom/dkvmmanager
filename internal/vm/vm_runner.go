@@ -268,6 +268,26 @@ func (r *VMRunner) startTPM(vmDataDir string) error {
 		return fmt.Errorf("swtpm socket not ready: %w", err)
 	}
 
+	// Verify swtpm is still running (it could crash immediately after creating socket)
+	r.mu.Lock()
+	proc := r.swtpmProcess
+	r.mu.Unlock()
+	if proc != nil {
+		// Check if process is still alive
+		err := proc.Signal(syscall.Signal(0))
+		if err != nil {
+			// Process died
+			r.mu.Lock()
+			r.swtpmProcess = nil
+			r.mu.Unlock()
+			// Try to wait for it to reap
+			_, _ = proc.Wait()
+			os.Remove(tpmSock)
+			os.RemoveAll(tpmDir)
+			return fmt.Errorf("swtpm process terminated unexpectedly")
+		}
+	}
+
 	if debugMode {
 		log.Printf("[DEBUG] TPM started for VM %s", r.vm.Name)
 	}

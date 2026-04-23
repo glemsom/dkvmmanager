@@ -113,7 +113,7 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 	if r.vm.TPMEnabled {
 		tpmSock := filepath.Join(vmDataDir, "tpm.sock")
 		args = append(args,
-			"-chardev", fmt.Sprintf("socket,id=chrtpm,path=%s,server=on,wait=off", tpmSock),
+			"-chardev", fmt.Sprintf("socket,id=chrtpm,path=%s,server=off", tpmSock),
 			"-tpmdev", "emulator,id=tpm0,chardev=chrtpm",
 			"-device", "tpm-tis,tpmdev=tpm0",
 		)
