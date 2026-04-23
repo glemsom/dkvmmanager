@@ -299,6 +299,8 @@ func (m *VMFormModel) toggleValue(fieldName string) {
 	switch fieldName {
 	case "vncEnabled":
 		m.vncEnabled = !m.vncEnabled
+	case "tpmEnabled":
+		m.tpmEnabled = !m.tpmEnabled
 	case "networkMode":
 		if m.networkMode == "nat" {
 			m.networkMode = "bridge"

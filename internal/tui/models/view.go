@@ -135,6 +135,11 @@ func (m *MainModel) renderActiveContent() string {
 			return m.vmRunningModel.View()
 		}
 		return "Loading..."
+	case ViewTPMConfig:
+		if m.tpmConfigModel != nil {
+			return m.tpmConfigModel.View()
+		}
+		return "Loading..."
 	}
 
 	// Tab-based content
@@ -249,6 +254,14 @@ func renderVMDetail(vm *models.VM, width, height int) string {
 	b.WriteString(labelStyle.Render("  VNC: "))
 	if vm.VNCListen != "" {
 		b.WriteString(valueStyle.Render("enabled (" + vm.VNCListen + ")"))
+	} else {
+		b.WriteString(valueStyle.Render("disabled"))
+	}
+
+	b.WriteString("\n")
+	b.WriteString(labelStyle.Render("  TPM: "))
+	if vm.TPMEnabled {
+		b.WriteString(valueStyle.Render("enabled"))
 	} else {
 		b.WriteString(valueStyle.Render("disabled"))
 	}

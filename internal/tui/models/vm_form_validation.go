@@ -3,6 +3,7 @@ package models
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -23,6 +24,14 @@ func (m *VMFormModel) validateAndSave() (tea.Model, tea.Cmd) {
 	// MAC (optional - allow empty means auto-generated)
 	if strings.TrimSpace(m.macAddress) != "" && !macRegex.MatchString(m.macAddress) {
 		m.errors["macAddress"] = "Expected format: xx:xx:xx:xx:xx:xx"
+	}
+
+	// TPM binary check if TPM is enabled
+	if m.tpmEnabled {
+		cfg := m.vmManager.GetConfig()
+		if _, err := os.Stat(cfg.TPMBinary); err != nil {
+			m.errors["tpmEnabled"] = fmt.Sprintf("TPM enabled but swtpm binary not found at %s", cfg.TPMBinary)
+		}
 	}
 
 	if len(m.errors) > 0 {
@@ -72,6 +81,7 @@ func (m *VMFormModel) saveNewVM(disks, cdroms []string) (tea.Model, tea.Cmd) {
 	createdVM.CDROMs = cdroms
 	createdVM.MAC = m.macAddress
 	createdVM.NetworkMode = m.networkMode
+	createdVM.TPMEnabled = m.tpmEnabled
 	if m.vncEnabled {
 		createdVM.VNCListen = "0.0.0.0:0"
 	} else {
@@ -94,6 +104,7 @@ func (m *VMFormModel) updateExistingVM(disks, cdroms []string) (tea.Model, tea.C
 	m.vm.CDROMs = cdroms
 	m.vm.MAC = m.macAddress
 	m.vm.NetworkMode = m.networkMode
+	m.vm.TPMEnabled = m.tpmEnabled
 	if m.vncEnabled {
 		m.vm.VNCListen = "0.0.0.0:0"
 	} else {

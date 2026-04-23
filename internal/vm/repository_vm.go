@@ -41,6 +41,7 @@ func (r *Repository) unmarshalVM(id string, data map[string]interface{}) models.
 	vm.MAC = getString(data, "mac")
 	vm.NetworkMode = getString(data, "network_mode")
 	vm.VNCListen = getString(data, "vnc_listen")
+	vm.TPMEnabled = getBool(data, "tpm_enabled")
 
 	return vm
 }

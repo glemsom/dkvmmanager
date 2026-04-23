@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
@@ -62,7 +63,8 @@ type VMRunner struct {
 	hostCPUTopology      models.HostCPUTopology
 	vcpuPinning          models.VCPUPinningGlobal
 	startStopScript      models.StartStopScript
-	memMB                int64 // Memory in MB for VM (dynamically allocated)
+	memMB                int64       // Memory in MB for VM (dynamically allocated)
+	swtpmProcess         *os.Process // swtpm process, if TPM is enabled
 }
 
 // NewVMRunner creates a new VM runner for the given VM
@@ -199,6 +201,137 @@ func (r *VMRunner) getVMDataDir() string {
 	return filepath.Join(r.cfg.DataFolder, "vms", r.vm.ID)
 }
 
+// waitForSocket polls until a Unix socket file exists or timeout is reached
+func (r *VMRunner) waitForSocket(path string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if _, err := os.Stat(path); err == nil {
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return fmt.Errorf("timeout waiting for socket: %s", path)
+}
+
+// startTPM starts the swtpm process for this VM
+func (r *VMRunner) startTPM(vmDataDir string) error {
+	tpmDir := filepath.Join(vmDataDir, "tpm")
+	tpmSock := filepath.Join(vmDataDir, "tpm.sock")
+
+	// Create TPM state directory
+	if err := os.MkdirAll(tpmDir, 0700); err != nil {
+		return fmt.Errorf("failed to create TPM state dir: %w", err)
+	}
+
+	// Remove stale socket
+	os.Remove(tpmSock)
+
+	// Start swtpm
+	cmd := exec.Command(r.cfg.TPMBinary,
+		"socket",
+		"--tpm2",
+		"--server",
+		fmt.Sprintf("type=unixio,path=%s", tpmSock),
+		"--flags",
+		"not-need-init",
+		"--ctrl",
+		fmt.Sprintf("type=unixio,path=%s/ctrl", tpmDir),
+		"--tpmstate",
+		fmt.Sprintf("dir=%s", tpmDir),
+		"--log",
+		fmt.Sprintf("level=20,file=%s/swtpm.log", tpmDir),
+	)
+	if err := cmd.Start(); err != nil {
+		// Clean up on failure
+		os.Remove(tpmSock)
+		os.RemoveAll(tpmDir)
+		return fmt.Errorf("failed to start swtpm: %w", err)
+	}
+
+	r.mu.Lock()
+	r.swtpmProcess = cmd.Process
+	r.mu.Unlock()
+
+	// Wait for socket to appear
+	if err := r.waitForSocket(tpmSock, 5*time.Second); err != nil {
+		r.mu.Lock()
+		proc := r.swtpmProcess
+		r.swtpmProcess = nil
+		r.mu.Unlock()
+		if proc != nil {
+			_ = proc.Kill()
+			// Reap the process to avoid zombie
+			_, _ = proc.Wait()
+		}
+		os.Remove(tpmSock)
+		os.RemoveAll(tpmDir)
+		return fmt.Errorf("swtpm socket not ready: %w", err)
+	}
+
+	// Verify swtpm is still running (it could crash immediately after creating socket)
+	r.mu.Lock()
+	proc := r.swtpmProcess
+	r.mu.Unlock()
+	if proc != nil {
+		// Check if process is still alive
+		err := proc.Signal(syscall.Signal(0))
+		if err != nil {
+			// Process died
+			r.mu.Lock()
+			r.swtpmProcess = nil
+			r.mu.Unlock()
+			// Try to wait for it to reap
+			_, _ = proc.Wait()
+			os.Remove(tpmSock)
+			os.RemoveAll(tpmDir)
+			return fmt.Errorf("swtpm process terminated unexpectedly")
+		}
+	}
+
+	if debugMode {
+		log.Printf("[DEBUG] TPM started for VM %s", r.vm.Name)
+	}
+
+	return nil
+}
+
+// cleanupTPM terminates the swtpm process and removes TPM files
+func (r *VMRunner) cleanupTPM() {
+	r.mu.Lock()
+	proc := r.swtpmProcess
+	r.swtpmProcess = nil
+	r.mu.Unlock()
+
+	if proc == nil {
+		return
+	}
+
+	vmDataDir := r.getVMDataDir()
+	tpmSock := filepath.Join(vmDataDir, "tpm.sock")
+	tpmDir := filepath.Join(vmDataDir, "tpm")
+
+	// Graceful termination with timeout
+	_ = proc.Signal(syscall.SIGTERM)
+	done := make(chan error, 1)
+	go func() {
+		_, err := proc.Wait()
+		done <- err
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		_ = proc.Kill()
+		<-done
+	}
+
+	os.Remove(tpmSock)
+	os.RemoveAll(tpmDir)
+
+	if debugMode {
+		log.Printf("[DEBUG] TPM cleaned up for VM %s", r.vm.Name)
+	}
+}
+
 // Start launches the QEMU process and connects QMP
 func (r *VMRunner) Start() error {
 	r.mu.Lock()
@@ -254,6 +387,21 @@ func (r *VMRunner) Start() error {
 	// Clean up stale socket
 	os.Remove(r.socketPath)
 
+	// Start TPM if enabled
+	var qemuStarted bool
+	if r.vm.TPMEnabled {
+		if err := r.startTPM(vmDataDir); err != nil {
+			return fmt.Errorf("failed to start TPM: %w", err)
+		}
+		// Defer cleanup if we return error before QEMU starts
+		qemuStarted = false
+		defer func() {
+			if !qemuStarted {
+				r.cleanupTPM()
+			}
+		}()
+	}
+
 	// Build QEMU arguments
 	args := r.buildQEMUArgs(vmDataDir)
 
@@ -292,6 +440,11 @@ func (r *VMRunner) Start() error {
 	// Start QEMU
 	if err := r.cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start QEMU: %w", err)
+	}
+
+	// TPM: mark as started so defer doesn't clean up
+	if r.vm.TPMEnabled {
+		qemuStarted = true
 	}
 
 	r.mu.Lock()
@@ -346,19 +499,31 @@ func (r *VMRunner) Stop() error {
 		}
 	}
 
+	// Cleanup TPM synchronously
+	r.cleanupTPM()
+
 	return nil
 }
 
 // ForceStop kills the QEMU process immediately
 func (r *VMRunner) ForceStop() error {
 	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	if !r.running || r.cmd == nil || r.cmd.Process == nil {
+		r.mu.Unlock()
 		return fmt.Errorf("VM %s is not running", r.vm.Name)
 	}
+	proc := r.cmd.Process
+	r.mu.Unlock()
 
-	return r.cmd.Process.Kill()
+	// Kill QEMU
+	if err := proc.Kill(); err != nil {
+		return err
+	}
+
+	// Cleanup TPM synchronously
+	r.cleanupTPM()
+
+	return nil
 }
 
 // Cleanup removes stale resources (socket files, etc.)
@@ -366,6 +531,8 @@ func (r *VMRunner) Cleanup() {
 	if r.socketPath != "" {
 		os.Remove(r.socketPath)
 	}
+	// Ensure TPM process is terminated and state cleaned up
+	r.cleanupTPM()
 }
 
 // readOutput reads lines from a pipe and sends them to the log channel
@@ -426,6 +593,9 @@ func (r *VMRunner) monitorProcess() {
 
 	// Execute stop script (non-blocking - don't fail if it errors)
 	r.executeStopScript()
+
+	// Cleanup TPM process
+	r.cleanupTPM()
 
 	close(r.done)
 

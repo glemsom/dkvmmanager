@@ -100,6 +100,7 @@ func (p *VMDetailsPanel) renderDetails() string {
 	lines = append(lines, p.renderField("MAC Address", p.vm.MAC, fieldStyle, valueStyle, contentWidth))
 	lines = append(lines, p.renderField("Network Mode", p.vm.NetworkMode, fieldStyle, valueStyle, contentWidth))
 	lines = append(lines, p.renderField("VNC Binding", p.vm.VNCListen, fieldStyle, valueStyle, contentWidth))
+	lines = append(lines, p.renderField("TPM", formatBool(p.vm.TPMEnabled), fieldStyle, valueStyle, contentWidth))
 	lines = append(lines, "")
 
 	if !p.vm.CreatedAt.IsZero() {
@@ -216,4 +217,11 @@ func (p *VMDetailsPanel) SelectedVM() *models.VM {
 func (p *VMDetailsPanel) Init() {}
 func (p *VMDetailsPanel) Update(msg interface{}) (interface{}, error) {
 	return nil, fmt.Errorf("VMDetailsPanel.Update not implemented")
+}
+
+func formatBool(b bool) string {
+	if b {
+		return "Yes"
+	}
+	return "No"
 }

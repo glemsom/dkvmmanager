@@ -97,6 +97,7 @@ func (r *Repository) SaveVM(vm *models.VM) error {
 		"mac":          vm.MAC,
 		"network_mode": vm.NetworkMode,
 		"vnc_listen":   vm.VNCListen,
+		"tpm_enabled":  vm.TPMEnabled,
 	}
 
 	// Get the current vms map, update the entry, and set it back.

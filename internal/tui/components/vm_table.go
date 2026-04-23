@@ -23,6 +23,7 @@ func NewVMTable(vms []models.VM, width, height int) *VMTable {
 		{Title: "ID", Width: 20},
 		{Title: "Disks", Width: 8},
 		{Title: "MAC", Width: 18},
+		{Title: "TPM", Width: 6},
 	}
 
 	rows := vmToRows(vms)
@@ -65,11 +66,17 @@ func vmToRows(vms []models.VM) []table.Row {
 			mac = "-"
 		}
 
+		tpm := "No"
+		if vm.TPMEnabled {
+			tpm = "Yes"
+		}
+
 		rows[i] = table.Row{
 			vm.Name,
 			vm.ID,
 			fmt.Sprintf("%d", len(vm.HardDisks)),
 			mac,
+			tpm,
 		}
 	}
 	return rows
