@@ -135,11 +135,6 @@ func (m *MainModel) renderActiveContent() string {
 			return m.vmRunningModel.View()
 		}
 		return "Loading..."
-	case ViewTPMConfig:
-		if m.tpmConfigModel != nil {
-			return m.tpmConfigModel.View()
-		}
-		return "Loading..."
 	}
 
 	// Tab-based content

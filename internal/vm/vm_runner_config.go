@@ -47,6 +47,12 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 		"-qmp", fmt.Sprintf("unix:%s,server=on,wait=off", r.socketPath),
 	)
 
+	// Debug logging to file if debug mode enabled
+	if debugMode {
+		debugLog := filepath.Join(vmDataDir, "qemu-debug.log")
+		args = append(args, "-D", debugLog)
+	}
+
 	// Memory and clock
 	rtcBase := "localtime"
 	if r.cpuOptions.RTCUTC {

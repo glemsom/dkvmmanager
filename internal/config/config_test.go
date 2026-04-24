@@ -44,11 +44,6 @@ func TestDefaultConfig(t *testing.T) {
 			expected: "/usr/bin/qemu-system-x86_64",
 		},
 		{
-			name:     "TPM socket path",
-			field:    "TPMSocketPath",
-			expected: "/var/run/swtpm",
-		},
-		{
 			name:     "log file",
 			field:    "LogFile",
 			expected: "/var/log/dkvm.log",
@@ -83,10 +78,6 @@ func TestDefaultConfig(t *testing.T) {
 			case "QEMUPath":
 				if cfg.QEMUPath != tt.expected {
 					t.Errorf("DefaultConfig().QEMUPath = %v, want %v", cfg.QEMUPath, tt.expected)
-				}
-			case "TPMSocketPath":
-				if cfg.TPMSocketPath != tt.expected {
-					t.Errorf("DefaultConfig().TPMSocketPath = %v, want %v", cfg.TPMSocketPath, tt.expected)
 				}
 			case "LogFile":
 				if cfg.LogFile != tt.expected {
@@ -153,7 +144,6 @@ func TestConfigStruct(t *testing.T) {
 		BIOSVars:      "/test/bios/vars.fd",
 		NetworkBridge: "br1",
 		QEMUPath:      "/test/qemu",
-		TPMSocketPath: "/test/swtpm",
 		LogFile:       "/test/log",
 	}
 
@@ -174,9 +164,6 @@ func TestConfigStruct(t *testing.T) {
 	}
 	if cfg.QEMUPath != "/test/qemu" {
 		t.Errorf("QEMUPath = %v, want /test/qemu", cfg.QEMUPath)
-	}
-	if cfg.TPMSocketPath != "/test/swtpm" {
-		t.Errorf("TPMSocketPath = %v, want /test/swtpm", cfg.TPMSocketPath)
 	}
 	if cfg.LogFile != "/test/log" {
 		t.Errorf("LogFile = %v, want /test/log", cfg.LogFile)

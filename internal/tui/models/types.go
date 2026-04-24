@@ -28,7 +28,6 @@ const (
 	ViewCPUTopology     = "cpu_topology"
 	ViewVCPUPinning   = "vcpu_pinning"
 	ViewSSHPassword     = "ssh_password"
-	ViewTPMConfig       = "tpm_config"
 	ViewStartStopScript = "start_stop_script"
 	ViewLVCreate        = "lv_create"
 )
@@ -124,9 +123,6 @@ type MainModel struct {
 
 	// SSH password model
 	sshPasswordModel *SSHPasswordModel
-
-	// TPM config model
-	tpmConfigModel *TPMConfigModel
 
 	// Running VM ID - tracks the currently running VM to persist across rebuildMenuList calls
 	runningVMID string

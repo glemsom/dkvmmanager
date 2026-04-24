@@ -14,7 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **TPM state persistence**: TPM state directory (`{vm}/tpm/`) is now preserved across VM restarts instead of being deleted
+- **Graceful TPM shutdown**: TPM processes are now shut down gracefully via the swtpm control channel before SIGTERM
+- **Orphaned swtpm detection**: Stale swtpm processes from previous runs are detected via PID file and killed before starting a new one
 - **Status bar display**: Status bar now shows VM execution state (▶ Running / ■ Stopped) instead of VM counts
+
+### Removed
+
+- **TPM config screen**: Removed the "Edit TPM Binary" configuration screen from the TUI (TPM binary is now configured via config file only)
+- **TPMSocketPath config**: Removed `tpm_socket_path` configuration option (socket path is auto-derived per-VM)
 
 ## [0.0.1] - 2025-04-19
 

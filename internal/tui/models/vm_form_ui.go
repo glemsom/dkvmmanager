@@ -311,11 +311,5 @@ func (m *VMFormModel) renderToggle(label, fieldName string, focused bool) string
 
 	toggleLine := prefix + labelPart + valPart
 
-	// Add hint for TPM toggle when enabled
-	if fieldName == "tpmEnabled" && m.tpmEnabled {
-		hint := "  " + styles.MutedTextStyle().Render("(requires swtpm binary)")
-		toggleLine += hint
-	}
-
 	return toggleLine
 }
