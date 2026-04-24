@@ -344,7 +344,7 @@ func TestCPUIndexToTopology(t *testing.T) {
 			dieID, coreID, threadID, err := CPUIndexToTopology(tt.cpuID, hostTopo)
 			if tt.wantErr {
 				if err == nil {
-					t.Error("Expected error for CPU %d", tt.cpuID)
+					t.Errorf("Expected error for CPU %d", tt.cpuID)
 				}
 				return
 			}

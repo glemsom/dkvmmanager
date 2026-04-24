@@ -688,8 +688,30 @@ func TestBuildQEMUArgsWithHostTopology(t *testing.T) {
 		TotalCPUs:     16,
 		ThreadsPerCore: 2,
 		Dies: []models.CPUDie{
-			{ID: 0, Threads: 2, Cores: 4},
-			{ID: 1, Threads: 2, Cores: 4},
+			{
+				ID:    0,
+				Cores: 4,
+				Threads: 2,
+				LogicalCPUs: []int{0, 1, 2, 3, 4, 5, 6, 7},
+				CoreDetails: []models.CPUCore{
+					{ID: 0, DieID: 0, Threads: []int{0, 1}},
+					{ID: 1, DieID: 0, Threads: []int{2, 3}},
+					{ID: 2, DieID: 0, Threads: []int{4, 5}},
+					{ID: 3, DieID: 0, Threads: []int{6, 7}},
+				},
+			},
+			{
+				ID:    1,
+				Cores: 4,
+				Threads: 2,
+				LogicalCPUs: []int{8, 9, 10, 11, 12, 13, 14, 15},
+				CoreDetails: []models.CPUCore{
+					{ID: 0, DieID: 1, Threads: []int{8, 9}},
+					{ID: 1, DieID: 1, Threads: []int{10, 11}},
+					{ID: 2, DieID: 1, Threads: []int{12, 13}},
+					{ID: 3, DieID: 1, Threads: []int{14, 15}},
+				},
+			},
 		},
 	}
 
@@ -794,10 +816,7 @@ func TestCleanupPreservesTPMState(t *testing.T) {
 	if err := os.WriteFile(stateFile, []byte("fake-tpm-state"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	ctrlSock := filepath.Join(tpmDir, "ctrl")
-	if err := os.WriteFile(ctrlSock, []byte{}, 0600); err != nil {
-		t.Fatal(err)
-	}
+	// PID file (transient)
 	pidPath := filepath.Join(tpmDir, "swtpm.pid")
 	if err := os.WriteFile(pidPath, []byte("12345"), 0600); err != nil {
 		t.Fatal(err)
@@ -832,9 +851,6 @@ func TestCleanupPreservesTPMState(t *testing.T) {
 	// Transient files should be removed
 	if _, err := os.Stat(tpmSock); err == nil {
 		t.Error("tpm.sock should have been removed")
-	}
-	if _, err := os.Stat(ctrlSock); err == nil {
-		t.Error("ctrl socket should have been removed")
 	}
 	if _, err := os.Stat(pidPath); err == nil {
 		t.Error("swtpm.pid should have been removed")

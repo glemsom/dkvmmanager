@@ -76,11 +76,6 @@ func NewVMRunningModel(vmObj *models.VM, runner *vm.VMRunner) *VMRunningModel {
 
 // Init initializes the model
 func (m *VMRunningModel) Init() tea.Cmd {
-	// Guard against nil runner
-	if m.runner == nil {
-		return nil
-	}
-
 	return tea.Batch(
 		m.waitForLog(),
 		m.waitForVMExit(),
@@ -92,6 +87,9 @@ func (m *VMRunningModel) Init() tea.Cmd {
 // initialStatus performs an immediate status check and returns a command
 func (m *VMRunningModel) initialStatus() tea.Cmd {
 	return func() tea.Msg {
+		if m.runner == nil {
+			return VMStatusUpdateMsg{Status: "starting"}
+		}
 		client := m.runner.QMPClient()
 		if client == nil {
 			return VMStatusUpdateMsg{Status: "starting"}
@@ -303,6 +301,11 @@ func (m *VMRunningModel) calculateInfoHeight() int {
 		if len(m.runner.USBPassthroughDevices()) > 0 {
 			height += 1 + len(m.runner.USBPassthroughDevices())
 		}
+
+		// Add line for threads if available
+		if len(m.threads) > 0 {
+			height += 1
+		}
 	}
 
 	return height
@@ -464,8 +467,20 @@ func (m *VMRunningModel) renderInfoPanel() string {
 		b.WriteString("\n")
 	}
 
+	// Show thread IDs if available (for both runner present and test)
+	if len(m.threads) > 0 {
+		b.WriteString(labelStyle.Render("vCPU Threads: "))
+		for i, tid := range m.threads {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(valueStyle.Render(fmt.Sprintf("%d", tid)))
+		}
+		b.WriteString("\n")
+	}
+
 	// === Separator line ===
-	b.WriteString(mutedStyle.Render("─── VM Output ───"))
+	b.WriteString(mutedStyle.Render("─── QEMU Output ───"))
 
 	return b.String()
 }
@@ -481,7 +496,7 @@ func (m *VMRunningModel) renderLogContent() string {
 	var output strings.Builder
 
 	// Separator (moved inside viewport so it's visible when scrolling back up)
-	output.WriteString(mutedStyle.Render("─── VM Output ───"))
+	output.WriteString(mutedStyle.Render("─── QEMU Output ───"))
 	output.WriteString("\n\n")
 
 	// Log lines
@@ -500,7 +515,7 @@ func (m *VMRunningModel) renderLogContent() string {
 	if m.runner != nil && m.runner.IsRunning() {
 		output.WriteString(mutedStyle.Render("q: Stop VM  Ctrl+C: Force Kill  ↑/↓: Scroll"))
 	} else {
-		output.WriteString(mutedStyle.Render("q: Exit  ↑/↓: Scroll"))
+		output.WriteString(mutedStyle.Render("q: Exit view  ↑/↓: Scroll"))
 	}
 
 	return output.String()

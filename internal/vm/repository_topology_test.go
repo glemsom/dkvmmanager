@@ -5,9 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/glemsom/dkvmmanager/internal/config"
 	"github.com/glemsom/dkvmmanager/internal/models"
-	"github.com/spf13/viper"
 )
 
 // mockRepositoryForTopology creates a repository with a temporary config file

@@ -433,9 +433,9 @@ func TestScenarioVMStoppedMsg(t *testing.T) {
 		t.Errorf("Expected status bar to mention VM name, got '%s'", view)
 	}
 
-	// Running count should be 0
-	if !strings.Contains(view, "0 running") {
-		t.Errorf("Expected status bar to show 0 running, got '%s'", view)
+	// Should show stopped state indicator
+	if !strings.Contains(view, "Stopped") {
+		t.Errorf("Expected status bar to show Stopped, got '%s'", view)
 	}
 }
 

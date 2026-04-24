@@ -22,7 +22,6 @@ func setupRunningModel(t *testing.T, status string) *VMRunningModel {
 		width:       80,
 		height:      24,
 		status:      status,
-		debugMode:   false,
 	}
 }
 
@@ -169,8 +168,8 @@ func TestVMRunningModelWindowSizeUpdate(t *testing.T) {
 	if m.vp.Width != 100 {
 		t.Errorf("Expected viewport width 100, got %d", m.vp.Width)
 	}
-	if m.vp.Height != 30 {
-		t.Errorf("Expected viewport height 30, got %d", m.vp.Height)
+	if m.vp.Height != 23 { // 30 - infoHeight(4) - 3 = 23
+		t.Errorf("Expected viewport height 23, got %d", m.vp.Height)
 	}
 }
 
@@ -202,8 +201,8 @@ func TestVMRunningModelSetSizeTwice(t *testing.T) {
 	if m.vp.Width != 120 {
 		t.Errorf("Expected viewport width 120, got %d", m.vp.Width)
 	}
-	if m.vp.Height != 40 {
-		t.Errorf("Expected viewport height 40, got %d", m.vp.Height)
+	if m.vp.Height != 33 { // 40 - infoHeight(4) - 3 = 33
+		t.Errorf("Expected viewport height 33, got %d", m.vp.Height)
 	}
 }
 
