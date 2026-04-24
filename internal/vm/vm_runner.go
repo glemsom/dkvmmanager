@@ -454,8 +454,11 @@ func (r *VMRunner) Start() error {
 		return err
 	}
 
-	// Execute start script asynchronously (non-blocking, errors logged to logChan)
-	go r.executeStartScriptAsync()
+	// Execute start script (blocking - must complete before QEMU starts
+	// so that PCI devices are bound to vfio-pci and /dev/vfio/* are available)
+	if err := r.executeStartScript(); err != nil {
+		return fmt.Errorf("start script failed: %w", err)
+	}
 
 	vmDataDir := r.getVMDataDir()
 	r.socketPath = filepath.Join("/tmp", fmt.Sprintf("dkvm-%s.sock", r.vm.ID))
@@ -952,18 +955,7 @@ func (r *VMRunner) executeStartScript() error {
 	return nil
 }
 
-// executeStartScriptAsync runs the start script in a goroutine without blocking
-func (r *VMRunner) executeStartScriptAsync() {
-	// Run in a goroutine to not block VM startup
-	go func() {
-		if err := r.executeStartScript(); err != nil {
-			// Error already logged to r.logChan by executeStartScript
-			if debugMode {
-				log.Printf("[DEBUG] start script (async) error: %v", err)
-			}
-		}
-	}()
-}
+
 
 // executeStopScript executes the stop script after QEMU exits (non-blocking)
 func (r *VMRunner) executeStopScript() {
