@@ -254,12 +254,10 @@ func (r *VMRunner) startTPM(vmDataDir string) error {
 	cmd := exec.Command(r.cfg.TPMBinary,
 		"socket",
 		"--tpm2",
-		"--server",
+		"--ctrl",
 		fmt.Sprintf("type=unixio,path=%s", tpmSock),
 		"--flags",
 		"not-need-init",
-		"--ctrl",
-		fmt.Sprintf("type=unixio,path=%s/ctrl", tpmDir),
 		"--tpmstate",
 		fmt.Sprintf("dir=%s", tpmDir),
 		"--log",
@@ -337,7 +335,6 @@ func (r *VMRunner) cleanupTPM() {
 	vmDataDir := r.getVMDataDir()
 	tpmDir := filepath.Join(vmDataDir, "tpm")
 	tpmSock := filepath.Join(vmDataDir, "tpm.sock")
-	ctrlSock := filepath.Join(tpmDir, "ctrl")
 	pidPath := filepath.Join(tpmDir, "swtpm.pid")
 
 	log.Printf("[INFO] TPM stopping for VM %s (preserving state in %s)", r.vm.Name, tpmDir)
@@ -361,7 +358,7 @@ func (r *VMRunner) cleanupTPM() {
 
 	// Remove transient runtime files only – DO NOT remove tpmDir (persistent state)
 	os.Remove(tpmSock)
-	os.Remove(ctrlSock)
+	// ctrlSock was removed — now tpm.sock is used for both control and TPM
 	os.Remove(pidPath)
 
 	if debugMode {
@@ -373,7 +370,7 @@ func (r *VMRunner) cleanupTPM() {
 // It is best-effort and ignores errors (SIGTERM fallback handles the rest).
 // CMD_SHUTDOWN = 0x00000003 (big-endian 4-byte command).
 func (r *VMRunner) shutdownTPMControl(tpmDir string) error {
-	ctrlPath := filepath.Join(tpmDir, "ctrl")
+	ctrlPath := filepath.Join(tpmDir, "tpm.sock")
 
 	conn, err := net.DialTimeout("unix", ctrlPath, 500*time.Millisecond)
 	if err != nil {
@@ -523,6 +520,10 @@ func (r *VMRunner) Start() error {
 		return fmt.Errorf("failed to start QEMU: %w", err)
 	}
 
+	if debugMode {
+		log.Printf("[DEBUG] QEMU process started: PID=%d, socket=%s", r.cmd.Process.Pid, r.socketPath)
+	}
+
 	// TPM: mark as started so defer doesn't clean up
 	if r.vm.TPMEnabled {
 		qemuStarted = true
@@ -540,6 +541,11 @@ func (r *VMRunner) Start() error {
 
 	// Monitor process exit
 	go r.monitorProcess()
+
+	// Start QMP watchdog to diagnose connection issues
+	if debugMode {
+		go r.qmpWatchdog()
+	}
 
 	// Wait for QMP socket and connect
 	go r.connectQMP()
@@ -640,6 +646,10 @@ func (r *VMRunner) readOutput(pipe io.Reader, source string) {
 			r.logChan <- prefix + line
 		}
 	}
+	// Scanner ended - check error
+	if err := scanner.Err(); err != nil {
+		log.Printf("[DEBUG] readOutput(%s) error: %v", source, err)
+	}
 }
 
 // readScriptOutput reads lines from a script pipe and writes them to the debug log
@@ -685,10 +695,71 @@ func (r *VMRunner) monitorProcess() {
 	}
 }
 
+// qmpWatchdog periodically checks QMP connection status and logs diagnostics
+func (r *VMRunner) qmpWatchdog() {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		r.mu.Lock()
+		running := r.running
+		proc := r.cmdProcess
+		r.mu.Unlock()
+
+		if !running {
+			return // VM stopped
+		}
+
+		// Check if QEMU process is still alive
+		if proc != nil {
+			if err := proc.Signal(syscall.Signal(0)); err != nil {
+				log.Printf("[DEBUG] QMP watchdog: QEMU process no longer alive: %v", err)
+				return
+			}
+		}
+
+		// Check if QMP socket exists
+		if _, err := os.Stat(r.socketPath); os.IsNotExist(err) {
+			log.Printf("[DEBUG] QMP watchdog: QMP socket not yet created")
+			continue
+		}
+
+		// Check if QMP client connected
+		r.mu.Lock()
+		qmpClient := r.qmpClient
+		r.mu.Unlock()
+		if qmpClient == nil {
+			log.Printf("[DEBUG] QMP watchdog: QEMU running but QMP not yet connected (socket exists)")
+		} else {
+			// QMP connected, watchdog no longer needed
+			return
+		}
+	}
+}
+
 // connectQMP waits for the QMP socket to appear, then negotiates
 func (r *VMRunner) connectQMP() {
 	maxAttempts := 30
 	for i := 0; i < maxAttempts; i++ {
+		// Check if QEMU process is still alive before proceeding
+		r.mu.Lock()
+		running := r.running
+		proc := r.cmdProcess
+		r.mu.Unlock()
+		
+		if !running || proc == nil {
+			if debugMode {
+				log.Printf("[DEBUG] QMP connect aborted: VM no longer running or process nil")
+			}
+			return
+		}
+		
+		// Verify QEMU process is still alive (signal 0)
+		if err := proc.Signal(syscall.Signal(0)); err != nil {
+			log.Printf("[DEBUG] QMP connect aborted: QEMU process died")
+			return
+		}
+
 		if _, err := os.Stat(r.socketPath); err == nil {
 			// Socket exists, try to connect
 			time.Sleep(500 * time.Millisecond) // Brief wait for QEMU to be ready
