@@ -21,10 +21,9 @@ func (m *PCIPassthroughFormModel) validateAndSave() (tea.Model, tea.Cmd) {
 		if !m.selected[dev.Address] {
 			continue
 		}
-		romPath := m.romPaths[dev.Address]
 		devices = append(devices, models.PCIPassthroughDevice{
 			Address:   dev.Address,
-			ROMPath:   romPath,
+			ROMPath:   "", // ROM field removed from UI; preserved for backward compatibility
 			Vendor:    dev.Vendor,
 			Device:    dev.Device,
 			Name:      dev.Name,

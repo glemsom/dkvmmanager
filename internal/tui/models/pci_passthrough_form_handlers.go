@@ -2,8 +2,6 @@
 package models
 
 import (
-	"fmt"
-
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -51,17 +49,8 @@ func (m *PCIPassthroughFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd)
 		m.syncViewport()
 	case "enter", " ":
 		return m.handleEnter()
-	case "backspace":
-		m.handleBackspace()
-		m.syncViewport()
-	case "delete":
-		m.handleDelete()
-		m.syncViewport()
 	default:
-		if len(key) == 1 {
-			m.handleCharInput(key)
-			m.syncViewport()
-		}
+		// No text input fields remaining (ROM removed)
 	}
 	return m, nil
 }
@@ -78,59 +67,11 @@ func (m *PCIPassthroughFormModel) handleEnter() (tea.Model, tea.Cmd) {
 	case pciSave:
 		return m.validateAndSave()
 	default:
-		// On a ROM path field: move to next field
+		// Skip non-focusable positions
 		m.moveFocus(1)
 		m.syncViewport()
 		return m, nil
 	}
-}
-
-// handleBackspace deletes the character before cursor in the focused ROM path field
-func (m *PCIPassthroughFormModel) handleBackspace() {
-	pos := m.currentPos()
-	if pos.kind != pciROMPath {
-		return
-	}
-	val := m.romPaths[pos.deviceAddr]
-	key := fmt.Sprintf("rom_%s", pos.deviceAddr)
-	cursor := m.effectiveCursor(key, val)
-
-	if cursor > 0 {
-		newVal := val[:cursor-1] + val[cursor:]
-		m.romPaths[pos.deviceAddr] = newVal
-		m.setCursorOffset(key, cursor-1)
-	}
-}
-
-// handleDelete deletes the character ahead of cursor in the focused ROM path field
-func (m *PCIPassthroughFormModel) handleDelete() {
-	pos := m.currentPos()
-	if pos.kind != pciROMPath {
-		return
-	}
-	val := m.romPaths[pos.deviceAddr]
-	key := fmt.Sprintf("rom_%s", pos.deviceAddr)
-	cursor := m.effectiveCursor(key, val)
-
-	if cursor < len(val) {
-		newVal := val[:cursor] + val[cursor+1:]
-		m.romPaths[pos.deviceAddr] = newVal
-	}
-}
-
-// handleCharInput inserts a character at the cursor in the focused ROM path field
-func (m *PCIPassthroughFormModel) handleCharInput(ch string) {
-	pos := m.currentPos()
-	if pos.kind != pciROMPath {
-		return
-	}
-	val := m.romPaths[pos.deviceAddr]
-	key := fmt.Sprintf("rom_%s", pos.deviceAddr)
-	cursor := m.effectiveCursor(key, val)
-
-	newVal := val[:cursor] + ch + val[cursor:]
-	m.romPaths[pos.deviceAddr] = newVal
-	m.setCursorOffset(key, cursor+1)
 }
 
 // View implements tea.Model
