@@ -84,8 +84,32 @@ func (m *VMRunningModel) Init() tea.Cmd {
 	return tea.Batch(
 		m.waitForLog(),
 		m.waitForVMExit(),
-		m.pollStatus(),
+		m.pollStatus(),      // periodic (500ms)
+		m.initialStatus(),   // immediate
 	)
+}
+
+// initialStatus performs an immediate status check and returns a command
+func (m *VMRunningModel) initialStatus() tea.Cmd {
+	return func() tea.Msg {
+		client := m.runner.QMPClient()
+		if client == nil {
+			return VMStatusUpdateMsg{Status: "starting"}
+		}
+		status, err := client.QueryStatus()
+		if err != nil {
+			return VMStatusUpdateMsg{Status: "unknown"}
+		}
+		// Try to get thread info
+		var threads []int
+		cpus, err := client.QueryCPUsFast()
+		if err == nil {
+			for _, cpu := range cpus {
+				threads = append(threads, cpu.ThreadID)
+			}
+		}
+		return VMStatusUpdateMsg{Status: status, Threads: threads}
+	}
 }
 
 // waitForLog returns a tea.Cmd that reads one log line from the runner
@@ -132,7 +156,7 @@ func (m *VMRunningModel) waitForVMExit() tea.Cmd {
 
 // pollStatus returns a tea.Cmd that polls VM status periodically
 func (m *VMRunningModel) pollStatus() tea.Cmd {
-	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
 		// Guard against nil runner (shouldn't happen in practice but defensive)
 		if m.runner == nil {
 			return VMStatusUpdateMsg{Status: "starting"}

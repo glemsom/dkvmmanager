@@ -454,10 +454,8 @@ func (r *VMRunner) Start() error {
 		return err
 	}
 
-	// Execute start script (block VM start if it fails)
-	if err := r.executeStartScript(); err != nil {
-		return fmt.Errorf("start script failed: %w", err)
-	}
+	// Execute start script asynchronously (non-blocking, errors logged to logChan)
+	go r.executeStartScriptAsync()
 
 	vmDataDir := r.getVMDataDir()
 	r.socketPath = filepath.Join("/tmp", fmt.Sprintf("dkvm-%s.sock", r.vm.ID))
@@ -652,11 +650,34 @@ func (r *VMRunner) readOutput(pipe io.Reader, source string) {
 	}
 }
 
-// readScriptOutput reads lines from a script pipe and writes them to the debug log
+// readScriptOutput reads lines from a script pipe and sends them to the log channel
 func (r *VMRunner) readScriptOutput(pipe io.Reader, source string) {
 	scanner := bufio.NewScanner(pipe)
 	for scanner.Scan() {
 		line := scanner.Text()
+		prefix := ""
+		switch source {
+		case "start script stdout":
+			prefix = "[start] "
+		case "start script stderr":
+			prefix = "[start ERR] "
+		case "stop script stdout":
+			prefix = "[stop] "
+		case "stop script stderr":
+			prefix = "[stop ERR] "
+		}
+		// Always send to log channel for UI display
+		select {
+		case r.logChan <- prefix + line:
+		default:
+			// Channel full, drop oldest
+			select {
+			case <-r.logChan:
+			default:
+			}
+			r.logChan <- prefix + line
+		}
+		// Also log in debug mode
 		if debugMode {
 			log.Printf("[DEBUG] %s: %s", source, line)
 		}
@@ -929,6 +950,19 @@ func (r *VMRunner) executeStartScript() error {
 	}
 
 	return nil
+}
+
+// executeStartScriptAsync runs the start script in a goroutine without blocking
+func (r *VMRunner) executeStartScriptAsync() {
+	// Run in a goroutine to not block VM startup
+	go func() {
+		if err := r.executeStartScript(); err != nil {
+			// Error already logged to r.logChan by executeStartScript
+			if debugMode {
+				log.Printf("[DEBUG] start script (async) error: %v", err)
+			}
+		}
+	}()
 }
 
 // executeStopScript executes the stop script after QEMU exits (non-blocking)
