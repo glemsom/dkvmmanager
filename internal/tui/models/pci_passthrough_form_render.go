@@ -36,6 +36,12 @@ var pciUSBStyle = styles.FormFocusStyle()
 // pciWarnStyle is the warning text style
 var pciWarnStyle = styles.WarningTextStyle()
 
+// pciHeaderStyle is the IOMMU group header style
+var pciHeaderStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("252"))
+
+// pciAddrStyle is the PCI address style (bold/high-contrast for quick scanning)
+var pciAddrStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("15"))
+
 // renderAllLines produces the full list of output lines for the form
 func (m *PCIPassthroughFormModel) renderAllLines() []string {
 	var lines []string
@@ -85,6 +91,10 @@ func (m *PCIPassthroughFormModel) renderAllLines() []string {
 // renderPosition appends lines for one focus position
 func (m *PCIPassthroughFormModel) renderPosition(lines []string, pos pciFocusPos, focused bool) []string {
 	switch pos.kind {
+	case pciGroupHeader:
+		lines = append(lines, m.renderGroupHeader(pos))
+		return lines
+
 	case pciToggle:
 		dev := m.getDeviceByAddr(pos.deviceAddr)
 		if dev == nil {
@@ -93,13 +103,6 @@ func (m *PCIPassthroughFormModel) renderPosition(lines []string, pos pciFocusPos
 		}
 		selected := m.selected[pos.deviceAddr]
 		lines = append(lines, m.renderDeviceToggle(dev, selected, focused))
-		return lines
-
-	case pciROMPath:
-		val := m.romPaths[pos.deviceAddr]
-		key := fmt.Sprintf("rom_%s", pos.deviceAddr)
-		cursor := m.effectiveCursor(key, val)
-		lines = append(lines, m.renderROMPath(pos.deviceAddr, val, cursor, focused))
 		return lines
 
 	case pciSave:
@@ -115,7 +118,8 @@ func (m *PCIPassthroughFormModel) renderPosition(lines []string, pos pciFocusPos
 	return lines
 }
 
-// renderDeviceToggle renders a PCI device as a toggle line
+// renderDeviceToggle renders a PCI device as a toggle line.
+// Format: [X] 0000:01:00.0 [GPU] NVIDIA GeForce GTX 1080 [10de:1b80] (IOMMU:1)
 func (m *PCIPassthroughFormModel) renderDeviceToggle(dev *models.PCIDevice, selected, focused bool) string {
 	prefix := "  "
 	if focused {
@@ -138,6 +142,9 @@ func (m *PCIPassthroughFormModel) renderDeviceToggle(dev *models.PCIDevice, sele
 		}
 	}
 
+	// PCI address first (bold, high-contrast for quick scanning)
+	addrStr := pciAddrStyle.Render(dev.Address)
+
 	// Device type tag
 	var tag string
 	if dev.IsGPU {
@@ -146,51 +153,74 @@ func (m *PCIPassthroughFormModel) renderDeviceToggle(dev *models.PCIDevice, sele
 		tag = pciUSBStyle.Render("[USB]")
 	}
 
+	// Device name
+	nameStr := pciLabelStyle.Render(dev.Name)
+	vendorDevStr := pciMutedStyle.Render(fmt.Sprintf(" [%s:%s]", dev.Vendor, dev.Device))
+
 	// IOMMU info
 	iommuStr := ""
 	if dev.IOMMUGroup >= 0 {
 		iommuStr = pciMutedStyle.Render(fmt.Sprintf(" (IOMMU:%d)", dev.IOMMUGroup))
 	}
 
-	// Device name
-	nameStr := pciLabelStyle.Render(dev.Name)
-	addrStr := pciMutedStyle.Render(fmt.Sprintf(" %s", dev.Address))
-	vendorDevStr := pciMutedStyle.Render(fmt.Sprintf(" [%s:%s]", dev.Vendor, dev.Device))
-
-	return prefix + togglePart + " " + tag + " " + nameStr + addrStr + vendorDevStr + iommuStr
+	return prefix + togglePart + " " + addrStr + " " + tag + " " + nameStr + vendorDevStr + iommuStr
 }
 
-// renderROMPath renders a ROM path text input for a device
-func (m *PCIPassthroughFormModel) renderROMPath(addr, value string, cursor int, focused bool) string {
-	prefix := "    "
-	if focused {
-		prefix = pciFocusStyle.Render("    > ")
+// renderGroupHeader renders an IOMMU group header line.
+// Format: ── IOMMU Group 1 (2 devices, all selected) ──
+func (m *PCIPassthroughFormModel) renderGroupHeader(pos pciFocusPos) string {
+	groupNum := pos.groupNum
+
+	// Find all devices in this group (consecutive toggles after this header)
+	headerIdx := -1
+	for i, p := range m.positions {
+		if p.kind == pciGroupHeader && p.groupNum == groupNum {
+			headerIdx = i
+			break
+		}
+	}
+	if headerIdx < 0 {
+		return ""
 	}
 
-	label := pciMutedStyle.Render("ROM: ")
-
-	var valPart string
-	if focused {
-		if cursor < len(value) {
-			before := value[:cursor]
-			at := string(value[cursor])
-			after := ""
-			if cursor+1 < len(value) {
-				after = value[cursor+1:]
+	// Walk forward collecting device pointers from this group
+	var devices []*models.PCIDevice
+	for i := headerIdx + 1; i < len(m.positions); i++ {
+		if m.positions[i].kind == pciToggle {
+			d := m.getDeviceByAddr(m.positions[i].deviceAddr)
+			if d != nil {
+				devices = append(devices, d)
 			}
-			valPart = pciInputStyle.Render(before) +
-				lipgloss.NewStyle().Reverse(true).Render(at) +
-				pciInputStyle.Render(after)
 		} else {
-			valPart = pciInputStyle.Render(value) + pciFocusStyle.Render("_")
-		}
-	} else {
-		if value == "" {
-			valPart = pciMutedStyle.Render("(optional ROM path)")
-		} else {
-			valPart = pciInputStyle.Render(value)
+			break // Hit next header or save button
 		}
 	}
 
-	return prefix + label + valPart
+	// Count selected devices in this group
+	selectedCount := 0
+	for _, d := range devices {
+		if m.selected[d.Address] {
+			selectedCount++
+		}
+	}
+
+	// Build label
+	var label string
+	if groupNum < 0 {
+		label = "Ungrouped Devices"
+	} else {
+		label = fmt.Sprintf("IOMMU Group %d", groupNum)
+	}
+
+	// Selection status suffix
+	status := fmt.Sprintf("(%d devices)", len(devices))
+	if selectedCount > 0 {
+		if selectedCount == len(devices) {
+			status = fmt.Sprintf("(%d devices, all selected)", len(devices))
+		} else {
+			status = fmt.Sprintf("(%d devices, %d selected)", len(devices), selectedCount)
+		}
+	}
+
+	return pciHeaderStyle.Render("── " + label + " " + status + " ──")
 }

@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **PCI passthrough dialog**: Device lines now show PCI address first (bold/high-contrast) for quick identification: `[X] 0000:01:00.0 [GPU] NVIDIA GeForce GTX 1080 [10de:1b80] (IOMMU:1)`
+- **PCI passthrough dialog**: Devices are now grouped by IOMMU group with visual headers showing device count and selection status. Toggling a device auto-selects/deselects all devices in its IOMMU group (strict mode).
 - **TPM state persistence**: TPM state directory (`{vm}/tpm/`) is now preserved across VM restarts instead of being deleted
 - **Graceful TPM shutdown**: TPM processes are now shut down gracefully via the swtpm control channel before SIGTERM
 - **Orphaned swtpm detection**: Stale swtpm processes from previous runs are detected via PID file and killed before starting a new one
@@ -21,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **PCI ROM path field**: Removed the per-device ROM path text input from the PCI passthrough dialog (ROM field preserved in data model for backward compatibility but not editable in UI)
 - **TPM config screen**: Removed the "Edit TPM Binary" configuration screen from the TUI (TPM binary is now configured via config file only)
 - **TPMSocketPath config**: Removed `tpm_socket_path` configuration option (socket path is auto-derived per-VM)
 

@@ -7,21 +7,39 @@ import (
 	"github.com/glemsom/dkvmmanager/internal/models"
 )
 
-// rebuildPositions reconstructs the flat focus list from scanned devices
+// rebuildPositions reconstructs the flat focus list from IOMMU-grouped devices.
+// Group headers are inserted as pciGroupHeader positions but are marked as
+// non-focusable (they are rendered for context but skipped during navigation).
 func (m *PCIPassthroughFormModel) rebuildPositions() {
 	m.positions = nil
 
-	for _, dev := range m.devices {
-		// Toggle for each device
+	// Collect and sort group keys for deterministic ordering
+	var groupKeys []int
+	for k := range m.iommuGroups {
+		groupKeys = append(groupKeys, k)
+	}
+	// Sort: negative (ungrouped) goes last, then ascending numeric order
+	for i := 0; i < len(groupKeys); i++ {
+		for j := i + 1; j < len(groupKeys); j++ {
+			ki, kj := groupKeys[i], groupKeys[j]
+			// Treat -1 as infinity for sorting (put it last)
+			if ki == -1 || (kj != -1 && ki > kj) {
+				groupKeys[i], groupKeys[j] = groupKeys[j], groupKeys[i]
+			}
+		}
+	}
+
+	for _, group := range groupKeys {
+		// Group header (non-focusable — only for visual separation)
 		m.positions = append(m.positions, pciFocusPos{
-			kind:       pciToggle,
-			deviceAddr: dev.Address,
+			kind:     pciGroupHeader,
+			groupNum: group,
 		})
 
-		// ROM path field only for selected devices
-		if m.selected[dev.Address] {
+		// Devices within this group
+		for _, dev := range m.iommuGroups[group] {
 			m.positions = append(m.positions, pciFocusPos{
-				kind:       pciROMPath,
+				kind:       pciToggle,
 				deviceAddr: dev.Address,
 			})
 		}
@@ -52,34 +70,20 @@ func (m *PCIPassthroughFormModel) getDeviceByAddr(addr string) *models.PCIDevice
 	return nil
 }
 
-// cursorOffset returns the cursor offset for the given position key
-func (m *PCIPassthroughFormModel) cursorOffset(key string) int {
-	if off, ok := m.cursorOffsets[key]; ok {
-		return off
-	}
-	return -1
-}
-
-// setCursorOffset sets cursor offset; -1 means end
-func (m *PCIPassthroughFormModel) setCursorOffset(key string, off int) {
-	m.cursorOffsets[key] = off
-}
-
-// effectiveCursor returns the actual cursor position
-func (m *PCIPassthroughFormModel) effectiveCursor(key string, val string) int {
-	off := m.cursorOffset(key)
-	if off < 0 {
-		return len(val)
-	}
-	if off > len(val) {
-		return len(val)
-	}
-	return off
-}
-
-// moveFocus moves focus by delta in the flat positions list
+// moveFocus moves focus by delta in the flat positions list,
+// skipping non-focusable positions (group headers).
 func (m *PCIPassthroughFormModel) moveFocus(delta int) {
+	if delta == 0 {
+		return
+	}
 	m.focusIndex += delta
+
+	// Skip non-focusable positions (group headers)
+	for m.focusIndex >= 0 && m.focusIndex < len(m.positions) &&
+		m.positions[m.focusIndex].kind == pciGroupHeader {
+		m.focusIndex += delta
+	}
+
 	if m.focusIndex < 0 {
 		m.focusIndex = 0
 	}
@@ -88,12 +92,39 @@ func (m *PCIPassthroughFormModel) moveFocus(delta int) {
 	}
 }
 
-// toggleDevice toggles selection of a PCI device
+// toggleDevice toggles selection of a PCI device.
+// If the device belongs to an IOMMU group with multiple devices,
+// all devices in the same group are toggled together (strict mode).
 func (m *PCIPassthroughFormModel) toggleDevice(addr string) {
-	if m.selected[addr] {
-		delete(m.selected, addr)
-	} else {
-		m.selected[addr] = true
+	dev := m.getDeviceByAddr(addr)
+	if dev == nil {
+		return
+	}
+
+	group := dev.IOMMUGroup
+	if group < 0 {
+		group = -1
+	}
+
+	groupDevices, ok := m.iommuGroups[group]
+	if !ok || len(groupDevices) <= 1 {
+		// Ungrouped device or single-device group: toggle only this device
+		if m.selected[addr] {
+			delete(m.selected, addr)
+		} else {
+			m.selected[addr] = true
+		}
+		return
+	}
+
+	// Multi-device IOMMU group: strict mode — toggle ALL devices in the group
+	newState := !m.selected[addr]
+	for _, d := range groupDevices {
+		if newState {
+			m.selected[d.Address] = true
+		} else {
+			delete(m.selected, d.Address)
+		}
 	}
 }
 
@@ -115,9 +146,9 @@ func (m *PCIPassthroughFormModel) focusedLineIndex() int {
 		}
 
 		switch p.kind {
-		case pciToggle:
+		case pciGroupHeader:
 			line++
-		case pciROMPath:
+		case pciToggle:
 			line++
 		case pciSave:
 			line++ // blank before button
