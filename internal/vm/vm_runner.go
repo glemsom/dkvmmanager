@@ -3,12 +3,15 @@ package vm
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -213,20 +216,41 @@ func (r *VMRunner) waitForSocket(path string, timeout time.Duration) error {
 	return fmt.Errorf("timeout waiting for socket: %s", path)
 }
 
-// startTPM starts the swtpm process for this VM
+// startTPM starts the swtpm process for this VM.
+// TPM state in {vmDataDir}/tpm/ persists across VM restarts.
 func (r *VMRunner) startTPM(vmDataDir string) error {
+	pidFile := "swtpm.pid"
 	tpmDir := filepath.Join(vmDataDir, "tpm")
 	tpmSock := filepath.Join(vmDataDir, "tpm.sock")
+	pidPath := filepath.Join(tpmDir, pidFile)
 
-	// Create TPM state directory
+	// (A) Ensure state directory exists
 	if err := os.MkdirAll(tpmDir, 0700); err != nil {
 		return fmt.Errorf("failed to create TPM state dir: %w", err)
 	}
+	log.Printf("[INFO] TPM state dir: %s (persistent)", tpmDir)
 
-	// Remove stale socket
+	// (B) Remove stale socket (safe, does not affect running process)
 	os.Remove(tpmSock)
 
-	// Start swtpm
+	// (C) Detect and kill orphaned swtpm from previous run
+	if pidData, err := os.ReadFile(pidPath); err == nil && len(pidData) > 0 {
+		pid, perr := strconv.Atoi(strings.TrimSpace(string(pidData)))
+		if perr == nil && pid > 0 {
+			proc, ferr := os.FindProcess(pid)
+			if ferr == nil && proc != nil {
+				// Check if process is alive (signal 0)
+				if err := proc.Signal(syscall.Signal(0)); err == nil {
+					log.Printf("[WARN] Orphaned swtpm PID %d detected for VM %s – killing", pid, r.vm.Name)
+					_ = proc.Kill()
+					_, _ = proc.Wait() // reap
+				}
+			}
+		}
+		os.Remove(pidPath) // always remove stale PID file
+	}
+
+	// (D) Start swtpm
 	cmd := exec.Command(r.cfg.TPMBinary,
 		"socket",
 		"--tpm2",
@@ -242,17 +266,22 @@ func (r *VMRunner) startTPM(vmDataDir string) error {
 		fmt.Sprintf("level=20,file=%s/swtpm.log", tpmDir),
 	)
 	if err := cmd.Start(); err != nil {
-		// Clean up on failure
+		// Transient cleanup only – do NOT delete tpmDir (persistent state)
 		os.Remove(tpmSock)
-		os.RemoveAll(tpmDir)
 		return fmt.Errorf("failed to start swtpm: %w", err)
 	}
 
+	// (E) Cache process handle and write PID file
 	r.mu.Lock()
 	r.swtpmProcess = cmd.Process
 	r.mu.Unlock()
 
-	// Wait for socket to appear
+	_ = os.WriteFile(pidPath, []byte(strconv.Itoa(cmd.Process.Pid)), 0600)
+	if debugMode {
+		log.Printf("[DEBUG] TPM PID file written: %s", pidPath)
+	}
+
+	// (F) Wait for socket to appear
 	if err := r.waitForSocket(tpmSock, 5*time.Second); err != nil {
 		r.mu.Lock()
 		proc := r.swtpmProcess
@@ -264,7 +293,7 @@ func (r *VMRunner) startTPM(vmDataDir string) error {
 			_, _ = proc.Wait()
 		}
 		os.Remove(tpmSock)
-		os.RemoveAll(tpmDir)
+		os.Remove(pidPath)
 		return fmt.Errorf("swtpm socket not ready: %w", err)
 	}
 
@@ -283,19 +312,18 @@ func (r *VMRunner) startTPM(vmDataDir string) error {
 			// Try to wait for it to reap
 			_, _ = proc.Wait()
 			os.Remove(tpmSock)
-			os.RemoveAll(tpmDir)
+			os.Remove(pidPath)
 			return fmt.Errorf("swtpm process terminated unexpectedly")
 		}
 	}
 
-	if debugMode {
-		log.Printf("[DEBUG] TPM started for VM %s", r.vm.Name)
-	}
+	log.Printf("[INFO] TPM started for VM %s (PID: %d, state: %s)", r.vm.Name, cmd.Process.Pid, tpmDir)
 
 	return nil
 }
 
-// cleanupTPM terminates the swtpm process and removes TPM files
+// cleanupTPM terminates the swtpm process and removes transient runtime files.
+// Persistent TPM state in {vmDataDir}/tpm/ is preserved.
 func (r *VMRunner) cleanupTPM() {
 	r.mu.Lock()
 	proc := r.swtpmProcess
@@ -307,10 +335,17 @@ func (r *VMRunner) cleanupTPM() {
 	}
 
 	vmDataDir := r.getVMDataDir()
-	tpmSock := filepath.Join(vmDataDir, "tpm.sock")
 	tpmDir := filepath.Join(vmDataDir, "tpm")
+	tpmSock := filepath.Join(vmDataDir, "tpm.sock")
+	ctrlSock := filepath.Join(tpmDir, "ctrl")
+	pidPath := filepath.Join(tpmDir, "swtpm.pid")
 
-	// Graceful termination with timeout
+	log.Printf("[INFO] TPM stopping for VM %s (preserving state in %s)", r.vm.Name, tpmDir)
+
+	// Attempt graceful shutdown via control channel (best-effort, ignores errors)
+	r.shutdownTPMControl(tpmDir)
+
+	// Signal termination
 	_ = proc.Signal(syscall.SIGTERM)
 	done := make(chan error, 1)
 	go func() {
@@ -324,12 +359,58 @@ func (r *VMRunner) cleanupTPM() {
 		<-done
 	}
 
+	// Remove transient runtime files only – DO NOT remove tpmDir (persistent state)
 	os.Remove(tpmSock)
-	os.RemoveAll(tpmDir)
+	os.Remove(ctrlSock)
+	os.Remove(pidPath)
 
 	if debugMode {
-		log.Printf("[DEBUG] TPM cleaned up for VM %s", r.vm.Name)
+		log.Printf("[DEBUG] TPM cleaned up for VM %s (state preserved)", r.vm.Name)
 	}
+}
+
+// shutdownTPMControl attempts a graceful TPM shutdown via the swtpm control channel.
+// It is best-effort and ignores errors (SIGTERM fallback handles the rest).
+// CMD_SHUTDOWN = 0x00000003 (big-endian 4-byte command).
+func (r *VMRunner) shutdownTPMControl(tpmDir string) error {
+	ctrlPath := filepath.Join(tpmDir, "ctrl")
+
+	conn, err := net.DialTimeout("unix", ctrlPath, 500*time.Millisecond)
+	if err != nil {
+		if debugMode {
+			log.Printf("[DEBUG] TPM control socket not available: %v", err)
+		}
+		return err
+	}
+	defer conn.Close()
+
+	// CMD_SHUTDOWN = 0x00000003 (big-endian)
+	cmd := []byte{0x00, 0x00, 0x00, 0x03}
+	if err := binary.Write(conn, binary.BigEndian, cmd); err != nil {
+		if debugMode {
+			log.Printf("[DEBUG] Failed to send CMD_SHUTDOWN: %v", err)
+		}
+		return err
+	}
+
+	// Read response (1 byte status)
+	var status byte
+	if err := binary.Read(conn, binary.BigEndian, &status); err != nil {
+		if debugMode {
+			log.Printf("[DEBUG] Failed to read CMD_SHUTDOWN response: %v", err)
+		}
+		return err
+	}
+
+	if status != 0 {
+		log.Printf("[WARN] CMD_SHUTDOWN returned non-zero status: 0x%02x", status)
+		return fmt.Errorf("shutdown failed, status=0x%02x", status)
+	}
+
+	if debugMode {
+		log.Printf("[DEBUG] TPM control shutdown successful for VM %s", r.vm.Name)
+	}
+	return nil
 }
 
 // Start launches the QEMU process and connects QMP

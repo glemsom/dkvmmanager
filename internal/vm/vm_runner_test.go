@@ -3,7 +3,10 @@ package vm
 import (
 	"os"
 	"path/filepath"
+	"strconv"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
 	"github.com/glemsom/dkvmmanager/internal/models"
@@ -769,5 +772,176 @@ func TestBuildQEMUArgsWithHostTopologyInvalidCPU(t *testing.T) {
 	// Should still have -smp args
 	if !containsString(argStr, "-smp") {
 		t.Error("Expected -smp args even when some CPUs are invalid")
+	}
+}
+
+// --- TPM Persistence Tests ---
+
+func TestCleanupPreservesTPMState(t *testing.T) {
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	if err := os.MkdirAll(vmDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	tpmDir := filepath.Join(vmDir, "tpm")
+	if err := os.MkdirAll(tpmDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create fake TPM state files
+	stateFile := filepath.Join(tpmDir, "tpm2-00.permall")
+	if err := os.WriteFile(stateFile, []byte("fake-tpm-state"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	ctrlSock := filepath.Join(tpmDir, "ctrl")
+	if err := os.WriteFile(ctrlSock, []byte{}, 0600); err != nil {
+		t.Fatal(err)
+	}
+	pidPath := filepath.Join(tpmDir, "swtpm.pid")
+	if err := os.WriteFile(pidPath, []byte("12345"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Start a fake background process to simulate swtpm
+	fakeProc, err := os.StartProcess("/bin/sleep", []string{"sleep", "60"}, &os.ProcAttr{})
+	if err != nil {
+		t.Skipf("Cannot start fake process: %v (test skipped)", err)
+	}
+	defer fakeProc.Kill()
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+	vm := &models.VM{ID: "1", Name: "test"}
+	runner := NewVMRunner(vm, cfg)
+	// Inject fake swtpm process
+	runner.swtpmProcess = fakeProc
+
+	// Create a transient socket file (like swtpm would)
+	tpmSock := filepath.Join(vmDir, "tpm.sock")
+	os.WriteFile(tpmSock, []byte{}, 0600)
+
+	// Run cleanup
+	runner.cleanupTPM()
+
+	// Wait a moment for cleanup to complete
+	time.Sleep(100 * time.Millisecond)
+
+	// Transient files should be removed
+	if _, err := os.Stat(tpmSock); err == nil {
+		t.Error("tpm.sock should have been removed")
+	}
+	if _, err := os.Stat(ctrlSock); err == nil {
+		t.Error("ctrl socket should have been removed")
+	}
+	if _, err := os.Stat(pidPath); err == nil {
+		t.Error("swtpm.pid should have been removed")
+	}
+
+	// TPM state directory should STILL exist
+	if _, err := os.Stat(tpmDir); err != nil {
+		t.Errorf("TPM state dir should still exist: %v", err)
+	}
+
+	// State files should still exist
+	if _, err := os.Stat(stateFile); err != nil {
+		t.Errorf("TPM state file should still exist: %v", err)
+	}
+}
+
+func TestStartTPMErrorDoesNotDeleteState(t *testing.T) {
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	if err := os.MkdirAll(vmDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	tpmDir := filepath.Join(vmDir, "tpm")
+	if err := os.MkdirAll(tpmDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create fake TPM state files
+	stateFile := filepath.Join(tpmDir, "tpm2-00.permall")
+	if err := os.WriteFile(stateFile, []byte("fake-tpm-state"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+		TPMBinary:  "/nonexistent/swtpm-binary", // will fail to start
+	}
+	vm := &models.VM{ID: "1", Name: "test"}
+	runner := NewVMRunner(vm, cfg)
+
+	// startTPM should fail
+	err := runner.startTPM(vmDir)
+	if err == nil {
+		t.Fatal("Expected startTPM to fail with invalid binary")
+	}
+
+	// TPM state dir must still exist
+	if _, err := os.Stat(tpmDir); err != nil {
+		t.Errorf("TPM state dir should still exist after start error: %v", err)
+	}
+
+	// State files must still exist
+	if _, err := os.Stat(stateFile); err != nil {
+		t.Errorf("TPM state file should still exist after start error: %v", err)
+	}
+}
+
+func TestStartTPMOrphanKill(t *testing.T) {
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	if err := os.MkdirAll(vmDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	tpmDir := filepath.Join(vmDir, "tpm")
+	if err := os.MkdirAll(tpmDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a fake "orphan" process
+	fakeProc, err := os.StartProcess("/bin/sleep", []string{"sleep", "60"}, &os.ProcAttr{})
+	if err != nil {
+		t.Skipf("Cannot start fake process: %v (test skipped)", err)
+	}
+	defer fakeProc.Kill()
+
+	// Write PID file pointing to the fake orphan
+	pidPath := filepath.Join(tpmDir, "swtpm.pid")
+	if err := os.WriteFile(pidPath, []byte(strconv.Itoa(fakeProc.Pid)), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+		TPMBinary:  "/nonexistent/swtpm-binary", // will fail to start
+	}
+	vm := &models.VM{ID: "1", Name: "test"}
+	runner := NewVMRunner(vm, cfg)
+
+	// startTPM should fail (bad binary) but should have killed the orphan first
+	err = runner.startTPM(vmDir)
+	if err == nil {
+		t.Fatal("Expected startTPM to fail with invalid binary")
+	}
+
+	// The orphan process should have been killed
+	// Give it a moment to actually die
+	time.Sleep(50 * time.Millisecond)
+	if err := fakeProc.Signal(syscall.Signal(0)); err == nil {
+		t.Error("Orphan process should have been killed by orphan detection")
+	}
+
+	// PID file should be removed (orphan detection removes it)
+	if _, err := os.Stat(pidPath); err == nil {
+		t.Error("Stale PID file should have been removed after orphan kill")
 	}
 }

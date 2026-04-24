@@ -29,9 +29,6 @@ type Config struct {
 	// QEMU binary path
 	QEMUPath string `mapstructure:"qemu_path"`
 
-	// TPM socket path
-	TPMSocketPath string `mapstructure:"tpm_socket_path"`
-
 	// TPM binary path
 	TPMBinary string `mapstructure:"tpm_binary"`
 
@@ -49,7 +46,6 @@ func DefaultConfig() *Config {
 		BIOSVars:      "/usr/share/OVMF/OVMF_VARS.fd",
 		NetworkBridge: "br0",
 		QEMUPath:      "/usr/bin/qemu-system-x86_64",
-		TPMSocketPath: "/var/run/swtpm",
 		TPMBinary:     "/usr/bin/swtpm",
 		LogFile:       "/var/log/dkvm.log",
 	}
@@ -72,7 +68,6 @@ func Load() *Config {
 	viper.SetDefault("bios_vars", cfg.BIOSVars)
 	viper.SetDefault("network_bridge", cfg.NetworkBridge)
 	viper.SetDefault("qemu_path", cfg.QEMUPath)
-	viper.SetDefault("tpm_socket_path", cfg.TPMSocketPath)
 	viper.SetDefault("tpm_binary", cfg.TPMBinary)
 	viper.SetDefault("log_file", cfg.LogFile)
 
@@ -134,7 +129,6 @@ func (c *Config) Save() error {
 	viper.Set("bios_vars", c.BIOSVars)
 	viper.Set("network_bridge", c.NetworkBridge)
 	viper.Set("qemu_path", c.QEMUPath)
-	viper.Set("tpm_socket_path", c.TPMSocketPath)
 	viper.Set("tpm_binary", c.TPMBinary)
 	viper.Set("log_file", c.LogFile)
 
