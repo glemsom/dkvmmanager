@@ -1,43 +1,14 @@
 package styles
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/lipgloss"
+	theme "github.com/glemsom/dkvmmanager/internal/tui/theme"
 )
 
 // Colors defines the Tokyo Night Storm color palette
-var Colors = struct {
-	Primary             lipgloss.Color // Main accent (Blue)
-	PrimaryDim          lipgloss.Color // Dimmed for backgrounds
-	Secondary           lipgloss.Color // Secondary actions (Purple)
-	SecondaryDim        lipgloss.Color // Dimmed for backgrounds
-	Success             lipgloss.Color // Success states (Teal)
-	SuccessDim          lipgloss.Color // Subtle background tints
-	Warning             lipgloss.Color // Warning states (Orange)
-	WarningDim          lipgloss.Color // Subtle background tints
-	Error               lipgloss.Color // Error states (Red-pink)
-	ErrorDim            lipgloss.Color // Subtle background tints
-	Muted               lipgloss.Color // Disabled/muted text (Blue-gray)
-	Background          lipgloss.Color // Panel backgrounds (Deep navy)
-	Border              lipgloss.Color // Border color (Blue-gray)
-	FocusedBackground   lipgloss.Color // Focused pane background (Lighter navy)
-	UnfocusedBackground lipgloss.Color // Unfocused pane background (Darker navy)
-}{
-	Primary:             "7aa2f7",  // Blue (Storm)
-	PrimaryDim:          "292e42",  // Blue-tinted dark
-	Secondary:           "bb9af7",  // Purple
-	SecondaryDim:        "2a2e3f",  // Purple-tinted dark
-	Success:             "73daca",  // Teal green
-	SuccessDim:          "1a1f2e",  // Subtle green tint
-	Warning:            "e0af68",  // Orange/yellow
-	WarningDim:         "2f1f1a",  // Subtle yellow tint
-	Error:              "f7768e",  // Red pink
-	ErrorDim:           "2f1a1f",  // Subtle red tint
-	Muted:              "565f89",  // Muted blue-gray
-	Background:          "#1a1b26", // Deep navy
-	Border:              "#3b4261", // Muted blue
-	FocusedBackground:   "#1f2335", // Lighter navy
-	UnfocusedBackground: "#16161e", // Darker navy
-}
+var Colors = theme.DefaultTheme
 
 // StatusColors defines colors for VM status indicators
 var StatusColors = struct {
@@ -45,9 +16,9 @@ var StatusColors = struct {
 	Stopped lipgloss.Color
 	Error   lipgloss.Color
 }{
-	Running: "73daca", // Teal green
-	Stopped: "565f89", // Muted blue-gray
-	Error:   "f7768e", // Red pink
+	Running: theme.DefaultTheme.Success,
+	Stopped: theme.DefaultTheme.Muted,
+	Error:   theme.DefaultTheme.Error,
 }
 
 // LayeredPanelStyle returns a styled panel with gradient border effect
@@ -84,7 +55,7 @@ func PanelWithTitleStyle(title string) lipgloss.Style {
 // NormalTextStyle returns the default text style
 func NormalTextStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252")) // Light gray
+		Foreground(Colors.Foreground)
 }
 
 // SelectedTextStyle returns the style for selected text
@@ -104,7 +75,7 @@ func FocusedTextStyle() lipgloss.Style {
 // DisabledTextStyle returns the style for disabled text
 func DisabledTextStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(Colors.Muted).
+		Foreground(Colors.ForegroundDim).
 		Strikethrough(false)
 }
 
@@ -273,6 +244,7 @@ func ActiveBorderStyle() lipgloss.Style {
 func ListItemSelectedStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(Colors.Primary).
+		Background(Colors.HoverBackground).
 		Bold(true).
 		PaddingLeft(1)
 }
@@ -280,7 +252,7 @@ func ListItemSelectedStyle() lipgloss.Style {
 // ListItemNormalStyle returns the style for normal list items
 func ListItemNormalStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252")).
+		Foreground(Colors.ForegroundDim).
 		PaddingLeft(1)
 }
 
@@ -301,7 +273,7 @@ func HelpKeyStyle() lipgloss.Style {
 // HelpDescStyle returns the style for help descriptions
 func HelpDescStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252"))
+		Foreground(Colors.ForegroundDim)
 }
 
 // HelpSeparatorStyle returns the style for help separators
@@ -340,4 +312,35 @@ func FormInputStyle() lipgloss.Style {
 func FormMutedStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(Colors.Muted)
+}
+
+// ScreenBackgroundStyle returns a style for the full-screen background
+func ScreenBackgroundStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Background(Colors.Background)
+}
+
+// PadToScreen pads content to fill the full terminal height with background.
+// Each line is padded to the given width, and empty lines are appended
+// until the content reaches the given height.
+func PadToScreen(content string, width, height int) string {
+	lines := strings.Split(content, "\n")
+
+	// Pad each line to full width (background fills behind spaces)
+	for i, line := range lines {
+		lineWidth := lipgloss.Width(line)
+		if lineWidth < width {
+			lines[i] = line + strings.Repeat(" ", width-lineWidth)
+		}
+	}
+
+	// Pad to full height with blank lines
+	if len(lines) < height {
+		blankLine := strings.Repeat(" ", width)
+		for len(lines) < height {
+			lines = append(lines, blankLine)
+		}
+	}
+
+	return ScreenBackgroundStyle().Render(strings.Join(lines, "\n"))
 }

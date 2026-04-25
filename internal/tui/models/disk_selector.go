@@ -54,7 +54,7 @@ type BlockDeviceLoadedMsg struct{}
 // View returns the rendered view for BlockDeviceModel
 func (m *BlockDeviceModel) View() string {
 	headerStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("86")).
+		Foreground(styles.Colors.Foreground).
 		Bold(true)
 
 	selectedStyle := lipgloss.NewStyle().
@@ -62,16 +62,16 @@ func (m *BlockDeviceModel) View() string {
 		Bold(true)
 
 	deviceStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("247"))
+		Foreground(styles.Colors.Foreground)
 
 	sizeStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241"))
+		Foreground(styles.Colors.ForegroundDim)
 
 	typeStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("75"))
+		Foreground(styles.Colors.ForegroundDim)
 
 	roStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("196"))
+		Foreground(styles.Colors.Warning)
 
 	helpStyle := lipgloss.NewStyle().
 		Foreground(styles.Colors.Muted)
@@ -108,7 +108,7 @@ func (m *BlockDeviceModel) View() string {
 	}
 
 	if m.errorMsg != "" {
-		output += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render("Error: "+m.errorMsg)
+		output += "\n" + lipgloss.NewStyle().Foreground(styles.Colors.Error).Render("Error: "+m.errorMsg)
 	}
 
 	output += "\n\n"
@@ -205,14 +205,14 @@ func (m *AddDiskModel) View() string {
 
 	// Default
 	headerStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("86")).
+		Foreground(styles.Colors.Foreground).
 		Bold(true)
 	return headerStyle.Render("Add Disk")
 }
 
 func (m *AddDiskModel) renderSourceSelect() string {
 	headerStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("86")).
+		Foreground(styles.Colors.Foreground).
 		Bold(true)
 
 	selectedStyle := lipgloss.NewStyle().

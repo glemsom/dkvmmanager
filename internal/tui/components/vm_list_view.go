@@ -109,11 +109,21 @@ func (v *VMListView) View() string {
 		}
 		statusIcon := styles.StatusIndicator(status)
 
-		nameStyle := lipgloss.NewStyle()
+		var nameStyle lipgloss.Style
 		if i == v.cursor {
-			nameStyle = nameStyle.Foreground(styles.Colors.Primary).Bold(true)
+			// Enhanced selected item styling with focus awareness
+			if v.focused {
+				nameStyle = lipgloss.NewStyle().
+					Foreground(styles.Colors.Primary).
+					Bold(true).
+					Background(styles.Colors.FocusedBackground)
+			} else {
+				nameStyle = lipgloss.NewStyle().
+					Foreground(styles.Colors.Primary).
+					Bold(true)
+			}
 		} else {
-			nameStyle = nameStyle.Foreground(styles.Colors.Muted)
+			nameStyle = styles.ListItemNormalStyle()
 		}
 
 		cursor := normalCursor
@@ -125,5 +135,19 @@ func (v *VMListView) View() string {
 		lines = append(lines, line)
 	}
 
-	return strings.Join(lines, "\n")
+	// Apply panel styling for elevation and visual grouping
+	var content string
+	if v.focused {
+		content = styles.ActiveLayeredPanelStyle().
+			Width(v.width).
+			Height(v.height).
+			Render(strings.Join(lines, "\n"))
+	} else {
+		content = styles.LayeredPanelStyle().
+			Width(v.width).
+			Height(v.height).
+			Render(strings.Join(lines, "\n"))
+	}
+
+	return content
 }

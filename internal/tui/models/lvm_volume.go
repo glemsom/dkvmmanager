@@ -206,7 +206,7 @@ func (m *LVMVolumeModel) handleEnter() (tea.Model, tea.Cmd) {
 // View returns the rendered view for LVMVolumeModel
 func (m *LVMVolumeModel) View() string {
 	headerStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("86")).
+		Foreground(styles.Colors.Primary).
 		Bold(true)
 
 	selectedStyle := lipgloss.NewStyle().
@@ -214,15 +214,15 @@ func (m *LVMVolumeModel) View() string {
 		Bold(true)
 
 	volNameStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("247"))
+		Foreground(styles.Colors.Foreground)
 
-	sizeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+	sizeStyle := lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim)
 
-	typeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("75"))
+	typeStyle := lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim)
 
-	checkStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("76"))
+	checkStyle := lipgloss.NewStyle().Foreground(styles.Colors.Success)
 
-	roCheckStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+	roCheckStyle := lipgloss.NewStyle().Foreground(styles.Colors.Error)
 
 	helpStyle := lipgloss.NewStyle().
 		Foreground(styles.Colors.Muted)
@@ -265,7 +265,7 @@ func (m *LVMVolumeModel) View() string {
 	}
 
 	if m.errorMsg != "" {
-		output += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render("Error: "+m.errorMsg)
+		output += "\n" + lipgloss.NewStyle().Foreground(styles.Colors.Error).Render("Error: "+m.errorMsg)
 	}
 
 	output += "\n\n"

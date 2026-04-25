@@ -292,7 +292,7 @@ func TestHeadingStyle(t *testing.T) {
 	}{
 		{"Level 1", 1, Colors.Primary},
 		{"Level 2", 2, Colors.Secondary},
-		{"Level 3", 3, lipgloss.Color("252")},
+		{"Level 3", 3, Colors.Foreground},
 		{"Default", 4, Colors.Primary},
 	}
 

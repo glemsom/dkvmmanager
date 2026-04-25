@@ -55,17 +55,24 @@ func (d MenuItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 	}
 
 	str := "  " + item.MenuItem.Title
-	style := lipgloss.NewStyle().PaddingLeft(2)
+	var style lipgloss.Style
 
 	if item.MenuItem.Disabled {
-		style = styles.ListItemDisabledStyle()
+		style = styles.ListItemDisabledStyle().
+			Background(styles.Colors.Background).
+			Width(m.Width())
 	} else if index == m.Index() {
 		// ListItemSelectedStyle has PaddingLeft(1), we add ">  " prefix for total 4-space equivalent (matching unselected)
-		style = styles.ListItemSelectedStyle()
+		style = styles.ListItemSelectedStyle().
+			Width(m.Width())
 		str = ">  " + item.MenuItem.Title
 	} else {
 		// Use muted color for non-selected items to create visual hierarchy
-		style = style.Foreground(styles.Colors.Muted)
+		style = lipgloss.NewStyle().
+			Foreground(styles.Colors.Muted).
+			Background(styles.Colors.Background).
+			PaddingLeft(2).
+			Width(m.Width())
 	}
 
 	fmt.Fprint(w, style.Render(str))
@@ -96,15 +103,21 @@ func (d VMListItemDelegate) Render(w io.Writer, m list.Model, index int, listIte
 		return
 	}
 
-	str := "  " + item.VM.Name
-	style := lipgloss.NewStyle().PaddingLeft(2)
+	var str string
+	var style lipgloss.Style
 
 	if index == m.Index() {
-		style = styles.ListItemSelectedStyle()
+		style = styles.ListItemSelectedStyle().
+			Width(m.Width())
 		str = ">  " + item.VM.Name
 	} else {
 		// Use muted color for non-selected items to create visual hierarchy
-		style = style.Foreground(styles.Colors.Muted)
+		style = lipgloss.NewStyle().
+			Foreground(styles.Colors.Muted).
+			Background(styles.Colors.Background).
+			PaddingLeft(2).
+			Width(m.Width())
+		str = "  " + item.VM.Name
 	}
 
 	fmt.Fprint(w, style.Render(str))

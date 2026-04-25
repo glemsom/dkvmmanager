@@ -15,6 +15,7 @@ type VMDetailsPanel struct {
 	width  int
 	height int
 	title  string
+	focused bool
 }
 
 func NewVMDetailsPanel() *VMDetailsPanel {
@@ -23,11 +24,16 @@ func NewVMDetailsPanel() *VMDetailsPanel {
 		width:  0,
 		height: 0,
 		title:  "VM Details",
+		focused: false,
 	}
 }
 
 func (p *VMDetailsPanel) SetVM(vm *models.VM) {
 	p.vm = vm
+}
+
+func (p *VMDetailsPanel) SetFocused(focused bool) {
+	p.focused = focused
 }
 
 func (p *VMDetailsPanel) SetTitle(title string) {
@@ -52,12 +58,24 @@ func (p *VMDetailsPanel) renderEmpty() string {
 		contentWidth = 30
 	}
 
-	style := lipgloss.NewStyle().
+	message := "Select a VM to view details"
+	styledMessage := lipgloss.NewStyle().
 		Width(contentWidth).
 		Foreground(styles.Colors.Muted).
-		Italic(true)
+		Italic(true).
+		Render(message)
 
-	return style.Render("Select a VM to view details")
+	// Apply panel styling for elevation based on focus
+	var panelStyle lipgloss.Style
+	if p.focused {
+		panelStyle = styles.ActiveLayeredPanelStyle()
+	} else {
+		panelStyle = styles.LayeredPanelStyle()
+	}
+	return panelStyle.
+		Width(p.width).
+		Height(p.height).
+		Render(styledMessage)
 }
 
 func (p *VMDetailsPanel) renderDetails() string {
@@ -68,14 +86,10 @@ func (p *VMDetailsPanel) renderDetails() string {
 		contentWidth = 30
 	}
 
-	titleStyle := lipgloss.NewStyle().
-		Foreground(styles.Colors.Primary).
-		Bold(true)
-
-	fieldStyle := lipgloss.NewStyle().
-		Foreground(styles.Colors.Muted)
-
-	valueStyle := lipgloss.NewStyle()
+	titleStyle := styles.HeaderStyle()
+	fieldStyle := styles.DetailLabelStyle()
+	valueStyle := styles.DetailValueStyle()
+	sectionStyle := styles.DetailSectionStyle()
 
 	lines = append(lines, titleStyle.Render(p.title))
 	lines = append(lines, "")
@@ -83,6 +97,8 @@ func (p *VMDetailsPanel) renderDetails() string {
 	lines = append(lines, p.renderField("ID", p.vm.ID, fieldStyle, valueStyle, contentWidth))
 	lines = append(lines, "")
 
+	// Storage section
+	lines = append(lines, sectionStyle.Render(" Storage "))
 	if len(p.vm.HardDisks) > 0 {
 		lines = append(lines, p.renderArrayField("Hard Disks", p.vm.HardDisks, fieldStyle, valueStyle, contentWidth))
 	} else {
@@ -97,12 +113,20 @@ func (p *VMDetailsPanel) renderDetails() string {
 	}
 	lines = append(lines, "")
 
+	// Network section
+	lines = append(lines, sectionStyle.Render(" Network "))
 	lines = append(lines, p.renderField("MAC Address", p.vm.MAC, fieldStyle, valueStyle, contentWidth))
 	lines = append(lines, p.renderField("Network Mode", p.vm.NetworkMode, fieldStyle, valueStyle, contentWidth))
 	lines = append(lines, p.renderField("VNC Binding", p.vm.VNCListen, fieldStyle, valueStyle, contentWidth))
+	lines = append(lines, "")
+
+	// System section
+	lines = append(lines, sectionStyle.Render(" System "))
 	lines = append(lines, p.renderField("TPM", formatBool(p.vm.TPMEnabled), fieldStyle, valueStyle, contentWidth))
 	lines = append(lines, "")
 
+	// Timestamps section
+	lines = append(lines, sectionStyle.Render(" Timestamps "))
 	if !p.vm.CreatedAt.IsZero() {
 		lines = append(lines, p.renderField("Created", formatTimestamp(p.vm.CreatedAt), fieldStyle, valueStyle, contentWidth))
 	}
@@ -110,7 +134,19 @@ func (p *VMDetailsPanel) renderDetails() string {
 		lines = append(lines, p.renderField("Updated", formatTimestamp(p.vm.UpdatedAt), fieldStyle, valueStyle, contentWidth))
 	}
 
-	return strings.Join(lines, "\n")
+	content := strings.Join(lines, "\n")
+	
+	// Apply panel styling for elevation based on focus
+	var panelStyle lipgloss.Style
+	if p.focused {
+		panelStyle = styles.ActiveLayeredPanelStyle()
+	} else {
+		panelStyle = styles.LayeredPanelStyle()
+	}
+	return panelStyle.
+		Width(p.width).
+		Height(p.height).
+		Render(content)
 }
 
 func (p *VMDetailsPanel) renderField(label, value string, fieldStyle, valueStyle lipgloss.Style, width int) string {

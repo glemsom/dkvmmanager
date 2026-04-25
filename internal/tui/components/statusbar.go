@@ -15,6 +15,7 @@ type StatusBar struct {
 	vmCount int    // Number of VMs
 	running int    // Running VMs
 	help    string // Quick help text
+	focused bool   // Whether the status bar is focused
 }
 
 // NewStatusBar creates a new StatusBar instance with default values
@@ -31,6 +32,11 @@ func NewStatusBar() *StatusBar {
 // SetMode updates the mode indicator
 func (s *StatusBar) SetMode(mode string) {
 	s.mode = mode
+}
+
+// SetFocused sets whether the status bar is focused
+func (s *StatusBar) SetFocused(focused bool) {
+	s.focused = focused
 }
 
 // SetMessage updates the status message
@@ -73,15 +79,28 @@ func (s *StatusBar) Render(width int) string {
 	leftGap := gap / 2
 	rightGap := gap - leftGap
 
-	// Build the final rendered string
-	content := left + strings.Repeat(" ", leftGap) + center + strings.Repeat(" ", rightGap) + right
+	// Style the center and right parts based on focus state
+	var centerStyle lipgloss.Style
+	var rightStyle lipgloss.Style
+	if s.focused {
+		centerStyle = lipgloss.NewStyle().Foreground(styles.Colors.Foreground)
+		rightStyle = lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim)
+	} else {
+		centerStyle = lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim)
+		rightStyle = lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim)
+	}
+	centerPart := centerStyle.Render(center)
+	rightPart := rightStyle.Render(right)
 
-	// Apply background and foreground styling
-	return lipgloss.NewStyle().
+	// Build the final rendered string
+	content := left + strings.Repeat(" ", leftGap) + centerPart + strings.Repeat(" ", rightGap) + rightPart
+
+	// Apply background styling to the entire bar
+	style := lipgloss.NewStyle().
 		Background(styles.Colors.Background).
-		Foreground(lipgloss.Color("252")).
-		Width(width).
-		Render(content)
+		Width(width)
+
+	return style.Render(content)
 }
 
 // renderModeIndicator renders the mode indicator with Unicode icon and optional spinner

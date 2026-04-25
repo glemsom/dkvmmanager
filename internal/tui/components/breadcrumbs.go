@@ -18,6 +18,7 @@ type BreadcrumbItem struct {
 type Breadcrumbs struct {
 	items        []BreadcrumbItem
 	currentIndex int
+	focused      bool // Whether the breadcrumbs component has focus
 }
 
 // NewBreadcrumbs creates a new Breadcrumbs instance
@@ -25,6 +26,7 @@ func NewBreadcrumbs() *Breadcrumbs {
 	return &Breadcrumbs{
 		items:        []BreadcrumbItem{},
 		currentIndex: -1,
+		focused:      false,
 	}
 }
 
@@ -37,6 +39,11 @@ func (b *Breadcrumbs) AddItem(label, view string, tabIndex int) {
 	}
 	b.items = append(b.items, item)
 	b.currentIndex = len(b.items) - 1
+}
+
+// SetFocused sets whether the breadcrumbs component has focus
+func (b *Breadcrumbs) SetFocused(focused bool) {
+	b.focused = focused
 }
 
 // RemoveItem removes a breadcrumb item at the specified index
@@ -96,19 +103,33 @@ func (b *Breadcrumbs) Render() string {
 	for i, item := range b.items {
 		if i < len(b.items)-1 {
 			// Clickable breadcrumb (underlined, accent color)
-			style := lipgloss.NewStyle().
-				Foreground(styles.Colors.Primary).
-				Underline(true)
+			var style lipgloss.Style
+			if b.focused {
+				style = lipgloss.NewStyle().
+					Foreground(styles.Colors.Primary).
+					Underline(true)
+			} else {
+				style = lipgloss.NewStyle().
+					Foreground(styles.Colors.Foreground).
+					Underline(true)
+			}
 
 			parts = append(parts, style.Render(item.Label))
 			parts = append(parts, lipgloss.NewStyle().
-				Foreground(styles.Colors.Muted).
+				Foreground(styles.Colors.ForegroundDim).
 				Render(" > "))
 		} else {
 			// Current location (bold, secondary color)
-			style := lipgloss.NewStyle().
-				Foreground(styles.Colors.Secondary).
-				Bold(true)
+			var style lipgloss.Style
+			if b.focused {
+				style = lipgloss.NewStyle().
+					Foreground(styles.Colors.Secondary).
+					Bold(true)
+			} else {
+				style = lipgloss.NewStyle().
+					Foreground(styles.Colors.Foreground).
+					Bold(true)
+			}
 
 			parts = append(parts, style.Render(item.Label))
 		}

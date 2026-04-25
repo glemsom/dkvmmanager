@@ -23,6 +23,7 @@ type TabModel struct {
 	tabs       []Tab
 	activeTab  Tab
 	tabContent map[Tab]string
+	focused    bool   // Whether the tab bar is focused
 }
 
 // NewTabModel creates a new TabModel instance
@@ -37,6 +38,11 @@ func NewTabModel() *TabModel {
 // SetActiveTab sets the active tab
 func (t *TabModel) SetActiveTab(tab Tab) {
 	t.activeTab = tab
+}
+
+// SetFocused sets whether the tab bar is focused
+func (t *TabModel) SetFocused(focused bool) {
+	t.focused = focused
 }
 
 // GetActiveTab returns the currently active tab
@@ -121,6 +127,7 @@ func (t *TabModel) RenderTabs(width int) string {
 
 	separator := lipgloss.NewStyle().
 		Foreground(styles.Colors.Muted).
+		Background(styles.Colors.Background).
 		Render(" | ")
 
 	var contentRow string
@@ -133,15 +140,26 @@ func (t *TabModel) RenderTabs(width int) string {
 		nameLen := len(tabName)
 
 		if tab == t.activeTab {
-			contentRow += lipgloss.NewStyle().
-				Foreground(styles.Colors.Primary).
-				Bold(true).
-				Render(tabName)
+			var tabStyle lipgloss.Style
+			if t.focused {
+				tabStyle = lipgloss.NewStyle().
+					Foreground(styles.Colors.Primary).
+					Background(styles.Colors.FocusedBackground).
+					Bold(true)
+			} else {
+				// Enhanced information hierarchy: active tab gets subtle background even when unfocused
+				tabStyle = lipgloss.NewStyle().
+					Foreground(styles.Colors.Primary).
+					Background(styles.Colors.Background).
+					Bold(true)
+			}
+			contentRow += tabStyle.Render(tabName)
 			underlineOffset = offset
 			activeTabWidth = nameLen
 		} else {
 			contentRow += lipgloss.NewStyle().
 				Foreground(styles.Colors.Muted).
+				Background(styles.Colors.Background).
 				Render(tabName)
 		}
 
@@ -162,18 +180,40 @@ func (t *TabModel) RenderTabs(width int) string {
 	if rowWidth < width {
 		padding = (width - rowWidth) / 2
 	}
-	contentRow = strings.Repeat(" ", padding) + contentRow
+	// Add leading spaces with background to maintain consistent background color
+	if padding > 0 {
+		leading := lipgloss.NewStyle().
+			Background(styles.Colors.Background).
+			Render(strings.Repeat(" ", padding))
+		contentRow = leading + contentRow
+	} else {
+		contentRow = contentRow
+	}
 	if paddedWidth := lipgloss.Width(contentRow); paddedWidth < width {
-		contentRow += strings.Repeat(" ", width-paddedWidth)
+		trailing := lipgloss.NewStyle().
+			Background(styles.Colors.Background).
+			Render(strings.Repeat(" ", width-paddedWidth))
+		contentRow += trailing
 	}
 
 	underlineOffset += padding
+	// Add leading spaces with background
+	var leadingUnderline string
+	if underlineOffset > 0 {
+		leadingUnderline = lipgloss.NewStyle().
+			Background(styles.Colors.Background).
+			Render(strings.Repeat(" ", underlineOffset))
+	}
 	underlineBar := lipgloss.NewStyle().
 		Foreground(styles.Colors.Primary).
+		Background(styles.Colors.Background).
 		Render(strings.Repeat("─", activeTabWidth))
-	underline := strings.Repeat(" ", underlineOffset) + underlineBar
+	underline := leadingUnderline + underlineBar
 	if ulWidth := lipgloss.Width(underline); ulWidth < width {
-		underline += strings.Repeat(" ", width-ulWidth)
+		trailing := lipgloss.NewStyle().
+			Background(styles.Colors.Background).
+			Render(strings.Repeat(" ", width-ulWidth))
+		underline += trailing
 	}
 
 	return contentRow + "\n" + underline
@@ -186,13 +226,11 @@ func (t *TabModel) RenderContent(width, height int) string {
 		content = "No content available for this tab"
 	}
 
-	// Apply styling to the content area
-	style := lipgloss.NewStyle().
+	// Apply panel styling for elevation and background
+	return styles.LayeredPanelStyle().
 		Width(width).
 		Height(height).
-		Padding(1, 2)
-
-	return style.Render(content)
+		Render(content)
 }
 
 // HandleKeyInput handles keyboard input for tab navigation

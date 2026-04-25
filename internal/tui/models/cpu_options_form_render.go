@@ -32,13 +32,13 @@ func (m *CPUOptionsFormModel) SetSize(w, h int) {
 // --- Rendering ---
 
 var (
-	cpuOptLabelStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+	cpuOptLabelStyle   = lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim)
 	cpuOptFocusStyle   = styles.FormFocusStyle()
 	cpuOptInputStyle   = styles.FormInputStyle()
 	cpuOptErrorStyle   = styles.ErrorTextStyle()
 	cpuOptMutedStyle   = styles.FormMutedStyle()
 	cpuOptSaveStyle    = styles.FormSaveStyle()
-	cpuOptSectionStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Bold(true)
+	cpuOptSectionStyle = styles.DetailSectionStyle()
 )
 
 // renderAllLines produces the full list of output lines for the form

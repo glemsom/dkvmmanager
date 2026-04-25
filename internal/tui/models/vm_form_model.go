@@ -29,6 +29,9 @@ type VMFormModel struct {
 	positions  []focusPos
 	focusIndex int
 
+	// Whether the form has focus
+	focused bool
+
 	// Per-field text cursor (character offset within the value)
 	cursorOffsets map[string]int // key = field identity e. g. "vmName", "hardDisks_0"
 
@@ -70,6 +73,7 @@ func NewVMFormModel(vmManager *vm.Manager) *VMFormModel {
 		cdroms:        []string{},
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
+		focused:       false,
 	}
 	m.rebuildPositions()
 	return m
@@ -231,4 +235,9 @@ func (m *VMFormModel) FileBrowserActive() bool {
 		return true
 	}
 	return false
+}
+
+// SetFocused sets whether the form has focus
+func (m *VMFormModel) SetFocused(focused bool) {
+	m.focused = focused
 }

@@ -10,7 +10,7 @@ import (
 )
 
 // pciLabelStyle is the label style for form fields
-var pciLabelStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+var pciLabelStyle = lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim)
 
 // pciFocusStyle is the focused field style
 var pciFocusStyle = styles.FormFocusStyle()
@@ -37,10 +37,10 @@ var pciUSBStyle = styles.FormFocusStyle()
 var pciWarnStyle = styles.WarningTextStyle()
 
 // pciHeaderStyle is the IOMMU group header style
-var pciHeaderStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("252"))
+var pciHeaderStyle = lipgloss.NewStyle().Bold(true).Foreground(styles.Colors.Primary)
 
 // pciAddrStyle is the PCI address style (bold/high-contrast for quick scanning)
-var pciAddrStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("15"))
+var pciAddrStyle = lipgloss.NewStyle().Bold(true).Foreground(styles.Colors.Primary)
 
 // renderAllLines produces the full list of output lines for the form
 func (m *PCIPassthroughFormModel) renderAllLines() []string {

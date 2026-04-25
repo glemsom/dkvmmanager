@@ -38,21 +38,21 @@ func DimStyle() lipgloss.Style {
 // ItalicStyle returns the style for italic text
 func ItalicStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252")).
+		Foreground(Colors.ForegroundDim).
 		Italic(true)
 }
 
 // UnderlineStyle returns the style for underlined text
 func UnderlineStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252")).
+		Foreground(Colors.ForegroundDim).
 		Underline(true)
 }
 
 // StrikethroughStyle returns the style for strikethrough text
 func StrikethroughStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(Colors.Muted).
+		Foreground(Colors.ForegroundDim).
 		Strikethrough(true)
 }
 
@@ -127,7 +127,7 @@ func TableHeaderStyle() lipgloss.Style {
 // TableRowStyle returns the style for table rows
 func TableRowStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252")).
+		Foreground(Colors.Foreground).
 		Padding(0, 1)
 }
 
@@ -143,7 +143,7 @@ func TableSelectedRowStyle() lipgloss.Style {
 // TooltipStyle returns the style for tooltips
 func TooltipStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252")).
+		Foreground(Colors.Foreground).
 		Background(Colors.Background).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(Colors.Border).
@@ -215,13 +215,14 @@ func DetailSectionStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(Colors.Primary).
 		Bold(true).
-		Padding(1, 0, 0, 0)
+		Background(Colors.PrimaryDim).
+		Padding(0, 1, 0, 1)
 }
 
 // DetailValueStyle returns the style for property values in detail view
 func DetailValueStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252"))
+		Foreground(Colors.Foreground)
 }
 
 // DetailLabelStyle returns the style for property labels in detail view
@@ -283,7 +284,7 @@ func HeadingStyle(level int) lipgloss.Style {
 			MarginBottom(1)
 	case 3:
 		return style.
-			Foreground(lipgloss.Color("252")).
+			Foreground(Colors.Foreground).
 			MarginBottom(1)
 	default:
 		return style.
@@ -377,7 +378,7 @@ func RenderProgressBar(fraction float64, width int, label, detail string) string
 
 	fillStyle := lipgloss.NewStyle().Foreground(Colors.Success)
 	emptyStyle := lipgloss.NewStyle().Foreground(Colors.Muted)
-	pctStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+	pctStyle := lipgloss.NewStyle().Foreground(Colors.Foreground)
 
 	bar := fillStyle.Render(strings.Repeat("█", filled)) +
 		emptyStyle.Render(strings.Repeat("░", width-filled))

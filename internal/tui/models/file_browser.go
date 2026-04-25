@@ -280,21 +280,21 @@ func isISOFile(name string) bool {
 // View returns the rendered view
 func (m *FileBrowserModel) View() string {
 	headerStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("86")).
+		Foreground(styles.Colors.Primary).
 		Bold(true)
 
 	dirStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("81"))
+		Foreground(styles.Colors.Primary)
 
 	selectedStyle := lipgloss.NewStyle().
 		Foreground(styles.Colors.Primary).
 		Bold(true)
 
 	fileStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("247"))
+		Foreground(styles.Colors.Foreground)
 
 	dirMarkerStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("75"))
+		Foreground(styles.Colors.ForegroundDim)
 
 	helpStyle := lipgloss.NewStyle().
 		Foreground(styles.Colors.Muted)
@@ -343,7 +343,7 @@ func (m *FileBrowserModel) View() string {
 
 	// Error message
 	if m.errorMsg != "" {
-		output += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render("Error: "+m.errorMsg)
+		output += "\n" + lipgloss.NewStyle().Foreground(styles.Colors.Error).Render("Error: "+m.errorMsg)
 	}
 
 	// Help text

@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Graceful TPM shutdown**: TPM processes are now shut down gracefully via the swtpm control channel before SIGTERM
 - **Orphaned swtpm detection**: Stale swtpm processes from previous runs are detected via PID file and killed before starting a new one
 - **Status bar display**: Status bar now shows VM execution state (▶ Running / ■ Stopped) instead of VM counts
+- **UI rendering**: Apply consistent background colors and full-width rendering for header, tab bar, and list items
 
 ### Removed
 
