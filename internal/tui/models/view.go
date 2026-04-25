@@ -167,17 +167,22 @@ func (m *MainModel) renderVMsTab() string {
 		content := emptyStyle.Render("No virtual machines configured.") + "\n\n" +
 			"Press 'n' or go to Configuration tab to create a new VM."
 
-		// Pad to match list-based tabs. The config/power lists call SetSize with
-		// (width-4, contentHeight()-2). The -2 accounts for list internal borders.
-		// Count newlines manually since lipgloss.Height may not match.
-		targetLines := m.contentHeight() - 2
+		// Wrap in a panel to match the bordered list view when VMs are present.
+		// LayeredPanelStyle adds border (2) + padding horizontal (4) = 6 chars
+		// and border (2) + padding vertical (2) = 4 lines.
+		contentWidth := m.windowWidth - 4
+		contentHeight := m.contentHeight() - 2
+		innerWidth := contentWidth - 6
+		innerHeight := contentHeight - 4
 		currentLines := strings.Count(content, "\n") + 1
-		if currentLines < targetLines {
-			padding := targetLines - currentLines
-			content += strings.Repeat("\n", padding)
+		if currentLines < innerHeight {
+			content += strings.Repeat("\n", innerHeight-currentLines)
 		}
 
-		return content
+		return styles.LayeredPanelStyle().
+			Width(contentWidth).
+			Height(contentHeight).
+			Render(content)
 	}
 
 	if m.windowWidth < 80 {
