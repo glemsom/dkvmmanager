@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
@@ -14,6 +15,16 @@ import (
 // the entire viewport area, eliminating gaps showing terminal default.
 func (m *VMFormModel) syncViewport() {
 	m.renderedLines = m.renderAllLines()
+
+	// Guard against invalid dimensions (can happen before first window resize)
+	if m.contentW <= 0 || m.contentH <= 0 {
+		m.contentW = 80
+		m.contentH = 25
+		if !m.ready {
+			m.vp = viewport.New(m.contentW, m.contentH)
+			m.ready = true
+		}
+	}
 
 	// Pad each line to full content width with spaces.
 	// These spaces carry the background color when rendered.

@@ -16,11 +16,15 @@ func (m *MainModel) view() string {
 		return "Goodbye!\n"
 	}
 
+	// Use effective dimensions to avoid negative/zero sizes during initial render
+	effectiveW := m.effectiveWidth()
+	effectiveH := m.effectiveHeight()
+
 	// 1. Header
-	header := m.renderHeader()
+	header := m.renderHeaderWithWidth(effectiveW)
 
 	// 2. Tab bar
-	tabBar := m.tabModel.RenderTabs(m.windowWidth)
+	tabBar := m.tabModel.RenderTabs(effectiveW)
 
 	// 3. Breadcrumbs (only if non-empty)
 	breadcrumbsView := ""
@@ -29,10 +33,10 @@ func (m *MainModel) view() string {
 	}
 
 	// 4. Content area
-	content := m.renderActiveContent()
+	content := m.renderActiveContentWithWidth(effectiveW)
 
 	// 5. Status bar
-	statusBarView := m.statusBar.Render(m.windowWidth)
+	statusBarView := m.statusBar.Render(effectiveW)
 
 	// Assemble
 	var parts []string
@@ -55,18 +59,18 @@ func (m *MainModel) view() string {
 	}
 
 	// Apply full-screen background, padded to terminal dimensions
-	output = styles.PadToScreen(output, m.windowWidth, m.windowHeight)
+	output = styles.PadToScreen(output, effectiveW, effectiveH)
 
 	return output
 }
 
-func (m *MainModel) renderHeader() string {
+func (m *MainModel) renderHeaderWithWidth(width int) string {
 	title := lipgloss.NewStyle().Foreground(styles.Colors.Primary).Render("DKVM Manager")
 	versionStyle := lipgloss.NewStyle().
 		Foreground(styles.Colors.Muted).
 		Italic(true)
 	ver := versionStyle.Render("v" + version.Version)
-	gap := m.windowWidth - lipgloss.Width(title) - lipgloss.Width(ver)
+	gap := width - lipgloss.Width(title) - lipgloss.Width(ver)
 	if gap < 1 {
 		gap = 1
 	}
@@ -75,12 +79,20 @@ func (m *MainModel) renderHeader() string {
 	// Apply full-width background so the entire header row has a consistent color
 	return lipgloss.NewStyle().
 		Background(styles.Colors.Background).
-		Width(m.windowWidth).
+		Width(width).
 		Render(content)
 }
 
+// Backward compatibility alias
+func (m *MainModel) renderHeader() string {
+	return m.renderHeaderWithWidth(m.effectiveWidth())
+}
+
 func (m *MainModel) renderActiveContent() string {
-	// Sub-views take over the content area
+	return m.renderActiveContentWithWidth(m.effectiveWidth())
+}
+
+func (m *MainModel) renderActiveContentWithWidth(width int) string {
 	switch m.currentView {
 	case ViewVMCreate:
 		if m.vmCreateModel != nil {
@@ -146,18 +158,18 @@ func (m *MainModel) renderActiveContent() string {
 		return "Loading..."
 	}
 
-	// Tab-based content
 	switch m.tabModel.GetActiveTab() {
 	case components.TabVMs:
 		return m.renderVMsTab()
 	case components.TabConfiguration:
-		return m.renderConfigTab()
+		return m.renderConfigTabWithWidth(width)
 	case components.TabPower:
-		return m.renderPowerTab()
+		return m.renderPowerTabWithWidth(width)
 	default:
 		return m.renderVMsTab()
 	}
 }
+
 
 func (m *MainModel) renderVMsTab() string {
 	if len(m.menuItems) == 0 {
@@ -278,37 +290,39 @@ func renderVMDetail(vm *models.VM, width, height int) string {
 }
 
 func (m *MainModel) renderConfigTab() string {
-	height := m.contentHeight() - 2
-	m.configList.SetSize(m.windowWidth-4, height)
-	content := m.configList.View()
+	return m.renderConfigTabWithWidth(m.effectiveWidth())
+}
 
-	// Pad to match VM tab height (contentHeight, not contentHeight-2)
-	targetLines := m.contentHeight()
-	currentLines := strings.Count(content, "\n") + 1
-	if currentLines < targetLines {
-		padding := targetLines - currentLines
-		content += strings.Repeat("\n", padding)
-	}
-
+func (m *MainModel) renderConfigTabWithWidth(width int) string {
+	height := m.contentHeight()
+	listWidth := max(0, width-4)
+	listHeight := max(0, height-4)
+	m.configList.SetSize(listWidth, listHeight)
+	content := styles.LayeredPanelStyle().
+		Width(width).
+		Height(height).
+		Render(m.configList.View())
 
 	return content
 }
 
 func (m *MainModel) renderPowerTab() string {
-	height := m.contentHeight() - 2
-	m.powerList.SetSize(m.windowWidth-4, height)
-	content := m.powerList.View()
+	return m.renderPowerTabWithWidth(m.effectiveWidth())
+}
 
-	// Pad to match VM tab height (contentHeight, not contentHeight-2)
-	targetLines := m.contentHeight()
-	currentLines := strings.Count(content, "\n") + 1
-	if currentLines < targetLines {
-		padding := targetLines - currentLines
-		content += strings.Repeat("\n", padding)
-	}
+func (m *MainModel) renderPowerTabWithWidth(width int) string {
+	height := m.contentHeight()
+	listWidth := max(0, width-4)
+	listHeight := max(0, height-4)
+	m.powerList.SetSize(listWidth, listHeight)
+	content := styles.LayeredPanelStyle().
+		Width(width).
+		Height(height).
+		Render(m.powerList.View())
 
 	return content
 }
+
 
 // contentHeight calculates available height for content area
 func (m *MainModel) contentHeight() int {
@@ -323,4 +337,20 @@ func (m *MainModel) contentHeight() int {
 		height = 3
 	}
 	return height
+}
+
+// effectiveWidth returns the window width clamped to minimum for safe rendering
+func (m *MainModel) effectiveWidth() int {
+	if m.windowWidth < 80 {
+		return 80
+	}
+	return m.windowWidth
+}
+
+// effectiveHeight returns the window height clamped to minimum for safe rendering
+func (m *MainModel) effectiveHeight() int {
+	if m.windowHeight < 25 {
+		return 25
+	}
+	return m.windowHeight
 }
