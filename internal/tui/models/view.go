@@ -172,7 +172,6 @@ func (m *MainModel) renderVMsTab() string {
 		// and border (2) + padding vertical (2) = 4 lines.
 		contentWidth := m.windowWidth - 4
 		contentHeight := m.contentHeight() - 2
-		innerWidth := contentWidth - 6
 		innerHeight := contentHeight - 4
 		currentLines := strings.Count(content, "\n") + 1
 		if currentLines < innerHeight {

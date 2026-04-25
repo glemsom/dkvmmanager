@@ -127,6 +127,7 @@ func (t *TabModel) RenderTabs(width int) string {
 
 	separator := lipgloss.NewStyle().
 		Foreground(styles.Colors.Muted).
+		Background(styles.Colors.Background).
 		Render(" | ")
 
 	var contentRow string
