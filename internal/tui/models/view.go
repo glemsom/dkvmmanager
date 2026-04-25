@@ -70,7 +70,13 @@ func (m *MainModel) renderHeader() string {
 	if gap < 1 {
 		gap = 1
 	}
-	return title + strings.Repeat(" ", gap) + ver
+	content := title + strings.Repeat(" ", gap) + ver
+
+	// Apply full-width background so the entire header row has a consistent color
+	return lipgloss.NewStyle().
+		Background(styles.Colors.Background).
+		Width(m.windowWidth).
+		Render(content)
 }
 
 func (m *MainModel) renderActiveContent() string {

@@ -144,13 +144,13 @@ func (t *TabModel) RenderTabs(width int) string {
 				tabStyle = lipgloss.NewStyle().
 					Foreground(styles.Colors.Primary).
 					Background(styles.Colors.FocusedBackground).
-				Bold(true)
+					Bold(true)
 			} else {
 				// Enhanced information hierarchy: active tab gets subtle background even when unfocused
 				tabStyle = lipgloss.NewStyle().
 					Foreground(styles.Colors.Primary).
 					Background(styles.Colors.Background).
-				Bold(true)
+					Bold(true)
 			}
 			contentRow += tabStyle.Render(tabName)
 			underlineOffset = offset
@@ -158,6 +158,7 @@ func (t *TabModel) RenderTabs(width int) string {
 		} else {
 			contentRow += lipgloss.NewStyle().
 				Foreground(styles.Colors.Muted).
+				Background(styles.Colors.Background).
 				Render(tabName)
 		}
 
@@ -169,7 +170,7 @@ func (t *TabModel) RenderTabs(width int) string {
 		}
 	}
 
-	// Center the tab bar within the requested width
+	// Center the tab bar within the requested width and apply full-width background
 	rowWidth := lipgloss.Width(contentRow)
 	if rowWidth == 0 {
 		rowWidth = offset
@@ -182,6 +183,12 @@ func (t *TabModel) RenderTabs(width int) string {
 	if paddedWidth := lipgloss.Width(contentRow); paddedWidth < width {
 		contentRow += strings.Repeat(" ", width-paddedWidth)
 	}
+
+	// Apply background to the entire tab bar row
+	contentRow = lipgloss.NewStyle().
+		Background(styles.Colors.Background).
+		Width(width).
+		Render(contentRow)
 
 	underlineOffset += padding
 	underlineBar := lipgloss.NewStyle().
