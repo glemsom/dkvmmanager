@@ -171,7 +171,7 @@ func (t *TabModel) RenderTabs(width int) string {
 		}
 	}
 
-	// Center the tab bar within the requested width and apply full-width background
+	// Center the tab bar within the requested width
 	rowWidth := lipgloss.Width(contentRow)
 	if rowWidth == 0 {
 		rowWidth = offset
@@ -180,24 +180,40 @@ func (t *TabModel) RenderTabs(width int) string {
 	if rowWidth < width {
 		padding = (width - rowWidth) / 2
 	}
-	contentRow = strings.Repeat(" ", padding) + contentRow
+	// Add leading spaces with background to maintain consistent background color
+	if padding > 0 {
+		leading := lipgloss.NewStyle().
+			Background(styles.Colors.Background).
+			Render(strings.Repeat(" ", padding))
+		contentRow = leading + contentRow
+	} else {
+		contentRow = contentRow
+	}
 	if paddedWidth := lipgloss.Width(contentRow); paddedWidth < width {
-		contentRow += strings.Repeat(" ", width-paddedWidth)
+		trailing := lipgloss.NewStyle().
+			Background(styles.Colors.Background).
+			Render(strings.Repeat(" ", width-paddedWidth))
+		contentRow += trailing
 	}
 
-	// Apply background to the entire tab bar row
-	contentRow = lipgloss.NewStyle().
-		Background(styles.Colors.Background).
-		Width(width).
-		Render(contentRow)
-
 	underlineOffset += padding
+	// Add leading spaces with background
+	var leadingUnderline string
+	if underlineOffset > 0 {
+		leadingUnderline = lipgloss.NewStyle().
+			Background(styles.Colors.Background).
+			Render(strings.Repeat(" ", underlineOffset))
+	}
 	underlineBar := lipgloss.NewStyle().
 		Foreground(styles.Colors.Primary).
+		Background(styles.Colors.Background).
 		Render(strings.Repeat("─", activeTabWidth))
-	underline := strings.Repeat(" ", underlineOffset) + underlineBar
+	underline := leadingUnderline + underlineBar
 	if ulWidth := lipgloss.Width(underline); ulWidth < width {
-		underline += strings.Repeat(" ", width-ulWidth)
+		trailing := lipgloss.NewStyle().
+			Background(styles.Colors.Background).
+			Render(strings.Repeat(" ", width-ulWidth))
+		underline += trailing
 	}
 
 	return contentRow + "\n" + underline
