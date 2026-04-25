@@ -403,19 +403,12 @@ func (m *VMRunningModel) renderInfoPanel() string {
 
 		// vCPU pinning
 		pinning := m.runner.VCPUPinning()
-		if pinning.Enabled && len(pinning.Mappings) > 0 {
-			b.WriteString("  ")
-			b.WriteString(labelStyle.Render("Pinning: "))
-			// Show first few mappings, summarize if many
-			mappings := make([]string, 0, len(pinning.Mappings))
-			for i, mp := range pinning.Mappings {
-				if i >= 4 {
-					mappings = append(mappings, fmt.Sprintf("+%d more", len(pinning.Mappings)-4))
-					break
-				}
-				mappings = append(mappings, fmt.Sprintf("v%d→h%d", mp.VCPUID, mp.HostCPUID))
-			}
-			b.WriteString(valueStyle.Render(strings.Join(mappings, ", ")))
+		b.WriteString("  ")
+		b.WriteString(labelStyle.Render("Pinning: "))
+		if pinning.Enabled {
+			b.WriteString(valueStyle.Render("enabled"))
+		} else {
+			b.WriteString(valueStyle.Render("disabled"))
 		}
 		b.WriteString("\n")
 
