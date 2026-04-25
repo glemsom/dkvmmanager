@@ -16,8 +16,32 @@ type ContrastResult struct {
 	Level       string // "AA" or "AAA"
 }
 
-// hexToRGB converts a hex color string (#RRGGBB) to RGB components (0-255).
+// ansi16Colors maps the 16 ANSI color codes to approximate RGB values.
+var ansi16Colors = map[string][3]uint8{
+	"0":  {0x00, 0x00, 0x00}, // Black
+	"1":  {0x80, 0x00, 0x00}, // Red
+	"2":  {0x00, 0x80, 0x00}, // Green
+	"3":  {0x80, 0x80, 0x00}, // Yellow
+	"4":  {0x00, 0x00, 0x80}, // Blue
+	"5":  {0x80, 0x00, 0x80}, // Magenta
+	"6":  {0x00, 0x80, 0x80}, // Cyan
+	"7":  {0xc0, 0xc0, 0xc0}, // White (light gray)
+	"8":  {0x80, 0x80, 0x80}, // Bright Black (dark gray)
+	"9":  {0xff, 0x00, 0x00}, // Bright Red
+	"10": {0x00, 0xff, 0x00}, // Bright Green
+	"11": {0xff, 0xff, 0x00}, // Bright Yellow
+	"12": {0x00, 0x00, 0xff}, // Bright Blue
+	"13": {0xff, 0x00, 0xff}, // Bright Magenta
+	"14": {0x00, 0xff, 0xff}, // Bright Cyan
+	"15": {0xff, 0xff, 0xff}, // Bright White
+}
+
+// hexToRGB converts a hex color string (#RRGGBB) or ANSI code (0-15) to RGB components (0-255).
 func hexToRGB(hex string) (r, g, b uint8) {
+	// Check if it's an ANSI 16-color code
+	if rgb, ok := ansi16Colors[hex]; ok {
+		return rgb[0], rgb[1], rgb[2]
+	}
 	if len(hex) != 7 || hex[0] != '#' {
 		return 0, 0, 0
 	}
