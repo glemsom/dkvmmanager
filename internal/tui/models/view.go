@@ -295,7 +295,7 @@ func (m *MainModel) renderConfigTab() string {
 
 func (m *MainModel) renderConfigTabWithWidth(width int) string {
 	height := m.contentHeight() - 2
-	listWidth := max(0, width-4)
+	listWidth := max(0, width-6)
 	listHeight := max(0, height-4)
 	m.configList.SetSize(listWidth, listHeight)
 	content := styles.LayeredPanelStyle().
@@ -312,7 +312,7 @@ func (m *MainModel) renderPowerTab() string {
 
 func (m *MainModel) renderPowerTabWithWidth(width int) string {
 	height := m.contentHeight() - 2
-	listWidth := max(0, width-4)
+	listWidth := max(0, width-6)
 	listHeight := max(0, height-4)
 	m.powerList.SetSize(listWidth, listHeight)
 	content := styles.LayeredPanelStyle().
