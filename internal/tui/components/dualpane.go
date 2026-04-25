@@ -44,6 +44,7 @@ type DualPane struct {
 	width        int
 	height       int
 	focusedPane  int // PaneLeft or PaneRight
+	focused      bool // Whether the dual pane container has focus
 }
 
 // NewDualPane creates a new DualPane instance
@@ -54,6 +55,7 @@ func NewDualPane() *DualPane {
 		width:        0,
 		height:       0,
 		focusedPane:  PaneLeft,
+		focused:      false,
 	}
 }
 
@@ -136,12 +138,18 @@ func (d *DualPane) Render() string {
 
 // applyFocusStyle applies focus styling to the appropriate pane style
 func (d *DualPane) applyFocusStyle(leftStyle, rightStyle lipgloss.Style) (lipgloss.Style, lipgloss.Style) {
-	if d.focusedPane == PaneLeft {
-		leftStyle = styles.ActiveLayeredPanelStyle()
-		rightStyle = styles.LayeredPanelStyle()
+	if d.focused {
+		if d.focusedPane == PaneLeft {
+			leftStyle = styles.ActiveLayeredPanelStyle()
+			rightStyle = styles.LayeredPanelStyle()
+		} else {
+			leftStyle = styles.LayeredPanelStyle()
+			rightStyle = styles.ActiveLayeredPanelStyle()
+		}
 	} else {
+		// When the container is not focused, both panes use the unfocused style
 		leftStyle = styles.LayeredPanelStyle()
-		rightStyle = styles.ActiveLayeredPanelStyle()
+		rightStyle = styles.LayeredPanelStyle()
 	}
 	// Apply dimensions to both styles
 	leftStyle = leftStyle.Width(leftStyle.GetWidth()).Height(leftStyle.GetHeight())

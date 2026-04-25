@@ -39,17 +39,17 @@ func (m *StartStopScriptFormModel) SetSize(w, h int) {
 // --- Rendering ---
 
 var (
-	startStopScriptLabelStyle         = lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+	startStopScriptLabelStyle         = lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim)
 	startStopScriptFocusStyle         = styles.FormFocusStyle()
 	startStopScriptInputStyle         = styles.FormInputStyle()
 	startStopScriptErrorStyle         = styles.ErrorTextStyle()
 	startStopScriptMutedStyle         = styles.FormMutedStyle()
 	startStopScriptSaveStyle          = styles.FormSaveStyle()
-	startStopScriptSectionStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Bold(true)
-	startStopScriptToggleOn           = lipgloss.NewStyle().Foreground(lipgloss.Color("82")).Bold(true)
-	startStopScriptToggleOff          = lipgloss.NewStyle().Foreground(lipgloss.Color("203")).Bold(true)
+	startStopScriptSectionStyle       = styles.DetailSectionStyle()
+	startStopScriptToggleOn           = lipgloss.NewStyle().Foreground(styles.Colors.Success).Bold(true)
+	startStopScriptToggleOff          = lipgloss.NewStyle().Foreground(styles.Colors.Error).Bold(true)
 	// New: Side-by-side layout styles
-	startStopScriptBrowseStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("75")).Bold(true)
+	startStopScriptBrowseStyle        = lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim).Bold(true)
 	startStopScriptBrowseFocusStyle  = lipgloss.NewStyle().Foreground(styles.Colors.Primary).Bold(true)
 )
 

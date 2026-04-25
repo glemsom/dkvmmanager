@@ -54,6 +54,9 @@ func (m *MainModel) view() string {
 		output = lipgloss.NewStyle().Faint(true).Render(output)
 	}
 
+	// Apply full-screen background, padded to terminal dimensions
+	output = styles.PadToScreen(output, m.windowWidth, m.windowHeight)
+
 	return output
 }
 

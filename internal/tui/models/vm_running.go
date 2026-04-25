@@ -484,7 +484,7 @@ func (m *VMRunningModel) renderLogContent() string {
 		Foreground(styles.Colors.Muted)
 
 	logStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252"))
+		Foreground(styles.Colors.Foreground)
 
 	var output strings.Builder
 

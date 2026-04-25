@@ -23,6 +23,7 @@ type TabModel struct {
 	tabs       []Tab
 	activeTab  Tab
 	tabContent map[Tab]string
+	focused    bool   // Whether the tab bar is focused
 }
 
 // NewTabModel creates a new TabModel instance
@@ -37,6 +38,11 @@ func NewTabModel() *TabModel {
 // SetActiveTab sets the active tab
 func (t *TabModel) SetActiveTab(tab Tab) {
 	t.activeTab = tab
+}
+
+// SetFocused sets whether the tab bar is focused
+func (t *TabModel) SetFocused(focused bool) {
+	t.focused = focused
 }
 
 // GetActiveTab returns the currently active tab
@@ -133,10 +139,20 @@ func (t *TabModel) RenderTabs(width int) string {
 		nameLen := len(tabName)
 
 		if tab == t.activeTab {
-			contentRow += lipgloss.NewStyle().
-				Foreground(styles.Colors.Primary).
-				Bold(true).
-				Render(tabName)
+			var tabStyle lipgloss.Style
+			if t.focused {
+				tabStyle = lipgloss.NewStyle().
+					Foreground(styles.Colors.Primary).
+					Background(styles.Colors.FocusedBackground).
+				Bold(true)
+			} else {
+				// Enhanced information hierarchy: active tab gets subtle background even when unfocused
+				tabStyle = lipgloss.NewStyle().
+					Foreground(styles.Colors.Primary).
+					Background(styles.Colors.Background).
+				Bold(true)
+			}
+			contentRow += tabStyle.Render(tabName)
 			underlineOffset = offset
 			activeTabWidth = nameLen
 		} else {
@@ -186,13 +202,11 @@ func (t *TabModel) RenderContent(width, height int) string {
 		content = "No content available for this tab"
 	}
 
-	// Apply styling to the content area
-	style := lipgloss.NewStyle().
+	// Apply panel styling for elevation and background
+	return styles.LayeredPanelStyle().
 		Width(width).
 		Height(height).
-		Padding(1, 2)
-
-	return style.Render(content)
+		Render(content)
 }
 
 // HandleKeyInput handles keyboard input for tab navigation

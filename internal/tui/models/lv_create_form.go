@@ -455,7 +455,7 @@ func (m *LVCreateFormModel) createCmd() tea.Cmd {
 }
 
 func (m *LVCreateFormModel) renderLines() []string {
-	label := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+	label := styles.FormLabelStyle()
 	focus := styles.FormFocusStyle()
 	muted := styles.FormMutedStyle()
 	lines := []string{

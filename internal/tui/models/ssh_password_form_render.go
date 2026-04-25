@@ -11,7 +11,7 @@ import (
 // --- Rendering ---
 
 var (
-	sshPwLabelStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+	sshPwLabelStyle = lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim)
 	sshPwFocusStyle = styles.FormFocusStyle()
 	sshPwInputStyle = styles.FormInputStyle()
 	sshPwErrorStyle = styles.ErrorTextStyle()

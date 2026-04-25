@@ -16,6 +16,7 @@ type VMCardView struct {
 	cursor int
 	width  int
 	height int
+	focused bool
 }
 
 // NewVMCardView creates a new VM card view
@@ -25,6 +26,7 @@ func NewVMCardView(vms []models.VM, width, height int) *VMCardView {
 		cursor: 0,
 		width:  width,
 		height: height,
+		focused: false,
 	}
 }
 
@@ -32,6 +34,11 @@ func NewVMCardView(vms []models.VM, width, height int) *VMCardView {
 func (c *VMCardView) SetSize(width, height int) {
 	c.width = width
 	c.height = height
+}
+
+// SetFocused sets whether the card view has focus
+func (c *VMCardView) SetFocused(focused bool) {
+	c.focused = focused
 }
 
 // Update handles messages for the card view
@@ -76,10 +83,16 @@ func (c *VMCardView) renderCard(vm models.VM, selected bool) string {
 		cardWidth = 40
 	}
 
-	// Determine border color
-	borderColor := styles.Colors.Muted
+	// Determine border color based on selection and focus state
+	var borderColor lipgloss.Color
 	if selected {
-		borderColor = styles.Colors.Primary
+		if c.focused {
+			borderColor = styles.Colors.Primary
+		} else {
+			borderColor = styles.Colors.Foreground
+		}
+	} else {
+		borderColor = styles.Colors.Muted
 	}
 
 	// Top border with title

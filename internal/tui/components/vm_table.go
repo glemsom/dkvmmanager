@@ -35,7 +35,7 @@ func NewVMTable(vms []models.VM, width, height int) *VMTable {
 		table.WithHeight(height),
 	)
 
-	// Custom styles
+	// Custom styles using theme colors
 	s := table.DefaultStyles()
 	s.Header = s.Header.
 		BorderStyle(lipgloss.NormalBorder()).
@@ -45,10 +45,10 @@ func NewVMTable(vms []models.VM, width, height int) *VMTable {
 	s.Selected = s.Selected.
 		Foreground(styles.Colors.Primary).
 		Bold(true).
-		Background(lipgloss.Color("236"))
+		Background(styles.Colors.HoverBackground)
 	s.Cell = s.Cell.
-		Foreground(lipgloss.Color("252")).
-		Background(lipgloss.Color("235"))
+		Foreground(styles.Colors.Foreground).
+		Background(styles.Colors.Background)
 	t.SetStyles(s)
 
 	return &VMTable{

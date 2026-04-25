@@ -9,10 +9,31 @@ import (
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
-// syncViewport regenerates the rendered lines and syncs the viewport
+// syncViewport regenerates the rendered lines and syncs the viewport.
+// Each line is padded to full width so the background color fills
+// the entire viewport area, eliminating gaps showing terminal default.
 func (m *VMFormModel) syncViewport() {
 	m.renderedLines = m.renderAllLines()
-	totalContent := strings.Join(m.renderedLines, "\n")
+
+	// Pad each line to full content width with spaces.
+	// These spaces carry the background color when rendered.
+	paddedLines := make([]string, len(m.renderedLines))
+	for i, line := range m.renderedLines {
+		lineWidth := lipgloss.Width(line)
+		if lineWidth < m.contentW {
+			line += strings.Repeat(" ", m.contentW-lineWidth)
+		}
+		paddedLines[i] = line
+	}
+
+	// Pad to full content height with blank lines so the viewport
+	// content always fills the available area.
+	blankLine := strings.Repeat(" ", m.contentW)
+	for len(paddedLines) < m.contentH {
+		paddedLines = append(paddedLines, blankLine)
+	}
+
+	totalContent := strings.Join(paddedLines, "\n")
 	m.vp.SetContent(totalContent)
 	// Ensure focused line is visible
 	if m.focusedLineIndex() >= 0 {
@@ -119,7 +140,7 @@ func (m *VMFormModel) renderPosition(lines []string, lineIdx int, pos focusPos, 
 		label := m.fieldLabel(pos.fieldName)
 		val := m.getValue(pos)
 		cursor := m.effectiveCursor(key, val)
-		rendered := m.renderTextInput(label, val, cursor, focused)
+		rendered := m.renderTextInput(label, val, cursor, focused && m.focused)
 		lines = append(lines, rendered)
 
 		// Inline error
@@ -131,13 +152,13 @@ func (m *VMFormModel) renderPosition(lines []string, lineIdx int, pos focusPos, 
 	case focusListItem:
 		val := m.getValue(pos)
 		cursor := m.effectiveCursor(key, val)
-		rendered := m.renderListItem(pos.listIndex, val, cursor, focused)
+		rendered := m.renderListItem(pos.listIndex, val, cursor, focused && m.focused)
 		lines = append(lines, rendered)
 		return lines, lineIdx + 1
 
 	case focusAddBtn:
 		btnText := styles.MutedTextStyle().Render("[+ Add]")
-		if focused {
+		if focused && m.focused {
 			btnText = styles.SelectedTextStyle().Render("[+ Add]")
 		}
 		fieldLabel := "Disk"
@@ -149,7 +170,7 @@ func (m *VMFormModel) renderPosition(lines []string, lineIdx int, pos focusPos, 
 
 	case focusToggle:
 		label := m.fieldLabel(pos.fieldName)
-		rendered := m.renderToggle(label, pos.fieldName, focused)
+		rendered := m.renderToggle(label, pos.fieldName, focused && m.focused)
 		lines = append(lines, rendered)
 		// Show inline error if present (e.g., TPM binary missing)
 		if errMsg, ok := m.errors[pos.fieldName]; ok {
@@ -161,7 +182,7 @@ func (m *VMFormModel) renderPosition(lines []string, lineIdx int, pos focusPos, 
 	case focusSaveBtn:
 		lines = append(lines, "")
 		saveText := styles.MutedTextStyle().Render("[Space/Enter] Save  [ESC] Cancel")
-		if focused {
+		if focused && m.focused {
 			saveText = styles.SuccessTextStyle().Render("[Space/Enter] Save") + "  " + styles.MutedTextStyle().Render("[ESC] Cancel")
 		}
 		lines = append(lines, saveText)
@@ -174,7 +195,7 @@ func (m *VMFormModel) renderPosition(lines []string, lineIdx int, pos focusPos, 
 // renderTextInput renders a labeled text input with an optional cursor
 func (m *VMFormModel) renderTextInput(label, value string, cursor int, focused bool) string {
 	prefix := "  "
-	if focused {
+	if focused && m.focused {
 		prefix = styles.SelectedTextStyle().Render("> ")
 	}
 
@@ -182,7 +203,7 @@ func (m *VMFormModel) renderTextInput(label, value string, cursor int, focused b
 
 	// Build value with cursor indicator
 	var valPart string
-	if focused {
+	if focused && m.focused {
 		// Show cursor as highlighted character or underscore at end
 		if cursor < len(value) {
 			before := value[:cursor]
@@ -213,7 +234,7 @@ func (m *VMFormModel) renderListItem(index int, value string, cursor int, focuse
 	numPart := styles.MutedTextStyle().Render(fmt.Sprintf("  [%d] ", index+1))
 
 	var valPart string
-	if focused {
+	if focused && m.focused {
 		if cursor < len(value) {
 			before := value[:cursor]
 			at := string(value[cursor])
@@ -236,7 +257,7 @@ func (m *VMFormModel) renderListItem(index int, value string, cursor int, focuse
 	}
 
 	delPart := ""
-	if focused {
+	if focused && m.focused {
 		delPart = " " + styles.ErrorTextStyle().Render("[Del]")
 	}
 

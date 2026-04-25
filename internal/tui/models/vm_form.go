@@ -4,7 +4,6 @@ package models
 import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
@@ -341,11 +340,4 @@ func (m *VMFormModel) SetSize(w, h int) {
 // unused field to satisfy compiler (vmManager reference needed)
 var _ = vm.Manager{}
 
-var (
-	formLabelStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
-	formFocusStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("170")).Bold(true)
-	formInputStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("170"))
-	formErrorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
-	formMutedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
-	formSaveStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("82")).Bold(true)
-)
+
