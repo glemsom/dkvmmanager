@@ -294,7 +294,7 @@ func (m *MainModel) renderConfigTab() string {
 }
 
 func (m *MainModel) renderConfigTabWithWidth(width int) string {
-	height := m.contentHeight()
+	height := m.contentHeight() - 2
 	listWidth := max(0, width-4)
 	listHeight := max(0, height-4)
 	m.configList.SetSize(listWidth, listHeight)
@@ -311,7 +311,7 @@ func (m *MainModel) renderPowerTab() string {
 }
 
 func (m *MainModel) renderPowerTabWithWidth(width int) string {
-	height := m.contentHeight()
+	height := m.contentHeight() - 2
 	listWidth := max(0, width-4)
 	listHeight := max(0, height-4)
 	m.powerList.SetSize(listWidth, listHeight)
@@ -326,7 +326,7 @@ func (m *MainModel) renderPowerTabWithWidth(width int) string {
 
 // contentHeight calculates available height for content area
 func (m *MainModel) contentHeight() int {
-	// header: 1, blank: 1, tab bar: 1, separator: 1, status bar: 1 = 5 fixed lines
+	// header: 1, blank: 1, tab bar: 2 (content row + underline), status bar: 1 = 5 fixed lines
 	// + breadcrumbs: 1 if present
 	fixed := 5
 	if m.breadcrumbs.Len() > 0 {
