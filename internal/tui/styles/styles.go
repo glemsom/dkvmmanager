@@ -215,7 +215,6 @@ func DetailSectionStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(Colors.Primary).
 		Bold(true).
-		Background(Colors.PrimaryDim).
 		Padding(0, 1, 0, 1)
 }
 
