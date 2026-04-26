@@ -28,54 +28,55 @@ type Theme struct {
 	HoverBackground lipgloss.Color // Background on hover/focus
 }
 
-// NewDarkTheme creates a theme suitable for dark terminals.
+// NewDarkTheme creates a theme suitable for dark terminals in pure textmode.
+// All colors use the 16-color ANSI palette (0-15) for maximum compatibility.
 func NewDarkTheme() Theme {
 	return Theme{
-		Primary:         lipgloss.Color("#7aa2f7"), // Blue (Storm)
-		PrimaryDim:      lipgloss.Color("#292e42"), // Blue-tinted dark
-		Secondary:       lipgloss.Color("#bb9af7"), // Purple
-		SecondaryDim:    lipgloss.Color("#2a2e3f"), // Purple-tinted dark
-		Success:         lipgloss.Color("#73daca"), // Teal green
-		SuccessDim:      lipgloss.Color("#1a1f2e"), // Subtle green tint
-		Warning:         lipgloss.Color("#e0af68"), // Orange/yellow
-		WarningDim:      lipgloss.Color("#2f1f1a"), // Subtle yellow tint
-		Error:           lipgloss.Color("#f7768e"), // Red pink
-		ErrorDim:        lipgloss.Color("#2f1a1f"), // Subtle red tint
-		Foreground:      lipgloss.Color("#a9b1d6"), // Foreground (light gray-blue)
-		ForegroundDim:   lipgloss.Color("#828baa"), // Dimmed text (blue-gray, WCAG AA: 5.06:1 on bg)
-		Muted:           lipgloss.Color("#828baa"), // Muted blue-gray (WCAG AA: 5.06:1 on bg)
-		Background:      lipgloss.Color("#1a1b26"), // Deep navy
-		Border:          lipgloss.Color("#626e98"), // Muted blue (WCAG AA 1.4.11: 3.42:1 on bg)
-		FocusedBackground: lipgloss.Color("#1f2335"), // Lighter navy
-		UnfocusedBackground: lipgloss.Color("#16161e"), // Darker navy
-		FocusBorder:     lipgloss.Color("#7aa2f7"), // Same as Primary
-		HoverBackground: lipgloss.Color("#1f2335"), // Same as FocusedBackground
+		Primary:         lipgloss.Color("4"),  // Blue
+		PrimaryDim:      lipgloss.Color("12"), // Bright blue
+		Secondary:       lipgloss.Color("5"),  // Magenta
+		SecondaryDim:    lipgloss.Color("13"), // Bright magenta
+		Success:         lipgloss.Color("2"),  // Green
+		SuccessDim:      lipgloss.Color("10"), // Bright green
+		Warning:         lipgloss.Color("3"),  // Yellow
+		WarningDim:      lipgloss.Color("11"), // Bright yellow
+		Error:           lipgloss.Color("1"),  // Red
+		ErrorDim:        lipgloss.Color("9"),  // Bright red
+		Foreground:      lipgloss.Color("7"),  // Light gray
+		ForegroundDim:   lipgloss.Color("8"),  // Dark gray
+		Muted:           lipgloss.Color("8"),  // Dark gray
+		Background:      lipgloss.Color("0"),  // Black
+		Border:          lipgloss.Color("8"),  // Dark gray
+		FocusedBackground: lipgloss.Color("0"), // Black
+		UnfocusedBackground: lipgloss.Color("0"), // Black
+		FocusBorder:     lipgloss.Color("4"),  // Blue (same as Primary)
+		HoverBackground: lipgloss.Color("0"),  // Black
 	}
 }
 
-// NewLightTheme creates a theme suitable for light terminals (if needed).
-// All color combinations are verified to meet WCAG AA 4.5:1 contrast ratio.
+// NewLightTheme creates a theme suitable for light terminals in pure textmode.
+// All colors use the 16-color ANSI palette (0-15) for maximum compatibility.
 func NewLightTheme() Theme {
 	return Theme{
-		Primary:         lipgloss.Color("#2f6dde"), // Blue
-		PrimaryDim:      lipgloss.Color("#f6f8fc"), // Very light blue tint (WCAG AA section headers)
-		Secondary:       lipgloss.Color("#7c3aed"), // Purple (5.70:1 on white)
-		SecondaryDim:    lipgloss.Color("#ede9fe"), // Light purple tint
-		Success:         lipgloss.Color("#15803d"), // Green (5.02:1 on white)
-		SuccessDim:      lipgloss.Color("#dcfce7"), // Light green tint (4.57:1 with success text)
-		Warning:         lipgloss.Color("#a16207"), // Amber (4.92:1 on white)
-		WarningDim:      lipgloss.Color("#fef9c3"), // Light amber tint (4.58:1 with warning text)
-		Error:           lipgloss.Color("#c53030"), // Red
-		ErrorDim:        lipgloss.Color("#fef2f2"), // Light red tint (5.00:1 with error text)
-		Foreground:      lipgloss.Color("#212529"), // Dark gray for text
-		ForegroundDim:   lipgloss.Color("#5f6878"), // Gray (5.62:1 on white, WCAG AA on all bg variants)
-		Muted:           lipgloss.Color("#5f6878"), // Gray (5.62:1 on white, WCAG AA on all bg variants)
-		Background:      lipgloss.Color("#ffffff"), // White
-		Border:          lipgloss.Color("#6b7280"), // Gray border (4.83:1 on white, WCAG 1.4.11)
-		FocusedBackground: lipgloss.Color("#f8f9fa"), // Light gray
-		UnfocusedBackground: lipgloss.Color("#e9ecef"), // Slightly lighter gray
-		FocusBorder:     lipgloss.Color("#2f6dde"), // Same as Primary
-		HoverBackground: lipgloss.Color("#f8f9fa"), // Same as FocusedBackground (WCAG AA for text on hover)
+		Primary:         lipgloss.Color("4"),  // Blue
+		PrimaryDim:      lipgloss.Color("12"), // Bright blue
+		Secondary:       lipgloss.Color("5"),  // Magenta
+		SecondaryDim:    lipgloss.Color("13"), // Bright magenta
+		Success:         lipgloss.Color("2"),  // Green
+		SuccessDim:      lipgloss.Color("10"), // Bright green
+		Warning:         lipgloss.Color("3"),  // Yellow
+		WarningDim:      lipgloss.Color("11"), // Bright yellow
+		Error:           lipgloss.Color("1"),  // Red
+		ErrorDim:        lipgloss.Color("9"),  // Bright red
+		Foreground:      lipgloss.Color("0"),  // Black
+		ForegroundDim:   lipgloss.Color("8"),  // Dark gray
+		Muted:           lipgloss.Color("8"),  // Dark gray
+		Background:      lipgloss.Color("15"), // White
+		Border:          lipgloss.Color("8"),  // Dark gray
+		FocusedBackground: lipgloss.Color("15"), // White
+		UnfocusedBackground: lipgloss.Color("7"), // Light gray
+		FocusBorder:     lipgloss.Color("4"),  // Blue (same as Primary)
+		HoverBackground: lipgloss.Color("15"), // White
 	}
 }
 

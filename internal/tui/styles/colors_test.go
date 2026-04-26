@@ -13,14 +13,14 @@ func TestColorPalette(t *testing.T) {
 		color    lipgloss.Color
 		expected string
 	}{
-		{"Primary", Colors.Primary, "7aa2f7"},
-		{"Secondary", Colors.Secondary, "bb9af7"},
-		{"Success", Colors.Success, "73daca"},
-		{"Warning", Colors.Warning, "e0af68"},
-		{"Error", Colors.Error, "f7768e"},
-		{"Muted", Colors.Muted, "565f89"},
-		{"Background", Colors.Background, "#1a1b26"},
-		{"Border", Colors.Border, "#3b4261"},
+		{"Primary", Colors.Primary, "4"},
+		{"Secondary", Colors.Secondary, "5"},
+		{"Success", Colors.Success, "2"},
+		{"Warning", Colors.Warning, "3"},
+		{"Error", Colors.Error, "1"},
+		{"Muted", Colors.Muted, "8"},
+		{"Background", Colors.Background, "0"},
+		{"Border", Colors.Border, "8"},
 	}
 
 	for _, tt := range tests {
@@ -38,9 +38,9 @@ func TestStatusColors(t *testing.T) {
 		color    lipgloss.Color
 		expected string
 	}{
-		{"Running", StatusColors.Running, "73daca"},
-		{"Stopped", StatusColors.Stopped, "565f89"},
-		{"Error", StatusColors.Error, "f7768e"},
+		{"Running", StatusColors.Running, "2"},
+		{"Stopped", StatusColors.Stopped, "8"},
+		{"Error", StatusColors.Error, "1"},
 	}
 
 	for _, tt := range tests {
