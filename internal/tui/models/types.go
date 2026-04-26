@@ -84,9 +84,11 @@ type MainModel struct {
 	// Config menu state
 	configSelectedIndex int
 	configList          list.Model
+	configListView      string
 
 	// Power menu state
 	powerList list.Model
+	powerListView     string
 
 	// Status message
 	statusMessage string
