@@ -90,32 +90,44 @@ func (m *CPUOptionsFormModel) syncViewport() {
 }
 
 // focusedLineIndex maps focusIndex to a rendered line index
+// Must mirror renderAllLines() structure exactly.
 func (m *CPUOptionsFormModel) focusedLineIndex() int {
 	line := 0
 
-	for i, p := range m.positions {
+	// Section 1: Hypervisor Stealth
+	line += 2 // "== Hypervisor Stealth ==" + blank
+	for i := 0; i < 2 && i < len(m.positions); i++ {
 		if i == m.focusIndex {
 			return line
 		}
-
-		// Section headers
-		if i == 0 {
-			line += 2 // section header + blank
-		} else if i == 2 {
-			line += 2 // section header + blank
-		} else if i == 17 {
-			line += 2 // section header + blank
-		}
-
-		switch p.kind {
-		case cpuOptToggle:
-			line++
-		case cpuOptText:
-			line++
-		case cpuOptSave:
-			line += 2 // blank + button
-		}
+		line++
 	}
+
+	// Section 2: Hyper-V Enlightenments
+	line += 3 // blank + header + blank
+	for i := 2; i < 17 && i < len(m.positions); i++ {
+		if i == m.focusIndex {
+			return line
+		}
+		line++
+	}
+
+	// Section 3: Advanced CPU Features
+	line += 3 // blank + header + blank
+	for i := 17; i < 23 && i < len(m.positions); i++ {
+		if i == m.focusIndex {
+			return line
+		}
+		line++
+	}
+
+	// Save button (last position)
+	line++ // blank before save button
+	saveIdx := len(m.positions) - 1
+	if saveIdx == m.focusIndex {
+		return line
+	}
+	line++ // the save button line itself
 
 	return line
 }
