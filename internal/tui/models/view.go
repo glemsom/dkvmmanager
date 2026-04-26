@@ -294,12 +294,15 @@ func (m *MainModel) renderConfigTab() string {
 }
 
 func (m *MainModel) renderConfigTabWithWidth(width int) string {
-	height := m.contentHeight()
-	listWidth := max(0, width-6)
+	height := m.contentHeight() - 2
+	// Leave 4-char margin on right side to match VMs tab and prevent
+	// terminal auto-wrap from hiding the right border.
+	contentWidth := width - 4
+	listWidth := max(0, contentWidth-6)
 	listHeight := max(0, height-4)
 	m.configList.SetSize(listWidth, listHeight)
 	content := styles.LayeredPanelStyle().
-		Width(width).
+		Width(contentWidth).
 		Height(height).
 		Render(m.configList.View())
 
@@ -312,12 +315,15 @@ func (m *MainModel) renderPowerTab() string {
 }
 
 func (m *MainModel) renderPowerTabWithWidth(width int) string {
-	height := m.contentHeight()
-	listWidth := max(0, width-6)
+	height := m.contentHeight() - 2
+	// Leave 4-char margin on right side to match VMs tab and prevent
+	// terminal auto-wrap from hiding the right border.
+	contentWidth := width - 4
+	listWidth := max(0, contentWidth-6)
 	listHeight := max(0, height-4)
 	m.powerList.SetSize(listWidth, listHeight)
 	content := styles.LayeredPanelStyle().
-		Width(width).
+		Width(contentWidth).
 		Height(height).
 		Render(m.powerList.View())
 
