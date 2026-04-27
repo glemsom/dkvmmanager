@@ -190,4 +190,3 @@ Release-please commit-to-changelog mapping is defined in
 | `chore` | Changed | No |
 | `test` | Changed | No |
 
-For full release automation details, see [gh-actions-plan.md](gh-actions-plan.md).
