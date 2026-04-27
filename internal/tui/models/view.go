@@ -201,8 +201,11 @@ func (m *MainModel) renderVMsTab() string {
 		return m.menuList.View()
 	}
 
-	leftWidth := max(30, int(float64(m.windowWidth)*0.4))
-	rightWidth := m.windowWidth - leftWidth - 3
+	// Reserve 4 chars total margin to prevent right border from being
+	// clipped by terminal auto-wrap (matches Config/Power tab approach).
+	availableWidth := m.windowWidth - 4
+	leftWidth := max(30, int(float64(availableWidth)*0.4))
+	rightWidth := availableWidth - leftWidth - 2
 	height := m.contentHeight() - 2
 
 	m.menuList.SetSize(leftWidth, height)
