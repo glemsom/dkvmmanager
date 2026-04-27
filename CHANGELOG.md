@@ -31,12 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Start script execution order**: Start/stop scripts now run synchronously before/after QEMU, ensuring VFIO devices are bound to `vfio-pci` before QEMU attempts passthrough
-- VM name input: spaces can now be typed in text fields
-- Multifunction PCI device address allocation for secondary functions
-- Silent failures and inconsistent error wrapping in OVMF file operations
-- Test summary counts when no tests match
-- Golden file formatting in config tab
 - Fixed line calculation for save button in CPU options form (`internal/tui/models/cpu_options_form_navigation.go`)
 
 ## [0.0.1] - 2025-04-19
