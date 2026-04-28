@@ -76,12 +76,22 @@ build: ## Build application in Docker using go.mod/go.sum from host
 .PHONY: test
 # Go test flags can be passed via TEST_FLAGS (e.g. make test TEST_FLAGS="-v -run TestName")
 # Use COVER=1 to enable coverage (e.g. make test COVER=1)
-test: generate-mod ## Run all tests (COVER=1 for coverage, TEST_FLAGS for extra args)
-	@echo "Running tests..."
+test: generate-mod ## Run go vet and all tests (COVER=1 for coverage, TEST_FLAGS for extra args)
+	@echo "=== Running go vet and tests ==="
 	@docker run --rm -w /build -v $(shell pwd):/build -e GOCACHE=/tmp/go-cache \
 		--user $$(id -u):$$(id -g) \
 		$(GOLANG_IMAGE) \
 		sh -c '\
+			echo "Running go vet..."; \
+			go vet ./... > /tmp/vet.log 2>&1; \
+			VET_EXIT=$$?; \
+			cat /tmp/vet.log; \
+			if [ "$$VET_EXIT" -ne 0 ]; then \
+				echo "go vet failed"; \
+				exit $$VET_EXIT; \
+			fi; \
+			echo ""; \
+			echo "Running tests..."; \
 			FLAGS="$(TEST_FLAGS)"; \
 			if [ "$(COVER)" = "1" ]; then FLAGS="$$FLAGS -cover"; fi; \
 			go test $$FLAGS ./... > /tmp/test.log 2>&1; \
