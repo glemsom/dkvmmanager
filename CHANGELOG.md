@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-04-28
+
 ### Added
 
 - **Breadcrumbs navigation**: Shows current UI location (e.g., Configuration > Delete VM) in sub-views
@@ -62,5 +64,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/glemsom/dkvmmanager/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/glemsom/dkvmmanager/tree/v0.0.1
