@@ -186,8 +186,6 @@ func (t *TabModel) RenderTabs(width int) string {
 			Background(styles.Colors.Background).
 			Render(strings.Repeat(" ", padding))
 		contentRow = leading + contentRow
-	} else {
-		contentRow = contentRow
 	}
 	if paddedWidth := lipgloss.Width(contentRow); paddedWidth < width {
 		trailing := lipgloss.NewStyle().
