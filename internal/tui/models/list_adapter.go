@@ -58,21 +58,21 @@ func (d MenuItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 	var style lipgloss.Style
 
 	if item.MenuItem.Disabled {
+		// String already has "  " prefix for indentation
 		style = styles.ListItemDisabledStyle().
-			Background(styles.Colors.Background).
-			Width(m.Width())
+			PaddingLeft(0).
+			Background(styles.Colors.Background)
 	} else if index == m.Index() {
-		// ListItemSelectedStyle has PaddingLeft(1), we add ">  " prefix for total 4-space equivalent (matching unselected)
+		// Use ">  " prefix for visual indentation; override PaddingLeft to 0
 		style = styles.ListItemSelectedStyle().
-			Width(m.Width())
+			PaddingLeft(0)
 		str = ">  " + item.MenuItem.Title
 	} else {
 		// Use muted color for non-selected items to create visual hierarchy
 		style = lipgloss.NewStyle().
 			Foreground(styles.Colors.Muted).
 			Background(styles.Colors.Background).
-			PaddingLeft(2).
-			Width(m.Width())
+			PaddingLeft(2)
 	}
 
 	fmt.Fprint(w, style.Render(str))
@@ -107,16 +107,16 @@ func (d VMListItemDelegate) Render(w io.Writer, m list.Model, index int, listIte
 	var style lipgloss.Style
 
 	if index == m.Index() {
+		// Use ">  " prefix for visual indentation; override PaddingLeft to 0
 		style = styles.ListItemSelectedStyle().
-			Width(m.Width())
+			PaddingLeft(0)
 		str = ">  " + item.VM.Name
 	} else {
 		// Use muted color for non-selected items to create visual hierarchy
 		style = lipgloss.NewStyle().
 			Foreground(styles.Colors.Muted).
 			Background(styles.Colors.Background).
-			PaddingLeft(2).
-			Width(m.Width())
+			PaddingLeft(2)
 		str = "  " + item.VM.Name
 	}
 

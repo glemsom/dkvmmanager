@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Status bar display**: Status bar now shows VM execution state (▶ Running / ■ Stopped) instead of VM counts
 - **UI rendering**: Apply consistent background colors and full-width rendering for header, tab bar, and list items
 - **UI rendering (Power tab)**: Adjust width calculation to leave 4-char margin on right side to prevent terminal auto-wrap from hiding the right border
+- **List item rendering**: Replace fixed-width rendering with padding-based indentation for VM list and menu items ("Selected > " and unselected "  " prefixes for consistent visual alignment)
 
 ### Removed
 
