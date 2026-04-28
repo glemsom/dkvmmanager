@@ -1,7 +1,7 @@
 # GoReleaser configuration for DKVM Manager
 # Triggered by the release workflow on tag pushes (v* pattern).
-# Produces cross-platform binaries, tar.gz/zip archives, checksums,
-# and publishes them as GitHub Releases.
+# Produces a Linux x86_64 binary as a tar.gz archive with checksums,
+# and publishes them as a GitHub Release.
 version: 2
 
 project_name: dkvmmanager
@@ -14,11 +14,8 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-      - darwin
-      - windows
     goarch:
       - amd64
-      - arm64
     ldflags:
       - -s -w
       - -X github.com/glemsom/dkvmmanager/internal/version.Version={{.Version}}
@@ -31,9 +28,6 @@ builds:
 archives:
   - id: default
     formats: ["tar.gz"]
-    format_overrides:
-      - goos: windows
-        formats: ["zip"]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     files:
