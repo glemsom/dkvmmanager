@@ -19,3 +19,4 @@ jobs:
           release-type: simple
           config-file: .release-please-config.json
           target-branch: main
+          skip-github-release: true
