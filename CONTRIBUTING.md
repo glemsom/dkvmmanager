@@ -66,8 +66,8 @@ publishes release]
    Commit and opens a Release PR with an updated `CHANGELOG.md` and version bump.
 
 6. **Release** — A maintainer merges the Release PR, creating a git tag
-   (e.g. `v0.1.0`). This triggers GoReleaser to build multi-platform binaries
-   and publish them to GitHub Releases.
+   (e.g. `v0.1.0`). This triggers GoReleaser to build the Linux amd64 binary
+   and publish it to GitHub Releases.
 
 ## Branch Strategy
 
@@ -164,8 +164,8 @@ the release workflow to build and publish artifacts:
 
 | Artifact | Platforms | Format |
 |----------|-----------|--------|
-| Binary | linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64, windows/arm64 | Native executable |
-| Archive | All platforms | `.tar.gz` (`.zip` on Windows) |
+| Binary | linux/amd64 | Native executable |
+| Archive | linux/amd64 | `.tar.gz` |
 | Checksums | — | `checksums.txt` (SHA-256) |
 
 Archives include `LICENSE`, `README`, and `CHANGELOG.md`. Configuration lives
