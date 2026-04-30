@@ -172,7 +172,7 @@ func TestCPUOptionsFormAllToggles(t *testing.T) {
 		"HVStimer", "HVSyncIC", "HVTime", "HVVapic", "HVVPIndex",
 		"HVNoNonarchCoresharing", "HVTLBFlush", "HVTLBFlushExt", "HVIPI",
 		"HVAVIC", "TopoExt", "L3Cache", "X2APIC", "Migratable", "InvTSC",
-		"RTCUTC",
+		"RTCUTC", "CPUPM",
 	}
 
 	for _, field := range toggleFields {
@@ -233,7 +233,7 @@ func TestCPUOptionsFieldLabels(t *testing.T) {
 		"HVRuntime", "HVSpinlocks", "HVStimer", "HVSyncIC", "HVTime",
 		"HVVapic", "HVVPIndex", "HVNoNonarchCoresharing", "HVTLBFlush",
 		"HVTLBFlushExt", "HVIPI", "HVAVIC", "TopoExt", "L3Cache",
-		"X2APIC", "Migratable", "InvTSC", "RTCUTC",
+		"X2APIC", "Migratable", "InvTSC", "RTCUTC", "CPUPM",
 	}
 
 	for _, field := range fields {
@@ -253,8 +253,8 @@ func TestCPUOptionsPositionsCount(t *testing.T) {
 	}
 	form.rebuildPositions()
 
-	// 21 toggles + 2 text fields + 1 save button = 24
-	expectedCount := 24
+	// 22 toggles + 2 text fields + 1 save button = 25
+	expectedCount := 25
 	if len(form.positions) != expectedCount {
 		t.Errorf("Expected %d positions, got %d", expectedCount, len(form.positions))
 	}

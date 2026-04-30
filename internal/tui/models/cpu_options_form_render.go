@@ -71,7 +71,7 @@ func (m *CPUOptionsFormModel) renderAllLines() []string {
 	lines = append(lines, cpuOptSectionStyle.Render("== Advanced CPU Features =="))
 	lines = append(lines, "")
 
-	for i, pos := range m.positions[17:23] {
+	for i, pos := range m.positions[17:24] {
 		focused := (i+17 == m.focusIndex)
 		lines = m.renderPosition(lines, pos, focused)
 	}
@@ -207,6 +207,7 @@ func (m *CPUOptionsFormModel) fieldLabel(name string) string {
 		"Migratable":             "Disable vCPU migration",
 		"InvTSC":                 "Invariant TSC",
 		"RTCUTC":                 "Use UTC time for RTC",
+		"CPUPM":                  "CPU Power Management",
 	}
 	if lbl, ok := labels[name]; ok {
 		return lbl

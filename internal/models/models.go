@@ -144,6 +144,7 @@ type CPUOptions struct {
 	Migratable             bool   `json:"migratable" yaml:"migratable"`
 	InvTSC                 bool   `json:"invtsc" yaml:"invtsc"`
 	RTCUTC                 bool   `json:"rtc_utc" yaml:"rtc_utc"`
+	CPUPM                  bool   `json:"cpu_pm" yaml:"cpu_pm"`
 }
 
 // VMStatus represents the current status of a running VM

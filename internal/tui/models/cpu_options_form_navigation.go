@@ -35,6 +35,7 @@ func (m *CPUOptionsFormModel) rebuildPositions() {
 	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "Migratable"})
 	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "InvTSC"})
 	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "RTCUTC"})
+	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "CPUPM"})
 
 	// Save button
 	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptSave, fieldName: "save"})
@@ -114,7 +115,7 @@ func (m *CPUOptionsFormModel) focusedLineIndex() int {
 
 	// Section 3: Advanced CPU Features
 	line += 3 // blank + header + blank
-	for i := 17; i < 23 && i < len(m.positions); i++ {
+	for i := 17; i < 24 && i < len(m.positions); i++ {
 		if i == m.focusIndex {
 			return line
 		}

@@ -46,6 +46,8 @@ func (m *CPUOptionsFormModel) getToggleValue(fieldName string) bool {
 		return m.options.InvTSC
 	case "RTCUTC":
 		return m.options.RTCUTC
+	case "CPUPM":
+		return m.options.CPUPM
 	}
 	return false
 }
@@ -95,6 +97,8 @@ func (m *CPUOptionsFormModel) toggleValue(fieldName string) {
 		m.options.InvTSC = !m.options.InvTSC
 	case "RTCUTC":
 		m.options.RTCUTC = !m.options.RTCUTC
+	case "CPUPM":
+		m.options.CPUPM = !m.options.CPUPM
 	}
 }
 

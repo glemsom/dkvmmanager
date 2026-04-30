@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **CPU Power Management toggle**: New `CPUPM` option in CPU options form to enable CPU power management passthrough (`cpu-pm=on`) to QEMU (`internal/models/models.go`, `internal/vm/vm_runner_config.go`, `internal/tui/models/cpu_options_form_*.go`)
+
 ## [0.1.2](https://github.com/glemsom/dkvmmanager/compare/v0.1.1...v0.1.2) (2026-04-30)
 
 ### Changed

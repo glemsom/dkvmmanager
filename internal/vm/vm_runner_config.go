@@ -382,6 +382,9 @@ func (r *VMRunner) buildCPUOptsString() string {
 	if opts.InvTSC {
 		flags = append(flags, "+invtsc")
 	}
+	if opts.CPUPM {
+		flags = append(flags, "cpu-pm=on")
+	}
 
 	return strings.Join(flags, ",")
 }
