@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3](https://github.com/glemsom/dkvmmanager/compare/v0.1.2...v0.1.3) (2026-04-30)
+
 ### Added
 
 - **CPU Power Management toggle**: New `CPUPM` option in CPU options form to enable CPU power management passthrough (`cpu-pm=on`) to QEMU (`internal/models/models.go`, `internal/vm/vm_runner_config.go`, `internal/tui/models/cpu_options_form_*.go`)
@@ -85,7 +87,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/glemsom/dkvmmanager/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/glemsom/dkvmmanager/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/glemsom/dkvmmanager/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/glemsom/dkvmmanager/compare/v0.0.1...v0.1.0
