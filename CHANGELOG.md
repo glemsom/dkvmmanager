@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Panel borders**: Replace rounded borders with normal (straight) borders in layered panels and titled panels for consistent visual alignment
+
 ### Fixed
 
 - GitHub releases now include the compiled binary — release-please skips release creation so GoReleaser exclusively owns the release with assets (`.github/workflows/release-please.yml`)

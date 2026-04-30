@@ -21,20 +21,20 @@ var StatusColors = struct {
 	Error:   theme.DefaultTheme.Error,
 }
 
-// LayeredPanelStyle returns a styled panel with gradient border effect
+// LayeredPanelStyle returns a styled panel with normal border effect
 func LayeredPanelStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
+		Border(lipgloss.NormalBorder()).
 		BorderForeground(Colors.Border).
 		BorderBackground(Colors.Background).
 		Background(Colors.Background).
 		Padding(1, 2)
 }
 
-// ActiveLayeredPanelStyle returns a styled panel with active gradient border
+// ActiveLayeredPanelStyle returns a styled panel with active normal border
 func ActiveLayeredPanelStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
+		Border(lipgloss.NormalBorder()).
 		BorderForeground(Colors.Primary).   // Outer border = accent
 		BorderBackground(Colors.Border).    // Inner = border color
 		Background(Colors.FocusedBackground).
@@ -44,7 +44,7 @@ func ActiveLayeredPanelStyle() lipgloss.Style {
 // PanelWithTitleStyle returns a styled panel with a title
 func PanelWithTitleStyle(title string) lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
+		Border(lipgloss.NormalBorder()).
 		BorderForeground(Colors.Primary).
 		Background(Colors.Background).
 		Padding(1, 2).
