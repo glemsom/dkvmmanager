@@ -16,8 +16,15 @@ import (
 
 // VMStartedMsg is sent when a VM starts successfully
 type VMStartedMsg struct {
+	Runner *vm.VMRunner
 	VMName string
 	VMID   string
+}
+
+// VMStartErrorMsg is sent when a VM fails to start
+type VMStartErrorMsg struct {
+	VMName string
+	Err    error
 }
 
 // VMStoppedMsg is sent when a VM stops
@@ -113,9 +120,9 @@ func (m *VMRunningModel) initialStatus() tea.Cmd {
 // waitForLog returns a tea.Cmd that reads one log line from the runner
 func (m *VMRunningModel) waitForLog() tea.Cmd {
 	return func() tea.Msg {
-		// Guard against nil runner and nil channel
+		// Guard against nil runner
 		if m.runner == nil {
-			return VMLogMsg{Line: ""}
+			return nil // no-op until runner is set
 		}
 
 		line, ok := <-m.runner.LogChan()
@@ -131,11 +138,7 @@ func (m *VMRunningModel) waitForVMExit() tea.Cmd {
 	return func() tea.Msg {
 		// Guard against nil runner
 		if m.runner == nil {
-			return VMStoppedMsg{
-				VMName: m.vm.Name,
-				VMID:   m.vm.ID,
-				Reason: "no runner",
-			}
+			return nil // no-op until runner is set
 		}
 
 		<-m.runner.Done()
@@ -219,6 +222,16 @@ func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.status = msg.Status
 		m.threads = msg.Threads
 		return m, m.pollStatus()
+
+	case VMStartedMsg:
+		m.runner = msg.Runner
+		m.status = "starting" // will be updated by initialStatus
+		return m, tea.Batch(
+			m.waitForLog(),
+			m.waitForVMExit(),
+			m.pollStatus(),
+			m.initialStatus(),
+		)
 	}
 
 	return m, nil
@@ -524,4 +537,15 @@ func (m *VMRunningModel) SetSize(w, h int) {
 // Runner returns the underlying VM runner
 func (m *VMRunningModel) Runner() *vm.VMRunner {
 	return m.runner
+}
+
+// startVMCommand returns a tea.Cmd that runs runner.Start() in a goroutine.
+// Sends VMStartedMsg on success, VMStartErrorMsg on failure.
+func startVMCommand(runner *vm.VMRunner, vmName, vmID string) tea.Cmd {
+	return func() tea.Msg {
+		if err := runner.Start(); err != nil {
+			return VMStartErrorMsg{VMName: vmName, Err: err}
+		}
+		return VMStartedMsg{Runner: runner, VMName: vmName, VMID: vmID}
+	}
 }

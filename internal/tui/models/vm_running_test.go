@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	models "github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
 func setupRunningModel(t *testing.T, status string) *VMRunningModel {
@@ -456,5 +457,101 @@ func TestVMRunningModelViewNoThreadsWhenEmpty(t *testing.T) {
 	view := m.View()
 	if strings.Contains(view, "vCPU Threads:") {
 		t.Error("View should not show 'vCPU Threads:' when threads empty")
+	}
+}
+
+// --- Async VM Start Tests ---
+
+func TestVMStartedMsgHandlerSetsRunner(t *testing.T) {
+	m := setupRunningModel(t, "starting")
+
+	// Create a real runner (with nil config, not used in this test)
+	runner := vm.NewVMRunner(&models.VM{Name: "test-vm", ID: "1"}, nil)
+
+	// Simulate receiving VMStartedMsg with a runner
+	msg := VMStartedMsg{
+		Runner: runner,
+		VMName: "test-vm",
+		VMID:   "1",
+	}
+	updated, cmd := m.Update(msg)
+	m = updated.(*VMRunningModel)
+
+	if m.runner == nil {
+		t.Error("Expected runner to be set after VMStartedMsg")
+	}
+	if m.status != "starting" {
+		t.Errorf("Expected status 'starting', got '%s'", m.status)
+	}
+	if cmd == nil {
+		t.Error("Expected non-nil command after VMStartedMsg")
+	}
+}
+
+func TestVMStartErrorMsgHandler(t *testing.T) {
+	// VMStartErrorMsg is handled by the parent MainModel, not VMRunningModel.
+	// This test verifies the message type exists and carries the expected data.
+	expectedErr := fmt.Errorf("QEMU not found")
+	errMsg := VMStartErrorMsg{
+		VMName: "test-vm",
+		Err:    expectedErr,
+	}
+
+	if errMsg.VMName != "test-vm" {
+		t.Errorf("Expected VMName 'test-vm', got '%s'", errMsg.VMName)
+	}
+	if errMsg.Err.Error() != expectedErr.Error() {
+		t.Errorf("Expected error '%v', got '%v'", expectedErr, errMsg.Err)
+	}
+}
+
+func TestStartVMCommandSuccess(t *testing.T) {
+	// startVMCommand takes a *vm.VMRunner and calls .Start() which launches
+	// real processes (QEMU, swtpm, etc.), making it unsuitable for unit tests.
+	// The logic is verified indirectly via integration tests and the
+	// VMStartedMsg handler test above.
+	// This test confirms the function signature is correct and compiles.
+	var _ func(runner *vm.VMRunner, vmName, vmID string) tea.Cmd = startVMCommand
+}
+
+func TestNilRunnerWaitForLogReturnsNil(t *testing.T) {
+	// When runner is nil, waitForLog should return nil (no-op),
+	// not an empty VMLogMsg.
+	m := setupRunningModel(t, "starting")
+	// Ensure runner is nil
+	if m.runner != nil {
+		t.Fatal("Expected nil runner in setupRunningModel")
+	}
+
+	// Execute the waitForLog command
+	cmd := m.waitForLog()
+	if cmd == nil {
+		t.Fatal("waitForLog should return a non-nil tea.Cmd")
+	}
+
+	msg := cmd()
+	if msg != nil {
+		t.Errorf("Expected nil message when runner is nil, got %T: %v", msg, msg)
+	}
+}
+
+func TestNilRunnerWaitForVMExitReturnsNil(t *testing.T) {
+	// When runner is nil, waitForVMExit should return nil (no-op),
+	// not a VMStoppedMsg.
+	m := setupRunningModel(t, "starting")
+	// Ensure runner is nil
+	if m.runner != nil {
+		t.Fatal("Expected nil runner in setupRunningModel")
+	}
+
+	// Execute the waitForVMExit command
+	cmd := m.waitForVMExit()
+	if cmd == nil {
+		t.Fatal("waitForVMExit should return a non-nil tea.Cmd")
+	}
+
+	msg := cmd()
+	if msg != nil {
+		t.Errorf("Expected nil message when runner is nil, got %T: %v", msg, msg)
 	}
 }
