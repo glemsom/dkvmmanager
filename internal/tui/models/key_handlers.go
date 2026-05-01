@@ -95,6 +95,17 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Handle VM start failure from async start command
+	if vse, ok := msg.(VMStartErrorMsg); ok {
+		m.statusBar.SetMessage("Error starting VM: " + vse.Err.Error())
+		m.runningVMID = ""
+		m.vmRunningModel = nil
+		m.currentView = ViewMainMenu
+		m.rebuildMenuList()
+		m.breadcrumbs.Clear()
+		return m, nil
+	}
+
 	// Handle exit request from VM running view
 	if _, ok := msg.(VMRunningViewExitMsg); ok {
 		return m.returnFromSubView()
@@ -596,20 +607,10 @@ func (m *MainModel) handleVMSelection() (tea.Model, tea.Cmd) {
 		if hostTopo, err := m.vmManager.ScanCPUTopology(); err == nil {
 			runner.SetHostCPUTopology(hostTopo)
 		}
-		if err := runner.Start(); err != nil {
-			m.statusBar.SetMessage("Error starting VM: " + err.Error())
-			return m, nil
-		}
 
-		// Update status bar to show this VM is running
-		m.statusBar.SetStats(len(m.menuItems), 1)
-		
-		// Track the running VM ID so status bar count survives rebuildMenuList
-		m.runningVMID = vmObj.ID
-
-		// Create running model
-		m.vmRunningModel = NewVMRunningModel(vmObj, runner)
-		m.vmRunningModel.startTime = time.Now() // Set before SetSize so uptime displays immediately
+		// Create running model immediately (runner will be set async)
+		m.vmRunningModel = NewVMRunningModel(vmObj, nil) // nil runner
+		m.vmRunningModel.startTime = time.Now()
 		m.vmRunningModel.SetSize(m.windowWidth-4, m.contentHeight()-2)
 		m.currentView = ViewVMRunning
 		m.breadcrumbs.Clear()
@@ -617,11 +618,19 @@ func (m *MainModel) handleVMSelection() (tea.Model, tea.Cmd) {
 		m.breadcrumbs.AddItem("Start", "vm_start", 1)
 		m.breadcrumbs.AddItem(vmObj.Name, "vm_running", 1)
 
+		// Optimistically update status bar
+		m.statusBar.SetStats(len(m.menuItems), 1)
+		m.runningVMID = vmObj.ID
+
+		// Start VM asynchronously — view is already visible
 		if debugMode {
-			log.Printf("[DEBUG] VM started: %s (ID: %s)", vmObj.Name, vmObj.ID)
+			log.Printf("[DEBUG] VM starting async: %s (ID: %s)", vmObj.Name, vmObj.ID)
 		}
 
-		return m, m.vmRunningModel.Init()
+		return m, tea.Batch(
+			m.vmRunningModel.Init(),               // polls with nil runner → shows "[STARTING]"
+			startVMCommand(runner, vmObj.Name, vmObj.ID),
+		)
 	}
 	return m, nil
 }
