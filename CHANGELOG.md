@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Prevent TUI freeze during VM startup by running `runner.Start()` in a goroutine instead of blocking the BubbleTea event loop
+
 ## [0.1.3](https://github.com/glemsom/dkvmmanager/compare/v0.1.2...v0.1.3) (2026-04-30)
 
 ### Added

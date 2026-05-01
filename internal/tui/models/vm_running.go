@@ -539,13 +539,17 @@ func (m *VMRunningModel) Runner() *vm.VMRunner {
 	return m.runner
 }
 
-// startVMCommand returns a tea.Cmd that runs runner.Start() in a goroutine.
+// startVMCommand returns a tea.Cmd that runs runner.Start() in a goroutine
+// to avoid blocking the BubbleTea event loop during VM startup.
 // Sends VMStartedMsg on success, VMStartErrorMsg on failure.
 func startVMCommand(runner *vm.VMRunner, vmName, vmID string) tea.Cmd {
-	return func() tea.Msg {
+	ch := make(chan tea.Msg, 1)
+	go func() {
 		if err := runner.Start(); err != nil {
-			return VMStartErrorMsg{VMName: vmName, Err: err}
+			ch <- VMStartErrorMsg{VMName: vmName, Err: err}
+		} else {
+			ch <- VMStartedMsg{Runner: runner, VMName: vmName, VMID: vmID}
 		}
-		return VMStartedMsg{Runner: runner, VMName: vmName, VMID: vmID}
-	}
+	}()
+	return func() tea.Msg { return <-ch }
 }
