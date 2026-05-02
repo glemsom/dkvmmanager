@@ -13,6 +13,11 @@ import (
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
+// sshPasswordErrorMsg is sent when password change fails.
+type sshPasswordErrorMsg struct {
+	err string
+}
+
 // passwordStrength returns a score 0-5 based on password complexity
 func passwordStrength(pw string) int {
 	score := 0
