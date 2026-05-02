@@ -73,7 +73,7 @@ func NewVMFormModel(vmManager *vm.Manager) *VMFormModel {
 		cdroms:        []string{},
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
-		focused:       false,
+		focused:       true,
 	}
 	m.rebuildPositions()
 	return m
@@ -106,6 +106,7 @@ func NewVMFormModelEdit(vmManager *vm.Manager, vmObj *models.VM) *VMFormModel {
 		tpmEnabled:    vmObj.TPMEnabled,
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
+		focused:       true,
 	}
 	m.rebuildPositions()
 	return m
