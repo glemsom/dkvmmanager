@@ -58,9 +58,16 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 	if r.cpuOptions.RTCUTC {
 		rtcBase = "utc"
 	}
+
+	// Build overcommit args based on CPUPM setting
+	overcommitArg := "mem-lock=on"
+	if r.cpuOptions.CPUPM {
+		overcommitArg = "mem-lock=on,cpu-pm=on"
+	}
+
 	args = append(args,
 		"-mem-prealloc",
-		"-overcommit", "mem-lock=on,cpu-pm=on",
+		"-overcommit", overcommitArg,
 		"-rtc", fmt.Sprintf("base=%s,clock=vm,driftfix=slew", rtcBase),
 		"-serial", "none",
 		"-parallel", "none",

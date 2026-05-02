@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Ensure VM form is focused when opened (new/edit mode)
+- **CPU Power Management toggle**: Fix `-overcommit cpu-pm=on` now respects the CPUPM setting (was previously hardcoded and always enabled)
 
 ### Security
 -

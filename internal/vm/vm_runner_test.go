@@ -532,6 +532,90 @@ func TestDryRunFiltersUSBPassthrough(t *testing.T) {
 	}
 }
 
+func TestBuildCPUOptsStringWithCPUPM(t *testing.T) {
+	runner := &VMRunner{
+		vm:         &models.VM{Name: "test"},
+		cpuOptions: models.CPUOptions{CPUPM: true},
+	}
+
+	result := runner.buildCPUOptsString()
+	if !containsString(result, "cpu-pm=on") {
+		t.Error("Expected cpu-pm=on flag when CPUPM is enabled")
+	}
+}
+
+func TestBuildQEMUArgsWithCPUPM(t *testing.T) {
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	if err := os.MkdirAll(vmDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(vmDir, "OVMF_CODE.fd"), []byte("fake"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(vmDir, "OVMF_VARS.fd"), []byte("fake"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+
+	vm := &models.VM{
+		ID:   "1",
+		Name: "test-vm",
+	}
+
+	runner := NewVMRunner(vm, cfg)
+	runner.SetCPUOptions(models.CPUOptions{CPUPM: true})
+	args := runner.buildQEMUArgs(vmDir)
+	argStr := string(joinArgs(args))
+
+	// Should have cpu-pm=on in -overcommit
+	if !containsString(argStr, "cpu-pm=on") {
+		t.Error("Expected cpu-pm=on in -overcommit arg when CPUPM is enabled")
+	}
+	// Should have cpu-pm=on in -cpu flags
+	if !containsString(argStr, "-cpu host,cpu-pm=on") {
+		t.Error("Expected cpu-pm=on in -cpu args when CPUPM is enabled")
+	}
+}
+
+func TestBuildQEMUArgsWithoutCPUPM(t *testing.T) {
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	if err := os.MkdirAll(vmDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(vmDir, "OVMF_CODE.fd"), []byte("fake"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(vmDir, "OVMF_VARS.fd"), []byte("fake"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+
+	vm := &models.VM{
+		ID:   "1",
+		Name: "test-vm",
+	}
+
+	runner := NewVMRunner(vm, cfg)
+	// CPUPM not set (defaults to false)
+	args := runner.buildQEMUArgs(vmDir)
+	argStr := string(joinArgs(args))
+
+	// Should NOT have cpu-pm=on in -overcommit
+	if containsString(argStr, "cpu-pm=on") {
+		t.Error("Should not have cpu-pm=on in -overcommit when CPUPM is disabled")
+	}
+}
+
 func containsString(s, substr string) bool {
 	return len(s) >= len(substr) && searchBytes([]byte(s), []byte(substr))
 }
