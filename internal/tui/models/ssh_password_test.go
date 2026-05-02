@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	tform "github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
 // TestNewSSHPasswordFormModel tests form initialization
@@ -33,14 +34,14 @@ func TestSSHPasswordFormRebuildPositions(t *testing.T) {
 	if len(form.positions) != 3 {
 		t.Errorf("Expected 3 positions, got %d", len(form.positions))
 	}
-	if form.positions[0].fieldName != "newPassword" {
-		t.Errorf("Position 0 field = %q, want newPassword", form.positions[0].fieldName)
+	if form.positions[0].Key != "newPassword" {
+		t.Errorf("Position 0 field = %q, want newPassword", form.positions[0].Key)
 	}
-	if form.positions[1].fieldName != "confirmPassword" {
-		t.Errorf("Position 1 field = %q, want confirmPassword", form.positions[1].fieldName)
+	if form.positions[1].Key != "confirmPassword" {
+		t.Errorf("Position 1 field = %q, want confirmPassword", form.positions[1].Key)
 	}
-	if form.positions[2].kind != sshPwApply {
-		t.Errorf("Position 2 kind = %d, want sshPwApply", form.positions[2].kind)
+	if form.positions[2].Kind != tform.FocusButton {
+		t.Errorf("Position 2 kind = %d, want FocusButton", form.positions[2].Kind)
 	}
 }
 
@@ -403,7 +404,7 @@ func TestSSHPasswordModelUpdate(t *testing.T) {
 	if wrapped.form == nil {
 		t.Error("Wrapped model form should not be nil after Update()")
 	}
-	if !wrapped.form.ready {
+	if !wrapped.form.Ready() {
 		t.Error("Form should be ready after WindowSizeMsg")
 	}
 	_ = cmd
@@ -428,12 +429,12 @@ func TestSSHPasswordModelUpdateDelegatesKeyPress(t *testing.T) {
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	m = updated.(*SSHPasswordModel)
 
-	initialField := m.form.currentPos().fieldName
+	initialField := m.Form().currentPos().fieldName
 
 	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
 	m = updated.(*SSHPasswordModel)
 
-	newField := m.form.currentPos().fieldName
+	newField := m.Form().currentPos().fieldName
 	if newField == initialField {
 		t.Error("Key press (Tab) should be delegated to form, focus should change")
 	}

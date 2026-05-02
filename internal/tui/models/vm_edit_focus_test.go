@@ -119,40 +119,34 @@ func TestEditFormArrowKeyNavigation(t *testing.T) {
 
 	initialFocusIndex := editModel.form.focusIndex
 
-	// Press down arrow
+	// Press down arrow twice to reach first hard disk list item (position 2)
+	// (position 1 is the hardDisks_label which doesn't show indicators)
+	for i := 0; i < 2; i++ {
+		model, _ := editModel.Update(tea.KeyMsg{Type: tea.KeyDown})
+		editModel = model.(*VMEditModel)
+	}
+
+	// Focus should have moved to position 2 (list item)
+	if editModel.form.focusIndex != initialFocusIndex+2 {
+		t.Errorf("Focus index should be %d after 2 down presses, got %d",
+			initialFocusIndex+2, editModel.form.focusIndex)
+	}
+
+	// List items show [Del] when focused, not '> '
+	afterView := editModel.View()
+	if !strings.Contains(afterView, "[Del]") {
+		t.Error("Focused list item should show [Del] button indicator")
+	}
+
+	// Press down to reach +Add button, then Tab to verify Tab works
 	model, _ := editModel.Update(tea.KeyMsg{Type: tea.KeyDown})
 	editModel = model.(*VMEditModel)
-
-	// Focus should have moved
-	if editModel.form.focusIndex <= initialFocusIndex {
-		t.Errorf("Focus index should have increased after pressing down. Before: %d, After: %d",
-			initialFocusIndex, editModel.form.focusIndex)
-	}
-
-	// View should still show focus indicator on the new field
-	afterView := editModel.View()
-	if !strings.Contains(afterView, "> ") {
-		t.Error("View after arrow down should still contain focus indicator '> ' prefix")
-	}
-
-	// Press down again
-	model, _ = editModel.Update(tea.KeyMsg{Type: tea.KeyDown})
-	editModel = model.(*VMEditModel)
-
-	// Focus should have moved again
-	if editModel.form.focusIndex <= initialFocusIndex+1 {
-		t.Errorf("Focus index should have increased again. Expected > %d, Got: %d",
-			initialFocusIndex+1, editModel.form.focusIndex)
-	}
-
-	// Tab key should also work
 	model, _ = editModel.Update(tea.KeyMsg{Type: tea.KeyTab})
 	editModel = model.(*VMEditModel)
 
-	// Focus should keep moving
+	// Focus should have moved forward by Tab
 	if editModel.form.focusIndex <= initialFocusIndex+2 {
-		t.Errorf("Focus index should have increased after tab. Expected > %d, Got: %d",
-			initialFocusIndex+2, editModel.form.focusIndex)
+		t.Errorf("Focus index should have advanced after down+tab. Got: %d", editModel.form.focusIndex)
 	}
 }
 
@@ -190,35 +184,32 @@ func TestEditFormArrowNavigationViaMainModel(t *testing.T) {
 		t.Error("BUG: Edit form should have focused=true when entering edit view")
 	}
 
-	// Capture initial focus index
-	initialFocusIndex := m.vmEditModel.form.focusIndex
-
-	// Send down arrow through MainModel Update
-	model, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	m = model.(*MainModel)
-
-	// Focus should have moved
-	if m.vmEditModel.form.focusIndex <= initialFocusIndex {
-		t.Errorf("Focus index should increase after down arrow. Before: %d, After: %d",
-			initialFocusIndex, m.vmEditModel.form.focusIndex)
-	}
-
-	// The rendered view should show focus indicators
-	view := m.vmEditModel.View()
-	if !strings.Contains(view, "> ") {
-		t.Error("Rendered view should contain '> ' focus indicator")
-	}
-
 	// Verify list items show [Del] button when focused
-	// Press down enough times to reach a hard disk list item (position 2 typically)
-	for i := 0; i < 5; i++ {
+	// First navigate to the hard disk list item (position 2) from start
+	for i := 0; i < 2; i++ {
 		model, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
 		m = model.(*MainModel)
 	}
 
-	view = m.vmEditModel.View()
+	view := m.vmEditModel.View()
 	// When a list item is focused, it should show [Del] button
 	if !strings.Contains(view, "[Del]") {
 		t.Error("Focused list item should show [Del] button indicator")
+	}
+
+	// Now navigate to macAddress text field (position 6) to check '> '
+	for i := 0; i < 4; i++ {
+		model, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+		m = model.(*MainModel)
+	}
+
+	// Focus should have moved to a text field
+	if m.vmEditModel.form.focusIndex <= 2 {
+		t.Errorf("Focus index should have moved past list items. Got: %d", m.vmEditModel.form.focusIndex)
+	}
+
+	view = m.vmEditModel.View()
+	if !strings.Contains(view, "> ") {
+		t.Error("Rendered view should contain '> ' focus indicator on text field")
 	}
 }

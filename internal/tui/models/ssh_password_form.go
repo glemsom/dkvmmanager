@@ -22,6 +22,18 @@ var (
 	sshPwStrengthStyle = styles.FormInputStyle()
 )
 
+// Constants for backward compatibility with existing tests.
+// Note: these map to form.FocusKind values used in positions.
+const (
+	sshPwText  = int(form.FocusText)   // text field position kind
+	sshPwApply = int(form.FocusButton) // apply button position kind
+)
+
+// sshPasswordErrorMsg is sent when password change fails.
+type sshPasswordErrorMsg struct {
+	err string
+}
+
 // SSHPasswordFormModel is a scrollable form for setting the SSH password.
 // It implements the form.FormModel interface for use with ScrollableForm.
 type SSHPasswordFormModel struct {
@@ -231,6 +243,42 @@ func (m *SSHPasswordFormModel) HandleMessage(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
+// renderPasswordInput renders a masked password input field.
+func (m *SSHPasswordFormModel) renderPasswordInput(label, value string, cursor int, focused bool) string {
+	prefix := "  "
+	if focused {
+		prefix = sshPwFocusStyle.Render("> ")
+	}
+
+	labelPart := sshPwLabelStyle.Render(label + ": ")
+	masked := strings.Repeat("*", len(value))
+
+	var valPart string
+	if focused {
+		if cursor < len(masked) {
+			before := masked[:cursor]
+			at := string(masked[cursor])
+			after := ""
+			if cursor+1 < len(masked) {
+				after = masked[cursor+1:]
+			}
+			valPart = sshPwInputStyle.Render(before) +
+				lipgloss.NewStyle().Reverse(true).Render(at) +
+				sshPwInputStyle.Render(after)
+		} else {
+			valPart = sshPwInputStyle.Render(masked) + sshPwFocusStyle.Render("_")
+		}
+	} else {
+		if value == "" {
+			valPart = sshPwMutedStyle.Render("(empty)")
+		} else {
+			valPart = sshPwInputStyle.Render(masked)
+		}
+	}
+
+	return prefix + labelPart + valPart
+}
+
 // --- Internal helpers ---
 
 // getTextValue returns the text value for a field.
@@ -278,4 +326,192 @@ func (m *SSHPasswordFormModel) cursorOffset(key string) int {
 // setCursorOffset sets cursor offset; -1 means end.
 func (m *SSHPasswordFormModel) setCursorOffset(key string, off int) {
 	m.cursorOffsets[key] = off
+}
+
+// renderAllLines generates the complete content lines for the viewport.
+func (m *SSHPasswordFormModel) renderAllLines() []string {
+	var lines []string
+	lines = append(lines, sshPwFocusStyle.Render("Set SSH Password"), "")
+
+	for i, pos := range m.positions {
+		focused := i == m.focusIndex
+		cursor := m.effectiveCursor(pos.Key, m.getTextValue(pos.Key))
+		if focused {
+			cursor = m.cursorOffset(pos.Key)
+			if cursor < 0 {
+				cursor = m.effectiveCursor(pos.Key, m.getTextValue(pos.Key))
+			}
+		}
+		lines = append(lines, m.RenderPosition(pos, focused, cursor))
+
+		// Add error line if applicable
+		if pos.Kind == form.FocusText {
+			if err, hasErr := m.errors[pos.Key]; hasErr {
+				lines = append(lines, sshPwErrorStyle.Render(err))
+			}
+		}
+		if pos.Kind == form.FocusButton {
+			lines = append(lines, "") // blank separator before button
+		}
+	}
+
+	// Footer
+	lines = append(lines, "")
+	if m.statusMessage != "" {
+		lines = append(lines, sshPwErrorStyle.Render(m.statusMessage), "")
+	}
+	lines = append(lines, sshPwMutedStyle.Render("Tab/Shift+Tab Navigate  Space/Enter Select  ESC Cancel"))
+	return lines
+}
+
+// Init implements tea.Model (for backward compatibility).
+func (m *SSHPasswordFormModel) Init() tea.Cmd {
+	return nil
+}
+
+// Update implements tea.Model (for backward compatibility).
+func (m *SSHPasswordFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.SetSize(msg.Width, msg.Height)
+		return m, nil
+
+	case tea.KeyMsg:
+		return m.handleKey(msg)
+
+	case sshPasswordErrorMsg:
+		m.applying = false
+		m.statusMessage = msg.err
+		return m, nil
+	}
+	return m, nil
+}
+
+// handleKey processes keyboard input for backward-compatible Update.
+func (m *SSHPasswordFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.applying {
+		return m, nil
+	}
+
+	key := msg.String()
+
+	switch key {
+	case "tab":
+		m.moveFocus(1)
+	case "shift+tab":
+		m.moveFocus(-1)
+	case "up":
+		m.moveFocus(-1)
+	case "down":
+		m.moveFocus(1)
+	case "enter", " ":
+		return m.handleEnterKey()
+	case "backspace":
+		m.handleBackspaceKey()
+	case "delete":
+		m.handleDeleteKey()
+	default:
+		if len(key) == 1 {
+			m.handleCharInput(key)
+		}
+	}
+	return m, nil
+}
+
+// moveFocus moves focus by delta in the flat positions list.
+func (m *SSHPasswordFormModel) moveFocus(delta int) {
+	m.focusIndex += delta
+	if m.focusIndex < 0 {
+		m.focusIndex = 0
+	}
+	if m.focusIndex >= len(m.positions) {
+		m.focusIndex = len(m.positions) - 1
+	}
+}
+
+// handleEnterKey acts contextually: apply or move to next field.
+func (m *SSHPasswordFormModel) handleEnterKey() (tea.Model, tea.Cmd) {
+	pos := m.currentPos()
+	if pos.kind == sshPwApply {
+		if !m.validate() {
+			return m, nil
+		}
+		m.applying = true
+		m.statusMessage = ""
+		return m, m.apply()
+	}
+	m.moveFocus(1)
+	return m, nil
+}
+
+// handleBackspaceKey deletes the character before cursor.
+func (m *SSHPasswordFormModel) handleBackspaceKey() {
+	pos := m.currentPos()
+	if pos.kind != sshPwText {
+		return
+	}
+	val := m.getTextValue(pos.fieldName)
+	cursor := m.effectiveCursor(pos.fieldName, val)
+	if cursor > 0 {
+		newVal := val[:cursor-1] + val[cursor:]
+		m.setTextValue(pos.fieldName, newVal)
+		m.setCursorOffset(pos.fieldName, cursor-1)
+	}
+}
+
+// handleDeleteKey deletes the character at cursor.
+func (m *SSHPasswordFormModel) handleDeleteKey() {
+	pos := m.currentPos()
+	if pos.kind != sshPwText {
+		return
+	}
+	val := m.getTextValue(pos.fieldName)
+	cursor := m.effectiveCursor(pos.fieldName, val)
+	if cursor < len(val) {
+		newVal := val[:cursor] + val[cursor+1:]
+		m.setTextValue(pos.fieldName, newVal)
+	}
+}
+
+// handleCharInput inserts a character at cursor.
+func (m *SSHPasswordFormModel) handleCharInput(ch string) {
+	pos := m.currentPos()
+	if pos.kind != sshPwText {
+		return
+	}
+	val := m.getTextValue(pos.fieldName)
+	cursor := m.effectiveCursor(pos.fieldName, val)
+	newVal := val[:cursor] + ch + val[cursor:]
+	m.setTextValue(pos.fieldName, newVal)
+	m.setCursorOffset(pos.fieldName, cursor+1)
+}
+
+// View implements tea.Model (for backward compatibility).
+func (m *SSHPasswordFormModel) View() string {
+	if !m.ready {
+		return "Loading form..."
+	}
+	m.renderedLines = m.renderAllLines()
+	totalContent := strings.Join(m.renderedLines, "\n")
+	m.vp.SetContent(totalContent)
+	return m.vp.View()
+}
+
+// sshPos is a legacy position type for backward-compatible test access.
+type sshPos struct {
+	kind      int
+	fieldName string
+}
+
+// currentPos returns the current focused position (for backward compatibility).
+func (m *SSHPasswordFormModel) currentPos() sshPos {
+	if m.focusIndex < 0 || m.focusIndex >= len(m.positions) {
+		if len(m.positions) > 0 {
+			p := m.positions[0]
+			return sshPos{kind: int(p.Kind), fieldName: p.Key}
+		}
+		return sshPos{}
+	}
+	p := m.positions[m.focusIndex]
+	return sshPos{kind: int(p.Kind), fieldName: p.Key}
 }
