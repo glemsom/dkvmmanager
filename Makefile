@@ -28,14 +28,15 @@ DOCKER_GO := docker run --rm -w /build -v $(shell pwd):/build $(GOLANG_IMAGE) go
 .PHONY: generate-mod
 generate-mod: ## Generate go.mod and go.sum in Docker, copy to host
 	@echo "Generating go.mod and go.sum in Docker container..."
-	@docker run --rm -w /build -v $(shell pwd):/build --user $$(id -u):$$(id -g) \
-		-e GOCACHE=/tmp/go-cache \
+	@docker run --rm -w /build -v $(shell pwd):/build \
 		$(GOLANG_IMAGE) sh -c '\
+		apk add --no-cache git; \
 		if [ ! -f go.mod ]; then \
 			go mod init github.com/glemsom/dkvmmanager; \
 		fi; \
 		go mod download; \
 		go mod tidy'
+	@chown $$(id -u):$$(id -g) go.mod go.sum 2>/dev/null || true
 	@echo "Done: go.mod and go.sum generated."
 
 .PHONY: coverage
