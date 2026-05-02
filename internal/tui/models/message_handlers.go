@@ -142,6 +142,16 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		m.breadcrumbs.Clear()
 		return m, nil
 	}
+	if kam, ok := nextMsg.(PCIVFIOKernelAppliedMsg); ok {
+		if kam.Success {
+			m.statusBar.SetMessage("vfio-pci.ids applied to kernel successfully")
+		} else {
+			m.statusBar.SetMessage("Apply to kernel failed: " + kam.Error)
+		}
+		m.currentView = ViewConfigMenu
+		m.breadcrumbs.Clear()
+		return m, nil
+	}
 	if _, ok := nextMsg.(USBPassthroughUpdatedMsg); ok {
 		m.statusBar.SetMessage("USB passthrough saved successfully")
 		m.currentView = ViewConfigMenu

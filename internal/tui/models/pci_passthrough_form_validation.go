@@ -56,3 +56,60 @@ func (m *PCIPassthroughFormModel) validateAndSave() (tea.Model, tea.Cmd) {
 		return PCIPassthroughUpdatedMsg{}
 	}
 }
+
+// handleApplyKernel applies the current PCI passthrough config to grub.cfg
+func (m *PCIPassthroughFormModel) handleApplyKernel() (tea.Model, tea.Cmd) {
+	m.errors = make(map[string]string)
+	m.kernelMsg = ""
+	m.kernelMsgErr = false
+
+	// Build config from selected devices (same as save)
+	var devices []models.PCIPassthroughDevice
+	for _, dev := range m.devices {
+		if !m.selected[dev.Address] {
+			continue
+		}
+		devices = append(devices, models.PCIPassthroughDevice{
+			Address:   dev.Address,
+			ROMPath:   "",
+			Vendor:    dev.Vendor,
+			Device:    dev.Device,
+			Name:      dev.Name,
+			ClassCode: dev.ClassCode,
+		})
+	}
+
+	// Validate before applying
+	_, valErrors := vm.ValidatePCIDevices(devices)
+	if len(valErrors) > 0 {
+		m.kernelMsg = strings.Join(valErrors, "; ")
+		m.kernelMsgErr = true
+		m.syncViewport()
+		return m, nil
+	}
+
+	// Build the PCI passthrough config and save it first
+	cfg := models.PCIPassthroughConfig{
+		Devices: devices,
+	}
+	if err := m.vmManager.SavePCIPassthroughConfig(cfg); err != nil {
+		m.kernelMsg = fmt.Sprintf("Failed to save config: %v", err)
+		m.kernelMsgErr = true
+		m.syncViewport()
+		return m, nil
+	}
+
+	// Apply to kernel grub.cfg asynchronously
+	return m, func() tea.Msg {
+		err := m.vmManager.ApplyVFIOIDsToKernel()
+		if err != nil {
+			return PCIVFIOKernelAppliedMsg{
+				Success: false,
+				Error:   err.Error(),
+			}
+		}
+		return PCIVFIOKernelAppliedMsg{
+			Success: true,
+		}
+	}
+}

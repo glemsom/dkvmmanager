@@ -221,6 +221,33 @@ func (m *Manager) SaveStartStopScript(cfg models.StartStopScript) error {
 	return m.repository.SaveStartStopScript(cfg)
 }
 
+// ApplyVFIOIDsToKernel reads the current PCI passthrough config, builds the
+// vfio-pci.ids parameter string, and writes it to the grub.cfg file.
+// It returns an error if the config cannot be read, or the grub.cfg cannot be updated.
+func (m *Manager) ApplyVFIOIDsToKernel() error {
+	// Get current PCI passthrough config
+	pciCfg, err := m.GetPCIPassthroughConfig()
+	if err != nil {
+		return fmt.Errorf("get PCI passthrough config: %w", err)
+	}
+
+	// Build vfio-pci.ids string
+	vfioIDs := BuildVFIOIDs(pciCfg.Devices)
+
+	// Get grub config path
+	grubPath := m.cfg.GrubConfigPath
+	if grubPath == "" {
+		grubPath = "/media/usb/boot/grub/grub.cfg"
+	}
+
+	// Update grub.cfg
+	if err := UpdateGrubVFIOIDs(vfioIDs, grubPath); err != nil {
+		return fmt.Errorf("update grub.cfg: %w", err)
+	}
+
+	return nil
+}
+
 // copyOVMFFiles copies OVMF_CODE.fd and OVMF_VARS.fd from the configured
 // BIOS paths to the VM directory.
 func (m *Manager) copyOVMFFiles(vmDir string) error {

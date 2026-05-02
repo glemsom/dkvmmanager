@@ -34,6 +34,9 @@ type Config struct {
 
 	// Log file path
 	LogFile string `mapstructure:"log_file"`
+
+	// Grub configuration file path (for vfio-pci.ids kernel parameter)
+	GrubConfigPath string `mapstructure:"grub_config_path"`
 }
 
 // DefaultConfig returns the default configuration
@@ -45,9 +48,10 @@ func DefaultConfig() *Config {
 		BIOSCode:      "/usr/share/OVMF/OVMF_CODE.fd",
 		BIOSVars:      "/usr/share/OVMF/OVMF_VARS.fd",
 		NetworkBridge: "br0",
-		QEMUPath:      "/usr/bin/qemu-system-x86_64",
-		TPMBinary:     "/usr/bin/swtpm",
-		LogFile:       "/var/log/dkvm.log",
+		QEMUPath:       "/usr/bin/qemu-system-x86_64",
+		TPMBinary:      "/usr/bin/swtpm",
+		LogFile:        "/var/log/dkvm.log",
+		GrubConfigPath: "/media/usb/boot/grub/grub.cfg",
 	}
 }
 
@@ -70,6 +74,7 @@ func Load() *Config {
 	viper.SetDefault("qemu_path", cfg.QEMUPath)
 	viper.SetDefault("tpm_binary", cfg.TPMBinary)
 	viper.SetDefault("log_file", cfg.LogFile)
+	viper.SetDefault("grub_config_path", cfg.GrubConfigPath)
 
 	// Read config
 	if err := viper.ReadInConfig(); err == nil {
@@ -131,6 +136,7 @@ func (c *Config) Save() error {
 	viper.Set("qemu_path", c.QEMUPath)
 	viper.Set("tpm_binary", c.TPMBinary)
 	viper.Set("log_file", c.LogFile)
+	viper.Set("grub_config_path", c.GrubConfigPath)
 
 	return viper.WriteConfigAs(configPath)
 }

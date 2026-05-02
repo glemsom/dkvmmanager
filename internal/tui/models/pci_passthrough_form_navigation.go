@@ -50,6 +50,12 @@ func (m *PCIPassthroughFormModel) rebuildPositions() {
 		kind:       pciSave,
 		deviceAddr: "",
 	})
+
+	// Apply to Kernel button
+	m.positions = append(m.positions, pciFocusPos{
+		kind:       pciApplyKernel,
+		deviceAddr: "",
+	})
 }
 
 // currentPos returns the focus position at the current focusIndex
@@ -152,6 +158,8 @@ func (m *PCIPassthroughFormModel) focusedLineIndex() int {
 			line++
 		case pciSave:
 			line++ // blank before button
+			line++ // button
+		case pciApplyKernel:
 			line++ // button
 		}
 	}

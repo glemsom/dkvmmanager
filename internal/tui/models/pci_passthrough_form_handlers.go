@@ -24,6 +24,17 @@ func (m *PCIPassthroughFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)
+
+	case PCIVFIOKernelAppliedMsg:
+		if msg.Success {
+			m.kernelMsg = "vfio-pci.ids applied to grub.cfg successfully"
+			m.kernelMsgErr = false
+		} else {
+			m.kernelMsg = msg.Error
+			m.kernelMsgErr = true
+		}
+		m.syncViewport()
+		return m, nil
 	}
 	return m, nil
 }
@@ -48,15 +59,15 @@ func (m *PCIPassthroughFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd)
 		m.moveFocus(1)
 		m.syncViewport()
 	case "enter", " ":
-		return m.handleEnter()
+		return m.handleEnterOrApply()
 	default:
 		// No text input fields remaining (ROM removed)
 	}
 	return m, nil
 }
 
-// handleEnter acts contextually: toggle or save
-func (m *PCIPassthroughFormModel) handleEnter() (tea.Model, tea.Cmd) {
+// handleEnterOrApply acts contextually: toggle, save, or apply kernel
+func (m *PCIPassthroughFormModel) handleEnterOrApply() (tea.Model, tea.Cmd) {
 	pos := m.currentPos()
 	switch pos.kind {
 	case pciToggle:
@@ -66,6 +77,8 @@ func (m *PCIPassthroughFormModel) handleEnter() (tea.Model, tea.Cmd) {
 		return m, nil
 	case pciSave:
 		return m.validateAndSave()
+	case pciApplyKernel:
+		return m.handleApplyKernel()
 	default:
 		// Skip non-focusable positions
 		m.moveFocus(1)

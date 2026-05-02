@@ -9,6 +9,12 @@ import (
 // PCIPassthroughUpdatedMsg is a message indicating PCI passthrough config was saved
 type PCIPassthroughUpdatedMsg struct{}
 
+// PCIVFIOKernelAppliedMsg is sent when vfio-pci.ids has been applied to grub.cfg
+type PCIVFIOKernelAppliedMsg struct {
+	Success bool
+	Error   string
+}
+
 // PCIPassthroughModel is a thin wrapper around PCIPassthroughFormModel
 type PCIPassthroughModel struct {
 	form *PCIPassthroughFormModel

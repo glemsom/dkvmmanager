@@ -13,10 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
--
+- **PCI passthrough Apply to Kernel**: New "Apply to Kernel" button in the PCI passthrough form that writes selected device VFIO IDs to `grub.cfg`'s `vfio-pci.ids` kernel parameter, enabling persistent kernel-level VFIO binding (`internal/vm/grub_config.go`, `internal/vm/grub_config_test.go`, `internal/tui/models/pci_passthrough_form_*.go`)
+- **GRUB VFIO config utilities**: `UpdateGrubVFIOIDs` function to safely update `vfio-pci.ids` in grub.cfg with backup support, parameter removal, and whitespace cleanup (`internal/vm/grub_config.go`)
 
 ### Changed
--
+- **PCI passthrough validation form**: Extended with kernel apply button, status messages, and asynchronous command handling (`internal/tui/models/pci_passthrough_form_*.go`)
+- **VM manager**: Added `ApplyVFIOIDsToKernel` method to orchestrate grub.cfg updates from PCI passthrough config (`internal/vm/manager.go`)
+- **Config**: Extended config save with additional logging (`internal/config/config.go`)
 
 ### Deprecated
 -

@@ -27,6 +27,9 @@ var pciMutedStyle = styles.FormMutedStyle()
 // pciSaveStyle is the save button style
 var pciSaveStyle = styles.FormSaveStyle()
 
+// pciApplyStyle is the apply-to-kernel button style
+var pciApplyStyle = styles.FormSaveStyle().Background(styles.Colors.Warning)
+
 // pciGPUStyle is the GPU tag style
 var pciGPUStyle = styles.FormFocusStyle()
 
@@ -55,11 +58,17 @@ func (m *PCIPassthroughFormModel) renderAllLines() []string {
 	if len(m.devices) == 0 {
 		lines = append(lines, pciMutedStyle.Render("No PCI devices found on this system."))
 		lines = append(lines, "")
-		saveText := pciMutedStyle.Render("[Space/Enter] Save    [ESC] Cancel")
-		if m.currentPos().kind == pciSave && m.focusIndex == len(m.positions)-1 {
+		saveText := pciMutedStyle.Render("[Space/Enter] Save") + "    " + pciMutedStyle.Render("[ESC] Cancel")
+		if m.currentPos().kind == pciSave && m.focusIndex == len(m.positions)-2 {
 			saveText = pciSaveStyle.Render("[Space/Enter] Save") + "    " + pciMutedStyle.Render("[ESC] Cancel")
 		}
 		lines = append(lines, saveText)
+		lines = append(lines, "")
+		applyText := pciMutedStyle.Render("[Space/Enter] Apply to Kernel")
+		if m.currentPos().kind == pciApplyKernel {
+			applyText = pciApplyStyle.Render("[Space/Enter] Apply to Kernel")
+		}
+		lines = append(lines, applyText)
 		return lines
 	}
 
@@ -75,6 +84,16 @@ func (m *PCIPassthroughFormModel) renderAllLines() []string {
 		lines = append(lines, pciErrorStyle.Render("Error: "+errMsg))
 	}
 
+	// Kernel apply status message
+	if m.kernelMsg != "" {
+		lines = append(lines, "")
+		if m.kernelMsgErr {
+			lines = append(lines, pciErrorStyle.Render("Error: "+m.kernelMsg))
+		} else {
+			lines = append(lines, pciSaveStyle.Render(m.kernelMsg))
+		}
+	}
+
 	// Validation warnings
 	for _, w := range m.warnings {
 		lines = append(lines, "")
@@ -83,7 +102,7 @@ func (m *PCIPassthroughFormModel) renderAllLines() []string {
 
 	// Footer
 	lines = append(lines, "")
-	lines = append(lines, pciMutedStyle.Render("Tab Navigate  Space/Enter Toggle  ESC Cancel"))
+	lines = append(lines, pciMutedStyle.Render("Tab Navigate  Space/Enter Toggle/Action  ESC Cancel"))
 
 	return lines
 }
@@ -107,11 +126,20 @@ func (m *PCIPassthroughFormModel) renderPosition(lines []string, pos pciFocusPos
 
 	case pciSave:
 		lines = append(lines, "")
-		saveText := pciMutedStyle.Render("[Space/Enter] Save    [ESC] Cancel")
+		saveText := pciMutedStyle.Render("[Space/Enter] Save") + "    " + pciMutedStyle.Render("[ESC] Cancel")
 		if focused {
 			saveText = pciSaveStyle.Render("[Space/Enter] Save") + "    " + pciMutedStyle.Render("[ESC] Cancel")
 		}
 		lines = append(lines, saveText)
+		return lines
+
+	case pciApplyKernel:
+		lines = append(lines, "")
+		applyText := pciMutedStyle.Render("[Space/Enter] Apply to Kernel") + "    " + pciMutedStyle.Render("[ESC] Cancel")
+		if focused {
+			applyText = pciApplyStyle.Render("[Space/Enter] Apply to Kernel") + "    " + pciMutedStyle.Render("[ESC] Cancel")
+		}
+		lines = append(lines, applyText)
 		return lines
 	}
 

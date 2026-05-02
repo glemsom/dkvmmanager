@@ -407,10 +407,10 @@ func TestPCIFORMUngroupedDeviceNoAutoSelect(t *testing.T) {
 func TestPCIFORMNavigationSkipsGroupHeaders(t *testing.T) {
 	form := newTestPCIForm(t)
 
-	// Positions can be pciToggle, pciGroupHeader, or pciSave
+	// Positions can be pciToggle, pciGroupHeader, pciSave, or pciApplyKernel
 	for i, pos := range form.positions {
-		if pos.kind != pciToggle && pos.kind != pciSave && pos.kind != pciGroupHeader {
-			t.Errorf("Position %d has unexpected kind %d (expected pciToggle, pciSave, or pciGroupHeader)", i, pos.kind)
+		if pos.kind != pciToggle && pos.kind != pciSave && pos.kind != pciGroupHeader && pos.kind != pciApplyKernel {
+			t.Errorf("Position %d has unexpected kind %d (expected pciToggle, pciSave, pciGroupHeader, or pciApplyKernel)", i, pos.kind)
 		}
 	}
 
@@ -517,11 +517,14 @@ func TestPCIFORMEmptyDevices(t *testing.T) {
 	form.rebuildPositions()
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 25})
 
-	if len(form.positions) != 1 {
-		t.Errorf("Expected 1 position (save button only), got %d", len(form.positions))
+	if len(form.positions) != 2 {
+		t.Errorf("Expected 2 positions (save + apply kernel buttons), got %d", len(form.positions))
 	}
 	if form.positions[0].kind != pciSave {
-		t.Error("Expected save button as only position")
+		t.Error("Expected save button as first position")
+	}
+	if form.positions[1].kind != pciApplyKernel {
+		t.Error("Expected apply kernel button as second position")
 	}
 }
 
@@ -607,7 +610,7 @@ func TestPCIFORMNavigationTabCycle(t *testing.T) {
 		t.Errorf("After first Tab, expected to be on a toggle, got kind=%d", form.currentPos().kind)
 	}
 
-	// Tab through to the save button (last position)
+	// Tab through to the apply kernel button (last position)
 	for i := 0; i < len(form.positions); i++ {
 		model, _ = form.Update(tea.KeyMsg{Type: tea.KeyTab})
 		form = model.(*PCIPassthroughFormModel)
@@ -616,8 +619,8 @@ func TestPCIFORMNavigationTabCycle(t *testing.T) {
 	if form.focusIndex != len(form.positions)-1 {
 		t.Errorf("Expected focus at last position, got %d", form.focusIndex)
 	}
-	if form.currentPos().kind != pciSave {
-		t.Errorf("Expected to land on save button, got kind=%d", form.currentPos().kind)
+	if form.currentPos().kind != pciApplyKernel {
+		t.Errorf("Expected to land on apply kernel button, got kind=%d", form.currentPos().kind)
 	}
 }
 

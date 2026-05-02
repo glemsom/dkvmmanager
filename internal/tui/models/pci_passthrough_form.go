@@ -15,6 +15,7 @@ const (
 	pciGroupHeader pciFocusKind = iota // IOMMU group header (non-selectable)
 	pciToggle                          // Toggle device selection
 	pciSave                            // Save button
+	pciApplyKernel                     // Apply to Kernel button
 )
 
 // pciFocusPos is one navigable position in the PCI passthrough form
@@ -56,6 +57,10 @@ type PCIPassthroughFormModel struct {
 
 	// Scan state
 	scanErr error
+
+	// Kernel apply status message (shown after applying)
+	kernelMsg     string
+	kernelMsgErr  bool
 }
 
 // NewPCIPassthroughFormModel creates a new PCI passthrough form model
