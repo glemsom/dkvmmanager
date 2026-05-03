@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -225,14 +226,32 @@ func (m *Manager) SaveStartStopScript(cfg models.StartStopScript) error {
 // vfio-pci.ids parameter string, and writes it to the grub.cfg file.
 // It returns an error if the config cannot be read, or the grub.cfg cannot be updated.
 func (m *Manager) ApplyVFIOIDsToKernel() error {
+	if debugMode {
+		log.Println("[DEBUG] ApplyVFIOIDsToKernel: starting")
+	}
+
 	// Get current PCI passthrough config
 	pciCfg, err := m.GetPCIPassthroughConfig()
 	if err != nil {
+		if debugMode {
+			log.Printf("[DEBUG] ApplyVFIOIDsToKernel: failed to get PCI config: %v", err)
+		}
 		return fmt.Errorf("get PCI passthrough config: %w", err)
+	}
+
+	if debugMode {
+		log.Printf("[DEBUG] ApplyVFIOIDsToKernel: got %d PCI devices from config", len(pciCfg.Devices))
+		for i, dev := range pciCfg.Devices {
+			log.Printf("[DEBUG] ApplyVFIOIDsToKernel: device[%d] = %s:%s (%s)", i, dev.Vendor, dev.Device, dev.Address)
+		}
 	}
 
 	// Build vfio-pci.ids string
 	vfioIDs := BuildVFIOIDs(pciCfg.Devices)
+
+	if debugMode {
+		log.Printf("[DEBUG] ApplyVFIOIDsToKernel: built vfioIDs = %q", vfioIDs)
+	}
 
 	// Get grub config path
 	grubPath := m.cfg.GrubConfigPath
@@ -240,11 +259,21 @@ func (m *Manager) ApplyVFIOIDsToKernel() error {
 		grubPath = "/media/usb/boot/grub/grub.cfg"
 	}
 
+	if debugMode {
+		log.Printf("[DEBUG] ApplyVFIOIDsToKernel: grubPath = %s", grubPath)
+	}
+
 	// Update grub.cfg
 	if err := UpdateGrubVFIOIDs(vfioIDs, grubPath); err != nil {
+		if debugMode {
+			log.Printf("[DEBUG] ApplyVFIOIDsToKernel: UpdateGrubVFIOIDs failed: %v", err)
+		}
 		return fmt.Errorf("update grub.cfg: %w", err)
 	}
 
+	if debugMode {
+		log.Println("[DEBUG] ApplyVFIOIDsToKernel: completed successfully")
+	}
 	return nil
 }
 
