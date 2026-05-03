@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -
 
 ### Fixed
--
+- **PCI passthrough Apply to Kernel**: Remount `/media/usb` as `rw` before modifying `grub.cfg` and restore to `ro` afterward, since DKVM Hypervisor keeps the USB filesystem read-only by default (`internal/vm/manager.go`)
 
 ### Security
 -

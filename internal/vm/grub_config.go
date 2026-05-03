@@ -25,7 +25,7 @@ func BuildVFIOIDs(devices []models.PCIPassthroughDevice) string {
 
 // UpdateGrubVFIOIDs updates the vfio-pci.ids parameter in the grub.cfg file.
 // It creates a backup before modification and writes the updated content.
-// The caller is responsible for ensuring the filesystem is writable (remounted rw).
+// The caller must ensure the filesystem is writable (e.g., remounted rw for /media/usb).
 func UpdateGrubVFIOIDs(vfioIDs, grubPath string) error {
 	// Debug logging
 	if debugMode {
@@ -91,7 +91,7 @@ func UpdateGrubVFIOIDs(vfioIDs, grubPath string) error {
 		newContent = replaced
 	}
 
-	// 4. Write back (requires rw mount on /media/usb)
+	// 4. Write back
 	if err := os.WriteFile(grubPath, []byte(newContent), 0644); err != nil {
 		if debugMode {
 			log.Printf("[DEBUG] UpdateGrubVFIOIDs: failed to write updated grub.cfg: %v", err)

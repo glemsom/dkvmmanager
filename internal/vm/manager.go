@@ -7,7 +7,9 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
@@ -263,6 +265,21 @@ func (m *Manager) ApplyVFIOIDsToKernel() error {
 		log.Printf("[DEBUG] ApplyVFIOIDsToKernel: grubPath = %s", grubPath)
 	}
 
+	// Remount /media/usb as rw before modifying grub.cfg.
+	// DKVM Hypervisor keeps the USB filesystem read-only by default.
+	remountPath := detectMountPath(grubPath)
+	if remountPath != "" {
+		if err := remountFilesystem(remountPath, "rw"); err != nil {
+			return fmt.Errorf("remount %s as rw: %w", remountPath, err)
+		}
+		// Always restore read-only after the update, regardless of outcome.
+		defer func() {
+			if err := remountFilesystem(remountPath, "ro"); err != nil {
+				log.Printf("[WARN] ApplyVFIOIDsToKernel: failed to remount %s as ro: %v", remountPath, err)
+			}
+		}()
+	}
+
 	// Update grub.cfg
 	if err := UpdateGrubVFIOIDs(vfioIDs, grubPath); err != nil {
 		if debugMode {
@@ -342,4 +359,30 @@ func generateMAC() string {
 	bytes[0] = bytes[0]&0xFE | 0x02
 	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",
 		bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5])
+}
+
+// detectMountPath checks if a file path resides under /media/usb and returns
+// the mount point path, or an empty string if no remount is needed.
+func detectMountPath(filePath string) string {
+	if strings.HasPrefix(filePath, "/media/usb") {
+		return "/media/usb"
+	}
+	return ""
+}
+
+// remountFilesystem remounts the given mount point with the specified options
+// (e.g., "rw" or "ro"). It uses the mount command with the remount flag.
+func remountFilesystem(mountPath, mode string) error {
+	if debugMode {
+		log.Printf("[DEBUG] remountFilesystem: mount -o remount,%s %s", mode, mountPath)
+	}
+	cmd := exec.Command("mount", "-o", "remount,"+mode, mountPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("mount -o remount,%s %s: %s: %w", mode, mountPath, string(output), err)
+	}
+	if debugMode {
+		log.Printf("[DEBUG] remountFilesystem: successfully remounted %s as %s", mountPath, mode)
+	}
+	return nil
 }
