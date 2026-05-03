@@ -13,6 +13,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+-
+
+### Changed
+-
+
+### Deprecated
+-
+
+### Removed
+-
+
+### Fixed
+-
+
+### Security
+-
+
+## [0.1.5](https://github.com/glemsom/dkvmmanager/compare/v0.1.4...v0.1.5) - 2026-05-03
+
+### Added
 - **PCI passthrough Apply to Kernel**: New "Apply to Kernel" button in the PCI passthrough form that writes selected device VFIO IDs to `grub.cfg`'s `vfio-pci.ids` kernel parameter, enabling persistent kernel-level VFIO binding (`internal/vm/grub_config.go`, `internal/vm/grub_config_test.go`, `internal/tui/models/pci_passthrough_form_*.go`)
 - **GRUB VFIO config utilities**: `UpdateGrubVFIOIDs` function to safely update `vfio-pci.ids` in grub.cfg with backup support, parameter removal, and whitespace cleanup (`internal/vm/grub_config.go`)
 
@@ -113,7 +133,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/glemsom/dkvmmanager/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/glemsom/dkvmmanager/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/glemsom/dkvmmanager/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/glemsom/dkvmmanager/compare/v0.1.1...v0.1.2
