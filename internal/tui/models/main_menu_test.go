@@ -193,8 +193,8 @@ func TestHandleCustomScriptSelection(t *testing.T) {
 	if m.currentView != ViewStartStopScript {
 		t.Errorf("Expected ViewStartStopScript after Edit Start/Stop Script selection, got %s", m.currentView)
 	}
-	if m.startStopScriptFormModel == nil {
-		t.Error("Expected startStopScriptFormModel to be set")
+	if m.startStopScriptModel == nil {
+		t.Error("Expected startStopScriptModel to be set")
 	}
 	// Should have correct breadcrumbs
 	if m.breadcrumbs.Len() != 2 {

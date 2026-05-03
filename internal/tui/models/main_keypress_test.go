@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
 func TestHandleKeyPressQuit(t *testing.T) {
@@ -267,26 +268,30 @@ func TestStartStopScriptBrowseOpensFileBrowser(t *testing.T) {
 	if m.currentView != ViewStartStopScript {
 		t.Fatalf("Expected ViewStartStopScript, got %s", m.currentView)
 	}
-	if m.startStopScriptFormModel == nil {
-		t.Fatal("Expected startStopScriptFormModel to be initialized")
+	if m.startStopScriptModel == nil {
+		t.Fatal("Expected startStopScriptModel to be initialized")
 	}
 
 	// Focus start_browse in custom mode: [toggle, start_path, start_browse, ...]
-	m.startStopScriptFormModel.focusIndex = 2
-	if m.startStopScriptFormModel.positions[m.startStopScriptFormModel.focusIndex].kind != startStopScriptStartBrowse {
-		t.Fatalf("Expected focus on start_browse, got %s", m.startStopScriptFormModel.positions[m.startStopScriptFormModel.focusIndex].fieldName)
+	// Need to set focusIndex on both the ScrollableForm and the underlying form model
+	fm := m.startStopScriptModel.Form()
+	m.startStopScriptModel.form.SetFocusIndex(2)
+	fm = m.startStopScriptModel.Form() // Re-get after sync
+	pos := fm.positions[fm.focusIndex]
+	if pos.Kind != form.FocusButton || pos.Key != "start_browse" {
+		t.Fatalf("Expected focus on start_browse, got Kind=%d Key=%s", pos.Kind, pos.Key)
 	}
 
 	model, _ = m.delegateToSubView(tea.KeyMsg{Type: tea.KeyEnter})
 	m = model.(*MainModel)
 
-	if m.startStopScriptFormModel.fileBrowser == nil {
+	if m.startStopScriptModel.Form().fileBrowser == nil {
 		t.Fatal("Expected file browser to be created after pressing Enter on browse")
 	}
-	if !m.startStopScriptFormModel.fileBrowser.active {
+	if !m.startStopScriptModel.Form().fileBrowser.active {
 		t.Error("Expected file browser to be active")
 	}
-	if len(m.startStopScriptFormModel.fileBrowser.files) == 0 {
+	if len(m.startStopScriptModel.Form().fileBrowser.files) == 0 {
 		t.Error("Expected file browser directory listing to be loaded")
 	}
 }

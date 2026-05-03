@@ -60,8 +60,9 @@ func TestFullTUIEditFlowReproducingBug(t *testing.T) {
 	}
 
 	// Step 4: Modify the VM name via form and save
-	m.vmEditModel.form.vmName = "vm-one-edited"
-	_, cmd := m.vmEditModel.form.validateAndSave()
+	fm := m.vmEditModel.form.Model().(*VMFormModel)
+	fm.vmName = "vm-one-edited"
+	cmd := fm.validateAndSaveCmd()
 	if cmd == nil {
 		t.Fatal("Expected command from save, got nil")
 	}
@@ -127,15 +128,16 @@ func TestEditSaveThenSwitchToVMsTab(t *testing.T) {
 	editModel, _ := NewVMEditModel(m.vmManager, vms[0].ID)
 
 	// Set values via form fields and save
-	editModel.form.vmName = "edited-vm"
-	editModel.form.hardDisks = []string{""}
-	editModel.form.cdroms = []string{}
-	editModel.form.macAddress = "11:22:33:44:55:66"
-	editModel.form.vncEnabled = true
+	fm := editModel.form.Model().(*VMFormModel)
+	fm.vmName = "edited-vm"
+	fm.hardDisks = []string{""}
+	fm.cdroms = []string{}
+	fm.macAddress = "11:22:33:44:55:66"
+	fm.vncEnabled = true
 
-	_, cmd := editModel.form.validateAndSave()
+	cmd := fm.validateAndSaveCmd()
 	if cmd == nil {
-		t.Fatal("validateAndSave returned nil command")
+		t.Fatal("validateAndSaveCmd returned nil command")
 	}
 	msg := cmd()
 

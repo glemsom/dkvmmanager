@@ -72,10 +72,11 @@ func TestEditVMPreservesAllVMsInMenu(t *testing.T) {
 	}
 
 	// Set the VM name via the form's internal fields (same package access)
-	editModel.form.vmName = "test-vm-1-edited"
+	fm := editModel.form.Model().(*VMFormModel)
+	fm.vmName = "test-vm-1-edited"
 
-	// Trigger save via validateAndSave
-	_, cmd := editModel.form.validateAndSave()
+	// Trigger save via validateAndSaveCmd
+	cmd := fm.validateAndSaveCmd()
 	if cmd == nil {
 		t.Fatal("Expected command from save, got nil")
 	}
@@ -152,8 +153,9 @@ func TestFullEditFlowViaUpdate(t *testing.T) {
 	m.currentView = ViewVMEdit
 
 	// Modify and save directly via form
-	m.vmEditModel.form.vmName = "edited-via-update"
-	_, cmd := m.vmEditModel.form.validateAndSave()
+	fm := m.vmEditModel.form.Model().(*VMFormModel)
+	fm.vmName = "edited-via-update"
+	cmd := fm.validateAndSaveCmd()
 	if cmd == nil {
 		t.Fatal("Expected command from save, got nil")
 	}

@@ -1,3 +1,4 @@
+ARG BUILDPLATFORM=linux/amd64
 FROM --platform=$BUILDPLATFORM golang:1.26-alpine@sha256:f85330846cde1e57ca9ec309382da3b8e6ae3ab943d2739500e08c86393a21b1 AS builder
 
 # Pin tool versions for reproducible builds
@@ -28,6 +29,7 @@ RUN CGO_ENABLED=0 go build \
               -extldflags '-static'" \
     -o dkvmmanager .
 
+ARG TARGETPLATFORM=linux/amd64
 FROM --platform=$BUILDPLATFORM alpine:3.20 AS runtime
 
 RUN apk add --no-cache ca-certificates gawk go yq jq
