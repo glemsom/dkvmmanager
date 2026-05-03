@@ -28,7 +28,7 @@ RUN CGO_ENABLED=0 go build \
               -extldflags '-static'" \
     -o dkvmmanager .
 
-FROM --platform=$BUILDPLATFORM alpine:3.19 AS runtime
+FROM --platform=$BUILDPLATFORM alpine:3.20 AS runtime
 
 RUN apk add --no-cache ca-certificates gawk go yq jq
 
