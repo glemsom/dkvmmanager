@@ -14,8 +14,7 @@ git commit -m "feat: add striped LVM support"
 
 # 3. Run tests and verify the build
 make test
-go vet ./...
-go build ./...
+make build
 
 # 4. Push and open a Pull Request on GitHub
 git push origin feat/my-feature
