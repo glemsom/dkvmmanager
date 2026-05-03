@@ -157,6 +157,131 @@ func TestUpdateGrubVFIOIDs_ReadError(t *testing.T) {
 	}
 }
 
+func TestUpdateGrubVFIOIDs_DeduplicatesSameLine(t *testing.T) {
+	dir := t.TempDir()
+	grubPath := filepath.Join(dir, "grub.cfg")
+
+	// Simulate a corrupted grub.cfg with vfio-pci.ids appearing twice on the same line
+	original := `set default=0
+set timeout=5
+
+menuentry 'DKVM' {
+	linux /vmlinuz root=/dev/sda1 ro quiet vfio-pci.ids=1002:7550 vfio-pci.ids=10de:1b80
+	initrd /initrd.img
+}
+`
+	if err := os.WriteFile(grubPath, []byte(original), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := UpdateGrubVFIOIDs("8086:15d4", grubPath); err != nil {
+		t.Fatalf("UpdateGrubVFIOIDs() error: %v", err)
+	}
+
+	content, err := os.ReadFile(grubPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Count occurrences of vfio-pci.ids=
+	count := strings.Count(string(content), "vfio-pci.ids=")
+	if count != 1 {
+		t.Errorf("Expected exactly 1 vfio-pci.ids= occurrence, got %d. Got:\n%s", count, string(content))
+	}
+
+	if !strings.Contains(string(content), "vfio-pci.ids=8086:15d4") {
+		t.Errorf("Expected vfio-pci.ids=8086:15d4. Got:\n%s", string(content))
+	}
+}
+
+func TestUpdateGrubVFIOIDs_MultipleLinuxLines(t *testing.T) {
+	dir := t.TempDir()
+	grubPath := filepath.Join(dir, "grub.cfg")
+
+	// Multiple boot entries with vfio-pci.ids on each
+	original := `set default=0
+set timeout=5
+
+menuentry 'DKVM Normal' {
+	linux /vmlinuz root=/dev/sda1 ro quiet vfio-pci.ids=1002:7550
+	initrd /initrd.img
+}
+
+menuentry 'DKVM Recovery' {
+	linux /vmlinuz root=/dev/sda1 ro quiet single vfio-pci.ids=1002:7550
+	initrd /initrd-recovery.img
+}
+`
+	if err := os.WriteFile(grubPath, []byte(original), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := UpdateGrubVFIOIDs("10de:1b80", grubPath); err != nil {
+		t.Fatalf("UpdateGrubVFIOIDs() error: %v", err)
+	}
+
+	content, err := os.ReadFile(grubPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Each linux line should have exactly one vfio-pci.ids=
+	lines := strings.Split(string(content), "\n")
+	linuxLineCount := 0
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "linux") {
+			linuxLineCount++
+			count := strings.Count(line, "vfio-pci.ids=")
+			if count != 1 {
+				t.Errorf("Linux line has %d vfio-pci.ids= occurrences (expected 1): %s", count, line)
+			}
+		}
+	}
+	if linuxLineCount < 2 {
+		t.Errorf("Expected at least 2 linux lines, got %d", linuxLineCount)
+	}
+}
+
+func TestUpdateGrubVFIOIDs_RemovesFromNonLinuxLine(t *testing.T) {
+	dir := t.TempDir()
+	grubPath := filepath.Join(dir, "grub.cfg")
+
+	// vfio-pci.ids accidentally on an initrd line
+	original := `set default=0
+set timeout=5
+
+menuentry 'DKVM' {
+	linux /vmlinuz root=/dev/sda1 ro quiet
+	initrd /initrd.img vfio-pci.ids=1002:7550
+}
+`
+	if err := os.WriteFile(grubPath, []byte(original), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := UpdateGrubVFIOIDs("10de:1b80", grubPath); err != nil {
+		t.Fatalf("UpdateGrubVFIOIDs() error: %v", err)
+	}
+
+	content, err := os.ReadFile(grubPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Should have been moved to the linux line, removed from initrd line
+	for _, line := range strings.Split(string(content), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "initrd") && strings.Contains(line, "vfio-pci.ids=") {
+			t.Errorf("vfio-pci.ids= should not appear on initrd line: %s", line)
+		}
+	}
+
+	if !strings.Contains(string(content), "vfio-pci.ids=10de:1b80") {
+		t.Errorf("Expected vfio-pci.ids=10de:1b80 on linux line. Got:\n%s", string(content))
+	}
+}
+
 func TestUpdateGrubVFIOIDs_PreservesStructure(t *testing.T) {
 	dir := t.TempDir()
 	grubPath := filepath.Join(dir, "grub.cfg")

@@ -58,37 +58,32 @@ func UpdateGrubVFIOIDs(vfioIDs, grubPath string) error {
 		log.Printf("[DEBUG] UpdateGrubVFIOIDs: backup created at %s", backupPath)
 	}
 
-	// 3. Modify content using regex
-	// Pattern: vfio-pci.ids= followed by non-whitespace characters
-	re := regexp.MustCompile(`vfio-pci\.ids=[^\s]+`)
+	// 3. Modify content: process line-by-line to guarantee vfio-pci.ids= appears
+	// exactly once per linux line (no duplicates) and never on non-linux lines.
+	vfioRe := regexp.MustCompile(`\s*vfio-pci\.ids=[^\s]*`)
+	linuxLineRe := regexp.MustCompile(`(?i)^([\t ]*linux[ \t])`)
 
-	var newContent string
+	lines := strings.Split(string(content), "\n")
+	for i, line := range lines {
+		isLinux := linuxLineRe.MatchString(line)
+		// Remove ALL existing vfio-pci.ids= occurrences from this line
+		cleaned := vfioRe.ReplaceAllString(line, "")
+		// If this is a linux line and we have IDs, append exactly one vfio-pci.ids=
+		if isLinux && vfioIDs != "" {
+			cleaned = cleaned + " vfio-pci.ids=" + vfioIDs
+		}
+		lines[i] = cleaned
+	}
+	newContent := strings.Join(lines, "\n")
+
 	if vfioIDs == "" {
-		// Remove the parameter if empty (clean up trailing space too)
-		reWithSpace := regexp.MustCompile(`\s*vfio-pci\.ids=[^\s]+`)
-		newContent = reWithSpace.ReplaceAllString(string(content), "")
 		if debugMode {
-			log.Printf("[DEBUG] UpdateGrubVFIOIDs: removed vfio-pci.ids parameter (was empty)")
+			log.Printf("[DEBUG] UpdateGrubVFIOIDs: removed all vfio-pci.ids parameters")
 		}
 	} else {
-		// Replace existing or add new
-		replaced := re.ReplaceAllString(string(content), fmt.Sprintf("vfio-pci.ids=%s", vfioIDs))
-
-		// If no replacement happened, we need to add the parameter to the linux line
-		if replaced == string(content) {
-			// Add to the end of the linux line
-			// Use (?m) for multiline mode so ^ matches start of each line
-			linuxLineRe := regexp.MustCompile(`(?m)^[\t ]*linux[^\n]*`)
-			replaced = linuxLineRe.ReplaceAllString(string(content), fmt.Sprintf("$0 vfio-pci.ids=%s", vfioIDs))
-			if debugMode {
-				log.Printf("[DEBUG] UpdateGrubVFIOIDs: added new vfio-pci.ids parameter to linux line")
-			}
-		} else {
-			if debugMode {
-				log.Printf("[DEBUG] UpdateGrubVFIOIDs: replaced existing vfio-pci.ids parameter")
-			}
+		if debugMode {
+			log.Printf("[DEBUG] UpdateGrubVFIOIDs: set vfio-pci.ids=%s on linux line(s)", vfioIDs)
 		}
-		newContent = replaced
 	}
 
 	// 4. Write back

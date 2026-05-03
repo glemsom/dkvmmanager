@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Ensure VM form is focused when opened (new/edit mode)
 - **CPU Power Management toggle**: Fix `-overcommit cpu-pm=on` now respects the CPUPM setting (was previously hardcoded and always enabled)
+- **GRUB VFIO config**: Rewrite `UpdateGrubVFIOIDs` to process lines individually, ensuring `vfio-pci.ids=` appears exactly once per linux line and never on non-linux lines (e.g. initrd lines) (`internal/vm/grub_config.go`)
 
 ### Security
 -
