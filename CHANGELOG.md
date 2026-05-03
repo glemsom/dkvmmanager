@@ -24,6 +24,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.1.8] - 2026-05-03
+
+### Changed
+- **CPU Options form**: Migrated to ScrollableForm framework for improved navigation and consistency (`internal/tui/models/cpu_options_form_*.go`)
+- **CPU Topology form**: Migrated to ScrollableForm framework (`internal/tui/models/cpu_topology_form*.go`)
+- **PCI Passthrough form**: Migrated to ScrollableForm framework (`internal/tui/models/pci_passthrough_form*.go`)
+- **VM form**: Migrated to ScrollableForm framework (`internal/tui/models/vm_form*.go`)
+- **Main TUI**: Simplified message routing through ScrollableForm (`internal/tui/main.go`)
+
+### Added
+- **Dropdown navigation**: Left/right arrow key handling in dropdown fields for easier value selection (`internal/tui/models/form_dropdown.go`)
+
 ## [0.1.7](https://github.com/glemsom/dkvmmanager/compare/v0.1.5...v0.1.7) - 2026-05-03
 
 ### Added
@@ -148,8 +160,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.7...HEAD
-[0.1.7]: https://github.com/glemsom/dkvmmanager/compare/v0.1.5...v0.1.7
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/glemsom/dkvmmanager/compare/v0.1.7...v0.1.8
+[0.1.7]: https://github.com/glemsom/dkvmanager/compare/v0.1.5...v0.1.7
 [0.1.5]: https://github.com/glemsom/dkvmmanager/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/glemsom/dkvmmanager/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/glemsom/dkvmmanager/compare/v0.1.2...v0.1.3
