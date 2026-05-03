@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
@@ -16,16 +17,8 @@ type VCPUCPUKernelAppliedMsg struct {
 	Error   string
 }
 
-// vcpuPinningFocusKind describes what a vCPU pinning focus position represents
-type vcpuPinningFocusKind int
-
-const (
-	vcpuPinningToggle vcpuPinningFocusKind = iota // Toggle pinning enabled
-	vcpuPinningSave                              // Save button
-	vcpuPinningApplyKernel                       // Apply to Kernel button
-)
-
-// VCPUPinningFormModel is a scrollable form for editing global vCPU pinning
+// VCPUPinningFormModel is a scrollable form for editing global vCPU pinning.
+// It implements the form.FormModel interface for use with ScrollableForm.
 type VCPUPinningFormModel struct {
 	vmManager *vm.Manager
 
@@ -38,8 +31,9 @@ type VCPUPinningFormModel struct {
 	// Global configuration
 	pinning models.VCPUPinningGlobal
 
-	// Focus position
-	focusPos vcpuPinningFocusKind
+	// Focus state
+	positions  []form.FocusPos
+	focusIndex int
 
 	// Per-field inline error messages
 	errors map[string]string
@@ -47,18 +41,18 @@ type VCPUPinningFormModel struct {
 	// Scan error
 	scanErr error
 
-	// Scrollable viewport
-	vp       viewport.Model
-	ready    bool
-	contentW int
-	contentH int
-
-	// Rendering cache
-	renderedLines []string
-
-	// Kernel apply feedback
+	// Kernel apply status message (shown after applying)
 	kernelMsg    string
 	kernelMsgErr bool
+
+	// Viewport fields (for backward-compatible View)
+	contentW int
+	contentH int
+	vp       viewport.Model
+	ready    bool
+
+	// Rendering cache (for backward-compatible View)
+	renderedLines []string
 }
 
 // NewVCPUPinningFormModel creates a new vCPU pinning form model
@@ -89,37 +83,73 @@ func NewVCPUPinningFormModel(vmManager *vm.Manager) (*VCPUPinningFormModel, erro
 	}
 
 	m := &VCPUPinningFormModel{
-		vmManager:  vmManager,
-		hostTopo:   hostTopo,
-		topology:   topology,
+		vmManager: vmManager,
+		hostTopo:  hostTopo,
+		topology:  topology,
 		pinning:   pinning,
-		focusPos:  vcpuPinningToggle,
 		errors:    make(map[string]string),
 		scanErr:   scanErr,
 	}
 
-	m.syncViewport()
+	m.positions = m.BuildPositions()
 	return m, nil
 }
 
-// Init implements tea.Model
+// --- FormModel Interface Implementation ---
+
+// BuildPositions returns the list of navigable positions.
+func (m *VCPUPinningFormModel) BuildPositions() []form.FocusPos {
+	return []form.FocusPos{
+		{Kind: form.FocusToggle, Label: "Pinning Enabled", Key: "enabled"},
+		{Kind: form.FocusButton, Label: "Save", Key: "save"},
+		{Kind: form.FocusButton, Label: "Apply to Kernel", Key: "apply_kernel"},
+	}
+}
+
+// CurrentIndex returns the index of the currently focused position.
+func (m *VCPUPinningFormModel) CurrentIndex() int {
+	return m.focusIndex
+}
+
+// SetFocusIndex sets the focused position index.
+func (m *VCPUPinningFormModel) SetFocusIndex(i int) {
+	m.focusIndex = i
+}
+
+// OnEnter is called when the form becomes active.
+func (m *VCPUPinningFormModel) OnEnter() {}
+
+// OnExit is called when the form is dismissed.
+func (m *VCPUPinningFormModel) OnExit() {}
+
+// SetSize updates the form dimensions.
+func (m *VCPUPinningFormModel) SetSize(w, h int) {
+	m.contentW = w
+	m.contentH = h
+	if !m.ready {
+		m.vp = viewport.New(w, h)
+		m.ready = true
+	} else {
+		m.vp.Width = w
+		m.vp.Height = h
+	}
+}
+
+// SetFocused sets whether the form has keyboard focus.
+func (m *VCPUPinningFormModel) SetFocused(bool) {}
+
+// --- Backward-compatible Init/Update/View ---
+
+// Init implements tea.Model (for backward compatibility).
 func (m *VCPUPinningFormModel) Init() tea.Cmd {
 	return nil
 }
 
-// Update implements tea.Model
+// Update implements tea.Model (for backward compatibility).
 func (m *VCPUPinningFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.contentW = msg.Width
-		m.contentH = msg.Height
-		if !m.ready {
-			m.vp = viewport.New(msg.Width, msg.Height)
-			m.ready = true
-		} else {
-			m.vp.Width = msg.Width
-			m.vp.Height = msg.Height
-		}
+		m.SetSize(msg.Width, msg.Height)
 		m.syncViewport()
 		return m, nil
 
@@ -144,7 +174,7 @@ func (m *VCPUPinningFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View implements tea.Model
+// View implements tea.Model (for backward compatibility).
 func (m *VCPUPinningFormModel) View() string {
 	if !m.ready {
 		return "Loading form..."
@@ -152,21 +182,7 @@ func (m *VCPUPinningFormModel) View() string {
 	return m.vp.View()
 }
 
-// SetSize updates the form dimensions
-func (m *VCPUPinningFormModel) SetSize(w, h int) {
-	m.contentW = w
-	m.contentH = h
-	if !m.ready {
-		m.vp = viewport.New(w, h)
-		m.ready = true
-	} else {
-		m.vp.Width = w
-		m.vp.Height = h
-	}
-	m.syncViewport()
-}
-
-// handleKey processes keyboard input
+// handleKey processes keyboard input (backward-compatible Update path).
 func (m *VCPUPinningFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
@@ -177,46 +193,59 @@ func (m *VCPUPinningFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "shift+tab", "up":
 		m.moveFocus(-1)
 		m.syncViewport()
-	case "p":
-		m.pinning.Enabled = !m.pinning.Enabled
-		m.syncViewport()
 	case "enter", " ":
-		return m.handleEnter()
+		return m.handleEnterOrApply()
 	}
 	return m, nil
 }
 
-// handleEnter acts contextually: toggle or save
-func (m *VCPUPinningFormModel) handleEnter() (tea.Model, tea.Cmd) {
-	switch m.focusPos {
-	case vcpuPinningToggle:
+// handleEnterOrApply acts contextually: toggle, save, or apply kernel (backward compat).
+func (m *VCPUPinningFormModel) handleEnterOrApply() (tea.Model, tea.Cmd) {
+	pos := m.positions[m.focusIndex]
+	switch pos.Kind {
+	case form.FocusToggle:
 		m.pinning.Enabled = !m.pinning.Enabled
 		m.syncViewport()
 		return m, nil
-	case vcpuPinningSave:
-		return m.validateAndSave()
-	case vcpuPinningApplyKernel:
-		return m.handleApplyKernel()
+	case form.FocusButton:
+		if pos.Key == "save" {
+			return m.validateAndSave()
+		}
+		if pos.Key == "apply_kernel" {
+			return m.handleApplyKernel()
+		}
+	}
+	// Skip non-focusable positions
+	m.moveFocus(1)
+	m.syncViewport()
+	return m, nil
+}
+
+// moveFocus moves focus by delta in the flat positions list.
+func (m *VCPUPinningFormModel) moveFocus(delta int) {
+	if delta == 0 {
+		return
+	}
+	m.focusIndex += delta
+	if m.focusIndex < 0 {
+		m.focusIndex = 0
+	}
+	if m.focusIndex >= len(m.positions) {
+		m.focusIndex = len(m.positions) - 1
+	}
+}
+
+// validateAndSave persists the vCPU pinning config (backward compat, returns tea.Model).
+func (m *VCPUPinningFormModel) validateAndSave() (tea.Model, tea.Cmd) {
+	result, cmd := m.validateAndSaveCmd()
+	if result == form.ResultSave {
+		return m, cmd
 	}
 	return m, nil
 }
 
-// moveFocus moves the focus by delta positions
-func (m *VCPUPinningFormModel) moveFocus(delta int) {
-	switch m.focusPos {
-	case vcpuPinningToggle:
-		if delta > 0 {
-			m.focusPos = vcpuPinningSave
-		}
-	case vcpuPinningSave:
-		if delta > 0 {
-			m.focusPos = vcpuPinningApplyKernel
-		} else if delta < 0 {
-			m.focusPos = vcpuPinningToggle
-		}
-	case vcpuPinningApplyKernel:
-		if delta < 0 {
-			m.focusPos = vcpuPinningSave
-		}
-	}
+// handleApplyKernel applies the current vCPU pinning config to grub.cfg (backward compat).
+func (m *VCPUPinningFormModel) handleApplyKernel() (tea.Model, tea.Cmd) {
+	cmd := m.handleApplyKernelCmd()
+	return m, cmd
 }

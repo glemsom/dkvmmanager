@@ -5,11 +5,12 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
-// validateAndSave validates the form and saves the configuration
-func (m *VCPUPinningFormModel) validateAndSave() (tea.Model, tea.Cmd) {
+// validateAndSaveCmd validates the form and saves the configuration.
+func (m *VCPUPinningFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd) {
 	m.errors = make(map[string]string)
 
 	// If enabling, recompute mappings from current topology
@@ -17,8 +18,7 @@ func (m *VCPUPinningFormModel) validateAndSave() (tea.Model, tea.Cmd) {
 		computed, err := vm.ComputePinningFromTopology(m.topology, m.hostTopo)
 		if err != nil {
 			m.errors["save"] = fmt.Sprintf("failed to compute pinning: %v", err)
-			m.syncViewport()
-			return m, nil
+			return form.ResultNone, nil
 		}
 		m.pinning.Mappings = computed.Mappings
 	}
@@ -26,16 +26,14 @@ func (m *VCPUPinningFormModel) validateAndSave() (tea.Model, tea.Cmd) {
 	// Save the pinning configuration
 	if err := m.vmManager.SaveVCPUPinningGlobal(m.pinning); err != nil {
 		m.errors["save"] = fmt.Sprintf("failed to save: %v", err)
-		m.syncViewport()
-		return m, nil
+		return form.ResultNone, nil
 	}
 
-	m.syncViewport()
-	return m, func() tea.Msg { return VCPUPinningUpdatedMsg{} }
+	return form.ResultSave, func() tea.Msg { return VCPUPinningUpdatedMsg{} }
 }
 
-// handleApplyKernel applies the current vCPU pinning config to grub.cfg as CPU isolation params
-func (m *VCPUPinningFormModel) handleApplyKernel() (tea.Model, tea.Cmd) {
+// handleApplyKernelCmd applies the current vCPU pinning config to grub.cfg as CPU isolation params.
+func (m *VCPUPinningFormModel) handleApplyKernelCmd() tea.Cmd {
 	m.errors = make(map[string]string)
 	m.kernelMsg = ""
 	m.kernelMsgErr = false
@@ -46,8 +44,7 @@ func (m *VCPUPinningFormModel) handleApplyKernel() (tea.Model, tea.Cmd) {
 		if err != nil {
 			m.kernelMsg = fmt.Sprintf("failed to compute pinning: %v", err)
 			m.kernelMsgErr = true
-			m.syncViewport()
-			return m, nil
+			return nil
 		}
 		m.pinning.Mappings = computed.Mappings
 	}
@@ -56,12 +53,11 @@ func (m *VCPUPinningFormModel) handleApplyKernel() (tea.Model, tea.Cmd) {
 	if err := m.vmManager.SaveVCPUPinningGlobal(m.pinning); err != nil {
 		m.kernelMsg = fmt.Sprintf("Failed to save config: %v", err)
 		m.kernelMsgErr = true
-		m.syncViewport()
-		return m, nil
+		return nil
 	}
 
 	// Apply to kernel grub.cfg asynchronously
-	return m, func() tea.Msg {
+	return func() tea.Msg {
 		err := m.vmManager.ApplyCPUParamsToKernel()
 		if err != nil {
 			return VCPUCPUKernelAppliedMsg{

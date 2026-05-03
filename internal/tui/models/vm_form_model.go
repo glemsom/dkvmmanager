@@ -4,13 +4,13 @@ package models
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
-// VMFormModel is the shared scrollable form for creating and editing VMs
+// VMFormModel is the shared scrollable form for creating and editing VMs.
+// It implements the form.FormModel interface for use with ScrollableForm.
 type VMFormModel struct {
 	mode      FormMode
 	vmManager *vm.Manager
@@ -23,29 +23,13 @@ type VMFormModel struct {
 	macAddress  string
 	vncEnabled  bool
 	networkMode string // "bridge" or "nat"
-	tpmEnabled    bool
+	tpmEnabled  bool
 
-	// Flat list of focusable positions
-	positions  []focusPos
-	focusIndex int
-
-	// Whether the form has focus
-	focused bool
-
-	// Per-field text cursor (character offset within the value)
-	cursorOffsets map[string]int // key = field identity e. g. "vmName", "hardDisks_0"
-
-	// Per-field inline error messages
-	errors map[string]string
-
-	// Scrollable viewport
-	vp       viewport.Model
-	ready    bool
-	contentW int
-	contentH int
-
-	// Rendering cache
-	renderedLines []string
+	// Focus state - uses form.FocusPos
+	positions     []form.FocusPos
+	focusIndex    int
+	cursorOffsets map[string]int // key = field identity e.g. "vmName", "hardDisks_0"
+	errors        map[string]string
 
 	// File browser state (for ISO selection via FileBrowserModel)
 	fileBrowser *FileBrowserModel
@@ -73,7 +57,6 @@ func NewVMFormModel(vmManager *vm.Manager) *VMFormModel {
 		cdroms:        []string{},
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
-		focused:       true,
 	}
 	m.rebuildPositions()
 	return m
@@ -106,93 +89,156 @@ func NewVMFormModelEdit(vmManager *vm.Manager, vmObj *models.VM) *VMFormModel {
 		tpmEnabled:    vmObj.TPMEnabled,
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
-		focused:       true,
 	}
 	m.rebuildPositions()
 	return m
 }
+
+// --- FormModel Interface Implementation ---
+
+// BuildPositions returns the current list of navigable positions.
+func (m *VMFormModel) BuildPositions() []form.FocusPos {
+	return m.positions
+}
+
+// CurrentIndex returns the index of the currently focused position.
+func (m *VMFormModel) CurrentIndex() int {
+	return m.focusIndex
+}
+
+// SetFocusIndex sets the focused position index.
+func (m *VMFormModel) SetFocusIndex(i int) {
+	m.focusIndex = i
+}
+
+// RenderHeader returns the form header.
+func (m *VMFormModel) RenderHeader() string {
+	return "Create/Edit VM"
+}
+
+// RenderFooter returns the form footer.
+func (m *VMFormModel) RenderFooter() string {
+	return "Tab Navigate  Space/Enter Browse  ESC Cancel"
+}
+
+// OnEnter is called when the form becomes active.
+func (m *VMFormModel) OnEnter() {}
+
+// OnExit is called when the form is dismissed.
+func (m *VMFormModel) OnExit() {}
+
+// SetSize is called when the form dimensions change.
+func (m *VMFormModel) SetSize(width int, height int) {}
+
+// SetFocused sets whether the form has keyboard focus.
+func (m *VMFormModel) SetFocused(bool) {}
+
+// --- Internal Helpers ---
 
 // rebuildPositions reconstructs the flat focus list from current field values
 func (m *VMFormModel) rebuildPositions() {
 	m.positions = nil
 
 	// VM Name
-	m.positions = append(m.positions, focusPos{kind: focusText, fieldName: "vmName"})
+	m.positions = append(m.positions, form.FocusPos{Kind: form.FocusText, Label: "VM Name", Key: "vmName"})
 
-	// Hard Disks label + N items + Add button
-	m.positions = append(m.positions, focusPos{kind: focusText, fieldName: "hardDisks_label"})
+	// Hard Disks label (header-style)
+	m.positions = append(m.positions, form.FocusPos{Kind: form.FocusHeader, Label: "Hard Disks:", Key: "hardDisks_label"})
+	// Hard Disk items
 	for i := range m.hardDisks {
-		m.positions = append(m.positions, focusPos{kind: focusListItem, fieldName: "hardDisks", listIndex: i})
+		m.positions = append(m.positions, form.FocusPos{
+			Kind:  form.FocusList,
+			Label: fmt.Sprintf("Disk %d", i+1),
+			Key:   fmt.Sprintf("hardDisks_%d", i),
+			Data:  i,
+		})
 	}
-	m.positions = append(m.positions, focusPos{kind: focusAddBtn, fieldName: "hardDisks"})
+	// Add button
+	m.positions = append(m.positions, form.FocusPos{Kind: form.FocusButton, Label: "[+] Add Disk", Key: "hardDisks_add"})
 
-	// CDROMs label + N items + Add button
-	m.positions = append(m.positions, focusPos{kind: focusText, fieldName: "cdroms_label"})
+	// CDROMs label (header-style)
+	m.positions = append(m.positions, form.FocusPos{Kind: form.FocusHeader, Label: "CD/DVD Drives (ISOs):", Key: "cdroms_label"})
+	// CDROM items
 	for i := range m.cdroms {
-		m.positions = append(m.positions, focusPos{kind: focusListItem, fieldName: "cdroms", listIndex: i})
+		m.positions = append(m.positions, form.FocusPos{
+			Kind:  form.FocusList,
+			Label: fmt.Sprintf("CDROM %d", i+1),
+			Key:   fmt.Sprintf("cdroms_%d", i),
+			Data:  i,
+		})
 	}
-	m.positions = append(m.positions, focusPos{kind: focusAddBtn, fieldName: "cdroms"})
+	// Add button
+	m.positions = append(m.positions, form.FocusPos{Kind: form.FocusButton, Label: "[+] Add CDROM", Key: "cdroms_add"})
 
 	// Text fields
-	m.positions = append(m.positions, focusPos{kind: focusText, fieldName: "macAddress"})
-	m.positions = append(m.positions, focusPos{kind: focusToggle, fieldName: "vncEnabled"})
-	m.positions = append(m.positions, focusPos{kind: focusToggle, fieldName: "networkMode"})
-	m.positions = append(m.positions, focusPos{kind: focusToggle, fieldName: "tpmEnabled"})
+	m.positions = append(m.positions, form.FocusPos{Kind: form.FocusText, Label: "MAC Address", Key: "macAddress"})
+
+	// Toggle fields
+	m.positions = append(m.positions, form.FocusPos{Kind: form.FocusToggle, Label: "VNC", Key: "vncEnabled"})
+	m.positions = append(m.positions, form.FocusPos{Kind: form.FocusToggle, Label: "Network", Key: "networkMode"})
+	m.positions = append(m.positions, form.FocusPos{Kind: form.FocusToggle, Label: "TPM", Key: "tpmEnabled"})
 
 	// Save button
-	m.positions = append(m.positions, focusPos{kind: focusSaveBtn, fieldName: "save"})
-}
-
-// currentPos returns the focus position at the current focusIndex
-func (m *VMFormModel) currentPos() focusPos {
-	if m.focusIndex < 0 || m.focusIndex >= len(m.positions) {
-		return focusPos{kind: focusText, fieldName: "vmName"}
-	}
-	return m.positions[m.focusIndex]
+	m.positions = append(m.positions, form.FocusPos{Kind: form.FocusButton, Label: "Save", Key: "save"})
 }
 
 // posKey returns a unique key for the position (used for cursor offsets / errors)
-func posKey(p focusPos) string {
-	if p.kind == focusListItem {
-		return fmt.Sprintf("%s_%d", p.fieldName, p.listIndex)
-	}
-	return p.fieldName
+func (m *VMFormModel) posKey(pos form.FocusPos) string {
+	return pos.Key
 }
 
 // getValue returns the text value at a focus position
-func (m *VMFormModel) getValue(p focusPos) string {
-	switch p.fieldName {
+func (m *VMFormModel) getValue(pos form.FocusPos) string {
+	switch pos.Key {
 	case "vmName":
 		return m.vmName
-	case "hardDisks":
-		if p.kind == focusListItem && p.listIndex < len(m.hardDisks) {
-			return m.hardDisks[p.listIndex]
-		}
-	case "cdroms":
-		if p.kind == focusListItem && p.listIndex < len(m.cdroms) {
-			return m.cdroms[p.listIndex]
-		}
 	case "macAddress":
 		return m.macAddress
+	}
+	// Check for list items (hardDisks_N, cdroms_N)
+	if pos.Kind == form.FocusList {
+		var disks *[]string
+		switch {
+		case len(pos.Key) > 9 && pos.Key[:9] == "hardDisks":
+			disks = &m.hardDisks
+		case len(pos.Key) > 6 && pos.Key[:6] == "cdroms":
+			disks = &m.cdroms
+		}
+		if disks != nil {
+			var idx int
+			_, _ = fmt.Sscanf(pos.Key, "%*[^0]%d", &idx)
+			if idx < len(*disks) {
+				return (*disks)[idx]
+			}
+		}
 	}
 	return ""
 }
 
 // setValue sets the text value at a focus position
-func (m *VMFormModel) setValue(p focusPos, val string) {
-	switch p.fieldName {
+func (m *VMFormModel) setValue(pos form.FocusPos, val string) {
+	switch pos.Key {
 	case "vmName":
 		m.vmName = val
-	case "hardDisks":
-		if p.kind == focusListItem && p.listIndex < len(m.hardDisks) {
-			m.hardDisks[p.listIndex] = val
-		}
-	case "cdroms":
-		if p.kind == focusListItem && p.listIndex < len(m.cdroms) {
-			m.cdroms[p.listIndex] = val
-		}
 	case "macAddress":
 		m.macAddress = val
+	}
+	// Check for list items (hardDisks_N, cdroms_N)
+	if pos.Kind == form.FocusList {
+		var disks *[]string
+		switch {
+		case len(pos.Key) > 9 && pos.Key[:9] == "hardDisks":
+			disks = &m.hardDisks
+		case len(pos.Key) > 6 && pos.Key[:6] == "cdroms":
+			disks = &m.cdroms
+		}
+		if disks != nil {
+			var idx int
+			_, _ = fmt.Sscanf(pos.Key, "%*[^0]%d", &idx)
+			if idx < len(*disks) {
+				(*disks)[idx] = val
+			}
+		}
 	}
 }
 
@@ -201,7 +247,6 @@ func (m *VMFormModel) cursorOffset(key string) int {
 	if off, ok := m.cursorOffsets[key]; ok {
 		return off
 	}
-	// Default: cursor at end of current value
 	return -1 // sentinel meaning "end"
 }
 
@@ -222,11 +267,6 @@ func (m *VMFormModel) effectiveCursor(key string, val string) int {
 	return off
 }
 
-// Init implements tea.Model
-func (m *VMFormModel) Init() tea.Cmd {
-	return nil
-}
-
 // FileBrowserActive returns true if the file browser or add disk model is currently active
 func (m *VMFormModel) FileBrowserActive() bool {
 	if m.fileBrowser != nil && m.fileBrowser.active {
@@ -236,9 +276,4 @@ func (m *VMFormModel) FileBrowserActive() bool {
 		return true
 	}
 	return false
-}
-
-// SetFocused sets whether the form has focus
-func (m *VMFormModel) SetFocused(focused bool) {
-	m.focused = focused
 }

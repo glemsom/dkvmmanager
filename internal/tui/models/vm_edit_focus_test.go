@@ -45,7 +45,7 @@ func TestEditFormHasFocus(t *testing.T) {
 	}
 
 	// The form must have focus for visual indicators to render
-	if !editModel.form.focused {
+	if !editModel.form.Focused() {
 		t.Error("BUG: VMFormModel.focused should be true in edit mode, but got false. " +
 			"This causes no visual feedback when navigating form fields with arrow keys.")
 	}
@@ -70,7 +70,7 @@ func TestCreateFormHasFocus(t *testing.T) {
 
 	createModel := NewVMCreateModel(mgr)
 
-	if !createModel.form.focused {
+	if !createModel.form.Focused() {
 		t.Error("BUG: VMFormModel.focused should be true in create mode, but got false.")
 	}
 }
@@ -117,7 +117,7 @@ func TestEditFormArrowKeyNavigation(t *testing.T) {
 		t.Error("Initial view should contain focus indicator '> ' prefix")
 	}
 
-	initialFocusIndex := editModel.form.focusIndex
+	initialFocusIndex := editModel.form.FocusIndex()
 
 	// Press down arrow twice to reach first hard disk list item (position 2)
 	// (position 1 is the hardDisks_label which doesn't show indicators)
@@ -127,9 +127,9 @@ func TestEditFormArrowKeyNavigation(t *testing.T) {
 	}
 
 	// Focus should have moved to position 2 (list item)
-	if editModel.form.focusIndex != initialFocusIndex+2 {
+	if editModel.form.FocusIndex() != initialFocusIndex+2 {
 		t.Errorf("Focus index should be %d after 2 down presses, got %d",
-			initialFocusIndex+2, editModel.form.focusIndex)
+			initialFocusIndex+2, editModel.form.FocusIndex())
 	}
 
 	// List items show [Del] when focused, not '> '
@@ -145,8 +145,8 @@ func TestEditFormArrowKeyNavigation(t *testing.T) {
 	editModel = model.(*VMEditModel)
 
 	// Focus should have moved forward by Tab
-	if editModel.form.focusIndex <= initialFocusIndex+2 {
-		t.Errorf("Focus index should have advanced after down+tab. Got: %d", editModel.form.focusIndex)
+	if editModel.form.FocusIndex() <= initialFocusIndex+2 {
+		t.Errorf("Focus index should have advanced after down+tab. Got: %d", editModel.form.FocusIndex())
 	}
 }
 
@@ -180,7 +180,7 @@ func TestEditFormArrowNavigationViaMainModel(t *testing.T) {
 	}
 
 	// The form must have focus
-	if !m.vmEditModel.form.focused {
+	if !m.vmEditModel.form.Focused() {
 		t.Error("BUG: Edit form should have focused=true when entering edit view")
 	}
 
@@ -204,8 +204,8 @@ func TestEditFormArrowNavigationViaMainModel(t *testing.T) {
 	}
 
 	// Focus should have moved to a text field
-	if m.vmEditModel.form.focusIndex <= 2 {
-		t.Errorf("Focus index should have moved past list items. Got: %d", m.vmEditModel.form.focusIndex)
+	if m.vmEditModel.form.FocusIndex() <= 2 {
+		t.Errorf("Focus index should have moved past list items. Got: %d", m.vmEditModel.form.FocusIndex())
 	}
 
 	view = m.vmEditModel.View()

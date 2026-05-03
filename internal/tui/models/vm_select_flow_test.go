@@ -92,8 +92,12 @@ func TestVMSelectArrowNavigationViaUpdate(t *testing.T) {
 		t.Fatalf("Invalid cursor position: %d (have %d VMs)", cursor, len(tableVMs))
 	}
 	expectedVM := tableVMs[cursor]
-	if m.vmEditModel.form.vmName != expectedVM.Name {
-		t.Errorf("Expected VM name '%s' (table row %d), got '%s'", expectedVM.Name, cursor, m.vmEditModel.form.vmName)
+	fm := getVMForm(m.vmEditModel.form)
+	if fm == nil {
+		t.Fatal("Could not get VMFormModel from edit model")
+	}
+	if fm.vmName != expectedVM.Name {
+		t.Errorf("Expected VM name '%s' (table row %d), got '%s'", expectedVM.Name, cursor, fm.vmName)
 	}
 }
 

@@ -52,7 +52,7 @@ func TestVMNameValidationValidNames(t *testing.T) {
 			m.vmName = name
 			m.hardDisks = []string{"/tmp/test-disk.qcow2"}
 
-			_, _ = m.validateAndSave()
+			_ = m.validateAndSaveCmd()
 
 			if err, ok := m.errors["vmName"]; ok {
 				t.Errorf("Expected name %q to be valid, got error: %s", name, err)
@@ -100,7 +100,7 @@ func TestVMNameValidationInvalidNames(t *testing.T) {
 			m.vmName = tc.name
 			m.hardDisks = []string{"/tmp/test-disk.qcow2"}
 
-			_, _ = m.validateAndSave()
+			_ = m.validateAndSaveCmd()
 
 			if _, ok := m.errors["vmName"]; !ok {
 				t.Errorf("Expected name %q (%s) to be invalid, but no error was set", tc.name, tc.reason)
@@ -123,7 +123,7 @@ func TestVMNameValidationEmptyAfterTrim(t *testing.T) {
 			m.vmName = name
 			m.hardDisks = []string{"/tmp/test-disk.qcow2"}
 
-			_, _ = m.validateAndSave()
+			_ = m.validateAndSaveCmd()
 
 			err, ok := m.errors["vmName"]
 			if !ok {
@@ -141,7 +141,7 @@ func TestVMNameValidationTrimmedBeforeSave(t *testing.T) {
 	m.vmName = "  my vm  "
 	m.hardDisks = []string{"/tmp/test-disk.qcow2"}
 
-	_, _ = m.validateAndSave()
+	_ = m.validateAndSaveCmd()
 
 	if m.vmName != "my vm" {
 		t.Errorf("Expected vmName to be trimmed to 'my vm', got %q", m.vmName)
@@ -157,7 +157,7 @@ func TestVMNameValidationErrorMessage(t *testing.T) {
 	m.vmName = "bad!name"
 	m.hardDisks = []string{"/tmp/test-disk.qcow2"}
 
-	_, _ = m.validateAndSave()
+	_ = m.validateAndSaveCmd()
 
 	err, ok := m.errors["vmName"]
 	if !ok {

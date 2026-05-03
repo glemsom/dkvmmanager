@@ -2,171 +2,96 @@
 package models
 
 import (
-	"github.com/charmbracelet/bubbles/viewport"
+	"fmt"
+
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
-// This file contains the VMFormModel Update/View handlers that tie together
-// the model, validation, and UI components.
-
-// openFilePicker creates and activates the appropriate file browser for the given position
-func (m *VMFormModel) openFilePicker(pos focusPos) (tea.Model, tea.Cmd) {
-	m.browsingFieldName = pos.fieldName
-	m.browsingIndex = pos.listIndex
-
-	if pos.fieldName == "hardDisks" {
-		m.addDiskModel = NewAddDiskModel(m.vmManager)
-		return m, m.addDiskModel.Init()
-	}
-
-	// cdroms
-	m.fileBrowser = NewFileBrowserModel(FileTypeISO)
-	return m, m.fileBrowser.Init()
-}
-
-// handleFileSelected processes the result from the ISO file browser
-func (m *VMFormModel) handleFileSelected(msg FileSelectedMsg) (tea.Model, tea.Cmd) {
-	m.fileBrowser = nil
-	if !msg.Canceled && m.browsingFieldName == "cdroms" && m.browsingIndex < len(m.cdroms) {
-		m.cdroms[m.browsingIndex] = msg.Path
-		m.rebuildPositions()
-		m.syncViewport()
-	}
-	return m, nil
-}
-
-// handleDiskAdded processes the result from the add disk model
-func (m *VMFormModel) handleDiskAdded(msg DiskAddedMsg) (tea.Model, tea.Cmd) {
-	m.addDiskModel = nil
-	if !msg.Canceled && m.browsingFieldName == "hardDisks" && m.browsingIndex < len(m.hardDisks) {
-		m.hardDisks[m.browsingIndex] = msg.Path
-		m.rebuildPositions()
-		m.syncViewport()
-	}
-	return m, nil
-}
-
-// Update implements tea.Model
-func (m *VMFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.contentW = msg.Width
-		m.contentH = msg.Height
-		if !m.ready {
-			m.vp = viewport.New(msg.Width, msg.Height)
-			m.ready = true
-		} else {
-			m.vp.Width = msg.Width
-			m.vp.Height = msg.Height
-		}
-		m.syncViewport()
-		return m, nil
-
-	case FileSelectedMsg:
-		return m.handleFileSelected(msg)
-
-	case DiskAddedMsg:
-		return m.handleDiskAdded(msg)
-
-	case tea.KeyMsg:
-		// Delegate to active file browser / add disk model first
-		if m.fileBrowser != nil && m.fileBrowser.active {
-			inner, cmd := m.fileBrowser.Update(msg)
-			if fb, ok := inner.(*FileBrowserModel); ok {
-				m.fileBrowser = fb
-			}
-			return m, cmd
-		}
-		if m.addDiskModel != nil && m.addDiskModel.active {
-			inner, cmd := m.addDiskModel.Update(msg)
-			if adm, ok := inner.(*AddDiskModel); ok {
-				m.addDiskModel = adm
-			}
-			return m, cmd
-		}
-		return m.handleKey(msg)
-	}
-	return m, nil
-}
-
-// handleKey processes keyboard input
-func (m *VMFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	key := msg.String()
-
-	// ESC is handled by MainModel (returnFromSubView), never reach here
-
-	switch key {
-	case "tab":
-		m.moveFocusNextEditable()
-		m.syncViewport()
-	case "shift+tab":
-		m.moveFocusPrevEditable()
-		m.syncViewport()
-	case "up":
-		m.moveFocus(-1)
-		m.syncViewport()
-	case "down":
-		m.moveFocus(1)
-		m.syncViewport()
-	case " ":
-		pos := m.currentPos()
-		if pos.kind == focusText && pos.fieldName != "hardDisks_label" && pos.fieldName != "cdroms_label" {
-			// Insert space in text fields
-			m.handleCharInput(" ")
-			m.syncViewport()
-		} else {
-			// Act like enter on buttons/toggles/labels
-			return m.handleEnter()
-		}
-	case "enter":
-		return m.handleEnter()
-	case "backspace":
-		m.handleBackspace()
-		m.syncViewport()
-	case "delete":
-		m.handleDelete()
+// HandleEnter acts contextually: add item, save, or move to next field
+func (m *VMFormModel) HandleEnter(pos form.FocusPos) (form.FormResult, tea.Cmd) {
+	switch pos.Key {
+	case "hardDisks_add", "cdroms_add":
+		m.addItem(pos.Key)
+		return form.ResultNone, nil
+	case "save":
+		return form.ResultSave, m.validateAndSaveCmd()
+	case "vncEnabled", "tpmEnabled", "networkMode":
+		m.toggleValue(pos.Key)
+		return form.ResultNone, nil
 	default:
-		if len(key) == 1 {
-			m.handleCharInput(key)
-			m.syncViewport()
+		// For list items, open file picker
+		if len(pos.Key) > 9 && (pos.Key[:9] == "hardDisks" || pos.Key[:6] == "cdroms") {
+			// Check if this is a list item (not a label or add button)
+			if pos.Kind == form.FocusList {
+				return form.ResultNone, m.openFilePickerCmd(pos)
+			}
 		}
-	}
-	return m, nil
-}
-
-// handleEnter acts contextually: add item, save, or move to next field
-func (m *VMFormModel) handleEnter() (tea.Model, tea.Cmd) {
-	pos := m.currentPos()
-	switch pos.kind {
-	case focusAddBtn:
-		m.addItem(pos.fieldName)
-		m.syncViewport()
-		return m, nil
-	case focusToggle:
-		m.toggleValue(pos.fieldName)
-		m.syncViewport()
-		return m, nil
-	case focusSaveBtn:
-		return m.validateAndSave()
-	case focusListItem:
-		return m.openFilePicker(pos)
-	default:
 		// On a text field: move to next editable position
 		m.moveFocusNextEditable()
-		m.syncViewport()
-		return m, nil
+		return form.ResultNone, nil
 	}
 }
 
-// handleBackspace deletes the character before cursor in the focused text field
-func (m *VMFormModel) handleBackspace() {
-	pos := m.currentPos()
-	if pos.kind == focusAddBtn || pos.kind == focusSaveBtn {
+// openFilePickerCmd creates and activates the file browser
+func (m *VMFormModel) openFilePickerCmd(pos form.FocusPos) tea.Cmd {
+	// Parse field name and index from key like "hardDisks_0" or "cdroms_1"
+	// Find the last underscore to split field name from index
+	fieldName := pos.Key
+	idx := 0
+	if pos.Kind == form.FocusList {
+		lastUnderscore := -1
+		for i := len(pos.Key) - 1; i >= 0; i-- {
+			if pos.Key[i] == '_' {
+				lastUnderscore = i
+				break
+			}
+		}
+		if lastUnderscore > 0 {
+			fieldName = pos.Key[:lastUnderscore]
+			// Parse index from digits after the underscore
+			for i := lastUnderscore + 1; i < len(pos.Key) && pos.Key[i] >= '0' && pos.Key[i] <= '9'; i++ {
+				idx = idx*10 + int(pos.Key[i]-'0')
+			}
+		}
+	}
+
+	m.browsingFieldName = fieldName
+	m.browsingIndex = idx
+
+	if m.browsingFieldName == "hardDisks" {
+		m.addDiskModel = NewAddDiskModel(m.vmManager)
+		return m.addDiskModel.Init()
+	}
+
+	m.fileBrowser = NewFileBrowserModel(FileTypeISO)
+	return m.fileBrowser.Init()
+}
+
+// HandleChar inserts a character at the cursor in the focused text field
+func (m *VMFormModel) HandleChar(pos form.FocusPos, ch string) {
+	if pos.Kind != form.FocusText && pos.Kind != form.FocusList {
 		return
 	}
+
 	val := m.getValue(pos)
-	key := posKey(pos)
+	key := pos.Key
+	cursor := m.effectiveCursor(key, val)
+
+	newVal := val[:cursor] + ch + val[cursor:]
+	m.setValue(pos, newVal)
+	m.setCursorOffset(key, cursor+1)
+}
+
+// HandleBackspace deletes the character before cursor
+func (m *VMFormModel) HandleBackspace(pos form.FocusPos) {
+	if pos.Kind == form.FocusButton || pos.Kind == form.FocusHeader {
+		return
+	}
+
+	val := m.getValue(pos)
+	key := pos.Key
 	cursor := m.effectiveCursor(key, val)
 
 	if cursor > 0 {
@@ -176,41 +101,64 @@ func (m *VMFormModel) handleBackspace() {
 	}
 }
 
-// handleDelete acts on list items (remove) or deletes char ahead of cursor
-func (m *VMFormModel) handleDelete() {
-	pos := m.currentPos()
-	if pos.kind == focusListItem {
-		m.removeListItem(pos.fieldName, pos.listIndex)
-		m.syncViewport()
+// HandleDelete acts on list items (remove) or deletes char ahead of cursor
+func (m *VMFormModel) HandleDelete(pos form.FocusPos) {
+	if pos.Kind == form.FocusList {
+		m.removeListItemByPos(pos)
 		return
 	}
-	if pos.kind == focusAddBtn || pos.kind == focusSaveBtn {
+	if pos.Kind == form.FocusButton || pos.Kind == form.FocusHeader {
 		return
 	}
+
 	val := m.getValue(pos)
-	key := posKey(pos)
+	key := pos.Key
 	cursor := m.effectiveCursor(key, val)
 
 	if cursor < len(val) {
 		newVal := val[:cursor] + val[cursor+1:]
 		m.setValue(pos, newVal)
-		// cursor stays at same position
 	}
 }
 
-// handleCharInput inserts a character at the cursor in the focused field
-func (m *VMFormModel) handleCharInput(ch string) {
-	pos := m.currentPos()
-	if pos.kind == focusAddBtn || pos.kind == focusSaveBtn {
-		return
+// HandleMessage handles custom messages (e.g., async command results).
+func (m *VMFormModel) HandleMessage(msg tea.Msg) tea.Cmd {
+	switch msg := msg.(type) {
+	case FileSelectedMsg:
+		return m.handleFileSelectedCmd(msg)
+	case DiskAddedMsg:
+		return m.handleDiskAddedCmd(msg)
 	}
-	val := m.getValue(pos)
-	key := posKey(pos)
-	cursor := m.effectiveCursor(key, val)
+	return nil
+}
 
-	newVal := val[:cursor] + ch + val[cursor:]
-	m.setValue(pos, newVal)
-	m.setCursorOffset(key, cursor+1)
+func (m *VMFormModel) handleFileSelectedCmd(msg FileSelectedMsg) tea.Cmd {
+	m.fileBrowser = nil
+	if msg.Canceled {
+		return nil
+	}
+
+	// Find the key for this index
+	key := m.browsingFieldName + "_" + string(rune('0'+m.browsingIndex))
+	if m.browsingFieldName == "cdroms" && m.browsingIndex < len(m.cdroms) {
+		m.cdroms[m.browsingIndex] = msg.Path
+		m.rebuildPositions()
+	}
+	_ = key // avoid unused variable error
+	return nil
+}
+
+func (m *VMFormModel) handleDiskAddedCmd(msg DiskAddedMsg) tea.Cmd {
+	m.addDiskModel = nil
+	if msg.Canceled {
+		return nil
+	}
+
+	if m.browsingFieldName == "hardDisks" && m.browsingIndex < len(m.hardDisks) {
+		m.hardDisks[m.browsingIndex] = msg.Path
+		m.rebuildPositions()
+	}
+	return nil
 }
 
 // moveFocus moves focus by delta in the flat positions list
@@ -224,20 +172,11 @@ func (m *VMFormModel) moveFocus(delta int) {
 	}
 }
 
-// moveFocusNextEditable moves to the next position that is not a label
+// moveFocusNextEditable moves to the next position that is not a label or header
 func (m *VMFormModel) moveFocusNextEditable() {
 	for i := m.focusIndex + 1; i < len(m.positions); i++ {
-		if m.positions[i].fieldName != "hardDisks_label" && m.positions[i].fieldName != "cdroms_label" {
-			m.focusIndex = i
-			return
-		}
-	}
-}
-
-// moveFocusPrevEditable moves to the previous position that is not a label
-func (m *VMFormModel) moveFocusPrevEditable() {
-	for i := m.focusIndex - 1; i >= 0; i-- {
-		if m.positions[i].fieldName != "hardDisks_label" && m.positions[i].fieldName != "cdroms_label" {
+		pos := m.positions[i]
+		if pos.Kind != form.FocusHeader {
 			m.focusIndex = i
 			return
 		}
@@ -247,21 +186,21 @@ func (m *VMFormModel) moveFocusPrevEditable() {
 // addItem appends an empty item to a list field and rebuilds positions
 func (m *VMFormModel) addItem(fieldName string) {
 	switch fieldName {
-	case "hardDisks":
+	case "hardDisks_add":
 		m.hardDisks = append(m.hardDisks, "")
 		m.rebuildPositions()
-		// Focus the new item (the add button shifts down by 1)
+		// Focus the new item
 		for i, p := range m.positions {
-			if p.kind == focusListItem && p.fieldName == "hardDisks" && p.listIndex == len(m.hardDisks)-1 {
+			if p.Kind == form.FocusList && p.Key == fmt.Sprintf("hardDisks_%d", len(m.hardDisks)-1) {
 				m.focusIndex = i
 				return
 			}
 		}
-	case "cdroms":
+	case "cdroms_add":
 		m.cdroms = append(m.cdroms, "")
 		m.rebuildPositions()
 		for i, p := range m.positions {
-			if p.kind == focusListItem && p.fieldName == "cdroms" && p.listIndex == len(m.cdroms)-1 {
+			if p.Kind == form.FocusList && p.Key == fmt.Sprintf("cdroms_%d", len(m.cdroms)-1) {
 				m.focusIndex = i
 				return
 			}
@@ -269,25 +208,36 @@ func (m *VMFormModel) addItem(fieldName string) {
 	}
 }
 
-// removeListItem removes an item from a list field and rebuilds positions
-func (m *VMFormModel) removeListItem(fieldName string, index int) {
+// removeListItemByPos removes a list item by position
+func (m *VMFormModel) removeListItemByPos(pos form.FocusPos) {
+	switch {
+	case len(pos.Key) > 9 && pos.Key[:9] == "hardDisks":
+		m.removeListAt("hardDisks", pos.Key)
+	case len(pos.Key) > 6 && pos.Key[:6] == "cdroms":
+		m.removeListAt("cdroms", pos.Key)
+	}
+}
+
+func (m *VMFormModel) removeListAt(fieldName, key string) {
+	var idx int
+	for i := len(key) - 1; i >= 0 && key[i] >= '0' && key[i] <= '9'; i-- {
+		idx = idx*10 + int(key[i]-'0')
+	}
+
 	switch fieldName {
 	case "hardDisks":
 		if len(m.hardDisks) <= 1 {
-			// Keep at least one slot, just clear it
 			m.hardDisks[0] = ""
-			key := posKey(focusPos{kind: focusListItem, fieldName: "hardDisks", listIndex: 0})
-			m.setCursorOffset(key, 0)
+			m.setCursorOffset(fmt.Sprintf("hardDisks_%d", idx), 0)
 		} else {
-			m.hardDisks = append(m.hardDisks[:index], m.hardDisks[index+1:]...)
+			m.hardDisks = append(m.hardDisks[:idx], m.hardDisks[idx+1:]...)
 		}
 	case "cdroms":
-		if index < len(m.cdroms) {
-			m.cdroms = append(m.cdroms[:index], m.cdroms[index+1:]...)
+		if idx < len(m.cdroms) {
+			m.cdroms = append(m.cdroms[:idx], m.cdroms[idx+1:]...)
 		}
 	}
 	m.rebuildPositions()
-	// Clamp focus
 	if m.focusIndex >= len(m.positions) {
 		m.focusIndex = len(m.positions) - 1
 	}
@@ -309,35 +259,5 @@ func (m *VMFormModel) toggleValue(fieldName string) {
 	}
 }
 
-// View implements tea.Model
-func (m *VMFormModel) View() string {
-	if m.fileBrowser != nil && m.fileBrowser.active {
-		return m.fileBrowser.View()
-	}
-	if m.addDiskModel != nil && m.addDiskModel.active {
-		return m.addDiskModel.View()
-	}
-	if !m.ready {
-		return "Loading form..."
-	}
-	return m.vp.View()
-}
-
-// SetSize updates the form dimensions
-func (m *VMFormModel) SetSize(w, h int) {
-	m.contentW = w
-	m.contentH = h
-	if !m.ready {
-		m.vp = viewport.New(w, h)
-		m.ready = true
-	} else {
-		m.vp.Width = w
-		m.vp.Height = h
-	}
-	m.syncViewport()
-}
-
 // unused field to satisfy compiler (vmManager reference needed)
 var _ = vm.Manager{}
-
-

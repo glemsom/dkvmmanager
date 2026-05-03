@@ -142,13 +142,13 @@ func (m *MainModel) renderActiveContentWithWidth(width int) string {
 		}
 		return "Loading..."
 	case ViewStartStopScript:
-		if m.startStopScriptFormModel != nil {
-			return m.startStopScriptFormModel.View()
+		if m.startStopScriptModel != nil {
+			return m.startStopScriptModel.View()
 		}
 		return "Loading..."
 	case ViewLVCreate:
-		if m.lvCreateFormModel != nil {
-			return m.lvCreateFormModel.View()
+		if m.lvCreateModel != nil {
+			return m.lvCreateModel.View()
 		}
 		return "Loading..."
 	case ViewVMRunning:

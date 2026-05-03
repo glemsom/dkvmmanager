@@ -9,8 +9,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// validateAndSave checks all fields and either saves or shows errors
-func (m *VMFormModel) validateAndSave() (tea.Model, tea.Cmd) {
+// validateAndSaveCmd checks all fields and returns a cmd that sends the appropriate message
+func (m *VMFormModel) validateAndSaveCmd() tea.Cmd {
 	m.errors = make(map[string]string)
 
 	// Name
@@ -37,14 +37,12 @@ func (m *VMFormModel) validateAndSave() (tea.Model, tea.Cmd) {
 	if len(m.errors) > 0 {
 		// Focus the first field with an error
 		for i, p := range m.positions {
-			k := posKey(p)
-			if _, hasErr := m.errors[k]; hasErr {
+			if _, hasErr := m.errors[p.Key]; hasErr {
 				m.focusIndex = i
 				break
 			}
 		}
-		m.syncViewport()
-		return m, nil
+		return nil
 	}
 
 	// Strip empty trailing disk slot
@@ -63,18 +61,17 @@ func (m *VMFormModel) validateAndSave() (tea.Model, tea.Cmd) {
 	}
 
 	if m.mode == FormCreate {
-		return m.saveNewVM(disks, cdroms)
+		return m.saveNewVMCmd(disks, cdroms)
 	}
-	return m.updateExistingVM(disks, cdroms)
+	return m.updateExistingVMCmd(disks, cdroms)
 }
 
-// saveNewVM creates a new VM and persists it
-func (m *VMFormModel) saveNewVM(disks, cdroms []string) (tea.Model, tea.Cmd) {
+// saveNewVMCmd creates a new VM and persists it, returning a cmd
+func (m *VMFormModel) saveNewVMCmd(disks, cdroms []string) tea.Cmd {
 	createdVM, err := m.vmManager.CreateVM(m.vmName)
 	if err != nil {
 		m.errors["vmName"] = fmt.Sprintf("Failed to create VM: %v", err)
-		m.syncViewport()
-		return m, nil
+		return nil
 	}
 
 	createdVM.HardDisks = disks
@@ -90,15 +87,14 @@ func (m *VMFormModel) saveNewVM(disks, cdroms []string) (tea.Model, tea.Cmd) {
 
 	if err := m.vmManager.SaveVM(createdVM); err != nil {
 		m.errors["save"] = fmt.Sprintf("Failed to save: %v", err)
-		m.syncViewport()
-		return m, nil
+		return nil
 	}
 
-	return m, func() tea.Msg { return VMCreatedMsg{VMName: m.vmName} }
+	return func() tea.Msg { return VMCreatedMsg{VMName: m.vmName} }
 }
 
-// updateExistingVM updates an existing VM and persists it
-func (m *VMFormModel) updateExistingVM(disks, cdroms []string) (tea.Model, tea.Cmd) {
+// updateExistingVMCmd updates an existing VM and persists it, returning a cmd
+func (m *VMFormModel) updateExistingVMCmd(disks, cdroms []string) tea.Cmd {
 	m.vm.Name = m.vmName
 	m.vm.HardDisks = disks
 	m.vm.CDROMs = cdroms
@@ -113,9 +109,8 @@ func (m *VMFormModel) updateExistingVM(disks, cdroms []string) (tea.Model, tea.C
 
 	if err := m.vmManager.SaveVM(m.vm); err != nil {
 		m.errors["save"] = fmt.Sprintf("Failed to save: %v", err)
-		m.syncViewport()
-		return m, nil
+		return nil
 	}
 
-	return m, func() tea.Msg { return VMUpdatedMsg{VMName: m.vmName} }
+	return func() tea.Msg { return VMUpdatedMsg{VMName: m.vmName} }
 }

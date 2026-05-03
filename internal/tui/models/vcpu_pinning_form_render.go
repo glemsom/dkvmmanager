@@ -5,44 +5,50 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
 // --- Styles ---
 
 var (
-	vcpuPinningLabelStyle    = styles.FormLabelStyle()
-	vcpuPinningFocusStyle  = styles.FormFocusStyle()
+	vcpuPinningLabelStyle   = styles.FormLabelStyle()
+	vcpuPinningFocusStyle   = styles.FormFocusStyle()
 	vcpuPinningEnabledStyle = styles.SuccessTextStyle()
-	vcpuPinningMutedStyle  = styles.FormMutedStyle()
-	vcpuPinningSaveStyle   = styles.FormSaveStyle()
-	vcpuPinningApplyStyle  = styles.FormSaveStyle().Background(styles.Colors.Warning)
+	vcpuPinningMutedStyle   = styles.FormMutedStyle()
+	vcpuPinningSaveStyle    = styles.FormSaveStyle()
+	vcpuPinningApplyStyle   = styles.FormSaveStyle().Background(styles.Colors.Warning)
 	vcpuPinningTitleStyle   = styles.TitleStyle()
-	vcpuPinningErrorStyle = styles.ErrorTextStyle()
-	vcpuPinningWarnStyle  = styles.WarningTextStyle()
+	vcpuPinningErrorStyle   = styles.ErrorTextStyle()
+	vcpuPinningWarnStyle    = styles.WarningTextStyle()
+	vcpuPinningHeaderStyle  = lipgloss.NewStyle().Bold(true).Foreground(styles.Colors.Primary)
 )
 
-// renderAllLines produces the full list of output lines for the form
-func (m *VCPUPinningFormModel) renderAllLines() []string {
-	var lines []string
+// --- FormModel interface methods ---
+
+// RenderHeader returns the form header containing all read-only content.
+func (m *VCPUPinningFormModel) RenderHeader() string {
+	var sb strings.Builder
 
 	// Title
-	lines = append(lines, vcpuPinningTitleStyle.Render("vCPU Pinning"))
-	lines = append(lines, "")
+	sb.WriteString(vcpuPinningTitleStyle.Render("vCPU Pinning"))
 
 	// Host summary (read-only, from CPU topology)
 	if m.scanErr != nil {
-		lines = append(lines, vcpuPinningErrorStyle.Render(fmt.Sprintf("Warning: CPU scan failed: %s", m.scanErr)))
-		lines = append(lines, vcpuPinningWarnStyle.Render("vCPU pinning requires CPU topology configuration."))
-		lines = append(lines, "")
+		sb.WriteString("\n")
+		sb.WriteString(vcpuPinningErrorStyle.Render(fmt.Sprintf("Warning: CPU scan failed: %s", m.scanErr)))
+		sb.WriteString("\n")
+		sb.WriteString(vcpuPinningWarnStyle.Render("vCPU pinning requires CPU topology configuration."))
 	} else {
-		lines = append(lines, vcpuPinningLabelStyle.Render(fmt.Sprintf("Host: %d dies, %d cores, %d threads",
+		sb.WriteString("\n")
+		sb.WriteString(vcpuPinningLabelStyle.Render(fmt.Sprintf("Host: %d dies, %d cores, %d threads",
 			len(m.hostTopo.Dies), m.hostTopo.TotalCores, m.hostTopo.TotalCPUs)))
-		lines = append(lines, "")
 	}
 
 	// Current allocation (based on CPU topology config)
-	lines = append(lines, vcpuPinningTitleStyle.Render("Current Allocation:"))
+	sb.WriteString("\n")
+	sb.WriteString(vcpuPinningTitleStyle.Render("Current Allocation:"))
 	allocatedCores := 0
 	if m.topology.Enabled && len(m.topology.SelectedCPUs) > 0 {
 		// Count cores allocated to VMs
@@ -80,43 +86,31 @@ func (m *VCPUPinningFormModel) renderAllLines() []string {
 				}
 				if dieCores > 0 {
 					vcpus := coreCount * 4 // Assume 4 threads per core
-					lines = append(lines, vcpuPinningLabelStyle.Render(fmt.Sprintf("  Die %d: %d cores (vCPUs %d-%d) -> Host CPUs %s",
+					sb.WriteString("\n")
+					sb.WriteString(vcpuPinningLabelStyle.Render(fmt.Sprintf("  Die %d: %d cores (vCPUs %d-%d) -> Host CPUs %s",
 						die.ID, dieCores, vcpus, vcpus+dieCores*4-1, "auto")))
 					coreCount += dieCores
 				}
 			}
 		} else {
-			lines = append(lines, vcpuPinningMutedStyle.Render("  No cores allocated to VMs."))
+			sb.WriteString("\n")
+			sb.WriteString(vcpuPinningMutedStyle.Render("  No cores allocated to VMs."))
 		}
 	} else {
-		lines = append(lines, vcpuPinningMutedStyle.Render("  CPU topology not configured."))
+		sb.WriteString("\n")
+		sb.WriteString(vcpuPinningMutedStyle.Render("  CPU topology not configured."))
 	}
-	lines = append(lines, "")
-
-	// Configuration toggle
-	focused := m.focusPos == vcpuPinningToggle
-	lines = append(lines, vcpuPinningTitleStyle.Render("vCPU Pinning Configuration"))
-
-	toggleLabel := "[ ] Disabled"
-	if m.pinning.Enabled {
-		toggleLabel = "[x] Enabled"
-	}
-
-	if focused {
-		toggleLabel = vcpuPinningFocusStyle.Render(toggleLabel)
-	} else if m.pinning.Enabled {
-		toggleLabel = vcpuPinningEnabledStyle.Render(toggleLabel)
-	}
-	lines = append(lines, "  "+toggleLabel)
-	lines = append(lines, "")
 
 	// Current mappings - show detailed topology alignment
-	lines = append(lines, vcpuPinningTitleStyle.Render("Current Mappings (auto-computed from topology):"))
+	sb.WriteString("\n")
+	sb.WriteString(vcpuPinningTitleStyle.Render("Current Mappings (auto-computed from topology):"))
 
 	if !m.pinning.Enabled {
-		lines = append(lines, "  "+vcpuPinningMutedStyle.Render("Pinning disabled."))
+		sb.WriteString("\n")
+		sb.WriteString("  " + vcpuPinningMutedStyle.Render("Pinning disabled."))
 	} else if len(m.pinning.Mappings) == 0 {
-		lines = append(lines, "  "+vcpuPinningMutedStyle.Render("No mappings (save with enabled to compute)."))
+		sb.WriteString("\n")
+		sb.WriteString("  " + vcpuPinningMutedStyle.Render("No mappings (save with enabled to compute)."))
 	} else {
 		// Compute guest topology info (die, siblings per vCPU)
 		guestDieMap, guestSiblingMap := m.computeGuestTopology()
@@ -125,69 +119,104 @@ func (m *VCPUPinningFormModel) renderAllLines() []string {
 		for _, mp := range m.pinning.Mappings {
 			// Find host die and siblings for this host CPU
 			hostDieID, hostSiblings := m.findHostTopologyInfo(mp.HostCPUID)
-			
+
 			// Get guest info
 			guestDieID := guestDieMap[mp.VCPUID]
 			guestSiblings := guestSiblingMap[mp.VCPUID]
-			
+
 			// Format siblings as "0,1" or "0,1,2,3"
 			guestSibStr := formatInts(guestSiblings)
 			hostSibStr := formatInts(hostSiblings)
-			
-			lines = append(lines, fmt.Sprintf("  vCPU %d (die %d, siblings %s) -> Host CPU %d (die %d, siblings %s)",
+
+			sb.WriteString("\n")
+			sb.WriteString(fmt.Sprintf("  vCPU %d (die %d, siblings %s) -> Host CPU %d (die %d, siblings %s)",
 				mp.VCPUID, guestDieID, guestSibStr, mp.HostCPUID, hostDieID, hostSibStr))
 		}
-		lines = append(lines, "  Die mapping: OK (guest die 0 -> host die 0)")
-		lines = append(lines, "  Sibling alignment: OK")
+		sb.WriteString("\n")
+		sb.WriteString("  Die mapping: OK (guest die 0 -> host die 0)")
+		sb.WriteString("\n")
+		sb.WriteString("  Sibling alignment: OK")
 	}
-	lines = append(lines, "")
 
 	// Summary
-	lines = append(lines, vcpuPinningLabelStyle.Render(fmt.Sprintf("Summary: %d vCPUs pinned", len(m.pinning.Mappings))))
+	sb.WriteString("\n")
+	sb.WriteString(vcpuPinningLabelStyle.Render(fmt.Sprintf("Summary: %d vCPUs pinned", len(m.pinning.Mappings))))
 	if len(m.pinning.Mappings) > 0 {
-		lines = append(lines, vcpuPinningLabelStyle.Render("topology-aware"))
+		sb.WriteString("\n")
+		sb.WriteString(vcpuPinningLabelStyle.Render("topology-aware"))
 	} else {
-		lines = append(lines, vcpuPinningMutedStyle.Render("not configured"))
+		sb.WriteString("\n")
+		sb.WriteString(vcpuPinningMutedStyle.Render("not configured"))
 	}
-	lines = append(lines, "")
 
-	// Save button
-	focused = m.focusPos == vcpuPinningSave
-	saveText := vcpuPinningMutedStyle.Render("[Enter] Save    [ESC] Cancel")
-	if focused {
-		saveText = vcpuPinningSaveStyle.Render("[Space/Enter] Save") + "    " + vcpuPinningMutedStyle.Render("[ESC] Cancel")
-	}
-	lines = append(lines, saveText)
+	return sb.String()
+}
 
-	// Apply to Kernel button
-	focused = m.focusPos == vcpuPinningApplyKernel
-	applyText := vcpuPinningMutedStyle.Render("[Space/Enter] Apply to Kernel") + "    " + vcpuPinningMutedStyle.Render("[ESC] Cancel")
-	if focused {
-		applyText = vcpuPinningApplyStyle.Render("[Space/Enter] Apply to Kernel") + "    " + vcpuPinningMutedStyle.Render("[ESC] Cancel")
-	}
-	lines = append(lines, applyText)
+// RenderFooter returns the form footer.
+func (m *VCPUPinningFormModel) RenderFooter() string {
+	var parts []string
 
-	// Errors
+	// Save error at the bottom
 	if errMsg, ok := m.errors["save"]; ok {
-		lines = append(lines, "")
-		lines = append(lines, vcpuPinningErrorStyle.Render("Error: "+errMsg))
+		parts = append(parts, "")
+		parts = append(parts, vcpuPinningErrorStyle.Render("Error: "+errMsg))
 	}
 
 	// Kernel apply status message
 	if m.kernelMsg != "" {
-		lines = append(lines, "")
+		parts = append(parts, "")
 		if m.kernelMsgErr {
-			lines = append(lines, vcpuPinningErrorStyle.Render("Error: "+m.kernelMsg))
+			parts = append(parts, vcpuPinningErrorStyle.Render("Error: "+m.kernelMsg))
 		} else {
-			lines = append(lines, vcpuPinningSaveStyle.Render(m.kernelMsg))
+			parts = append(parts, vcpuPinningSaveStyle.Render(m.kernelMsg))
 		}
 	}
 
-	lines = append(lines, "")
-	lines = append(lines, vcpuPinningMutedStyle.Render("↑/↓ Navigate  Space Toggle  ESC Cancel"))
+	// Footer help text
+	parts = append(parts, "")
+	parts = append(parts, vcpuPinningMutedStyle.Render("Tab Navigate  Space/Enter Toggle/Action  ESC Cancel"))
 
-	return lines
+	return strings.Join(parts, "\n")
 }
+
+// RenderPosition renders a single position for the form framework.
+func (m *VCPUPinningFormModel) RenderPosition(pos form.FocusPos, focused bool, cursorOffset int) string {
+	switch pos.Kind {
+	case form.FocusToggle:
+		toggleLabel := "[ ] Disabled"
+		if m.pinning.Enabled {
+			toggleLabel = "[x] Enabled"
+		}
+
+		if focused {
+			toggleLabel = vcpuPinningFocusStyle.Render(toggleLabel)
+		} else if m.pinning.Enabled {
+			toggleLabel = vcpuPinningEnabledStyle.Render(toggleLabel)
+		}
+		return vcpuPinningHeaderStyle.Render("vCPU Pinning Configuration") + "\n  " + toggleLabel
+
+	case form.FocusButton:
+		if pos.Key == "save" {
+			saveText := vcpuPinningMutedStyle.Render("[Space/Enter] Save") + "    " + vcpuPinningMutedStyle.Render("[ESC] Cancel")
+			if focused {
+				saveText = vcpuPinningSaveStyle.Render("[Space/Enter] Save") + "    " + vcpuPinningMutedStyle.Render("[ESC] Cancel")
+			}
+			return "\n" + saveText
+		}
+
+		if pos.Key == "apply_kernel" {
+			applyText := vcpuPinningMutedStyle.Render("[Space/Enter] Apply to Kernel") + "    " + vcpuPinningMutedStyle.Render("[ESC] Cancel")
+			if focused {
+				applyText = vcpuPinningApplyStyle.Render("[Space/Enter] Apply to Kernel") + "    " + vcpuPinningMutedStyle.Render("[ESC] Cancel")
+			}
+			return "\n" + applyText
+		}
+	}
+
+	return ""
+}
+
+// --- Helper functions ---
 
 // containsInt checks if a slice contains a value
 func containsInt(slice []int, val int) bool {
@@ -201,7 +230,7 @@ func containsInt(slice []int, val int) bool {
 
 // computeGuestTopology derives guest die and sibling info from topology config
 func (m *VCPUPinningFormModel) computeGuestTopology() (map[int]int, map[int][]int) {
-	dieMap := make(map[int]int)   // vCPU ID -> guest die ID
+	dieMap := make(map[int]int)     // vCPU ID -> guest die ID
 	siblingMap := make(map[int][]int) // vCPU ID -> sibling vCPU IDs
 
 	if !m.topology.Enabled || len(m.topology.SelectedCPUs) == 0 {
@@ -271,67 +300,64 @@ func formatInts(nums []int) string {
 	return result
 }
 
-// syncViewport regenerates the rendered lines and syncs the viewport
+// --- Backward-compatible viewport helpers ---
+
+// syncViewport regenerates the rendered lines and syncs the viewport (backward compat).
 func (m *VCPUPinningFormModel) syncViewport() {
 	m.renderedLines = m.renderAllLines()
 	content := strings.Join(m.renderedLines, "\n")
 	m.vp.SetContent(content)
 	// Ensure focused element is visible
 	if m.focusedLineIndex() >= 0 {
-		m.vp.SetYOffset(clampOffset(m.vp.YOffset, m.focusedLineIndex(), m.vp.Height))
+		m.vp.SetYOffset(form.ClampOffset(m.vp.YOffset, m.focusedLineIndex(), m.vp.Height))
 	}
 }
 
-// focusedLineIndex maps focusPos to the rendered line index
+// focusedLineIndex maps focusIndex to a rendered line index (backward compat).
 func (m *VCPUPinningFormModel) focusedLineIndex() int {
 	line := 0
 
-	// Title + blank = 2
-	line += 2
-
-	// Host summary
+	// Header: title + blank + host info + blank + allocation title + allocation content + blank
+	line += 2  // title + blank
 	if m.scanErr != nil {
 		line += 3 // error + warning + blank
 	} else {
 		line += 2 // host info + blank
 	}
+	line += 3 // allocation title + content + blank
 
-	// Current Allocation section: title + (either allocation details or muted message) + blank
-	line += 3
+	// Now at the toggle position
+	if m.focusIndex == 0 {
+		return line // toggle
+	}
+	line += 2 // config header + toggle
 
-	// Configuration toggle section: title + toggle + blank = 3
-	line += 3
+	// Now at the Save button
+	if m.focusIndex == 1 {
+		return line // save
+	}
+	line += 2 // blank + save button
 
-	// Current mappings section (only when enabled)
-	if m.pinning.Enabled {
-		line++ // title
-		if len(m.pinning.Mappings) == 0 {
-			line++ // muted message
-		} else {
-			// Each mapping is 1 line + 2 info lines
-			line += len(m.pinning.Mappings)
-			line += 2 // die mapping + sibling alignment
-		}
-		line++ // blank
+	// Apply to Kernel button
+	return line // apply_kernel
+}
+
+// renderAllLines produces the full list of output lines for the form (backward compat).
+func (m *VCPUPinningFormModel) renderAllLines() []string {
+	var lines []string
+
+	// Render header
+	lines = append(lines, strings.Split(m.RenderHeader(), "\n")...)
+
+	// Render positions
+	for i, pos := range m.positions {
+		focused := (i == m.focusIndex)
+		line := m.RenderPosition(pos, focused, -1)
+		lines = append(lines, strings.Split(line, "\n")...)
 	}
 
-	// Summary: label + status = 2 lines + blank
-	line += 3
+	// Render footer
+	lines = append(lines, strings.Split(m.RenderFooter(), "\n")...)
 
-	// Now we're at the Save button line
-	if m.focusPos == vcpuPinningApplyKernel {
-		return line + 1 // Apply to Kernel is 1 line after Save
-	}
-
-	// Save button is at this line
-	if m.focusPos == vcpuPinningSave {
-		return line
-	}
-
-	// Toggle is at the configuration section, after title + blank + allocation section
-	// Recalculate: title(2) + host(2) + allocation(3) + config(3) = line 10
-	// Toggle is at line 10
-	line = 2 + 2 + 3 + 3 // title + host + allocation + config = 10
-
-	return line
+	return lines
 }

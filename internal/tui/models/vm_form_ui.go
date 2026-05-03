@@ -3,210 +3,101 @@ package models
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
-// syncViewport regenerates the rendered lines and syncs the viewport.
-// Each line is padded to full width so the background color fills
-// the entire viewport area, eliminating gaps showing terminal default.
-func (m *VMFormModel) syncViewport() {
-	m.renderedLines = m.renderAllLines()
+// RenderPosition returns the markup for a single position.
+func (m *VMFormModel) RenderPosition(pos form.FocusPos, focused bool, cursorOffset int) string {
+	switch pos.Key {
+	case "hardDisks_label", "cdroms_label":
+		// Headers
+		return styles.FormLabelStyle().Render(pos.Key)
 
-	// Guard against invalid dimensions (can happen before first window resize)
-	if m.contentW <= 0 || m.contentH <= 0 {
-		m.contentW = 80
-		m.contentH = 25
-		if !m.ready {
-			m.vp = viewport.New(m.contentW, m.contentH)
-			m.ready = true
+	case "vmName":
+		val := m.vmName
+		cursor := m.effectiveCursor("vmName", val)
+		if cursorOffset >= 0 {
+			cursor = cursorOffset
 		}
-	}
+		return m.renderTextInput("VM Name", val, cursor, focused)
 
-	// Pad each line to full content width with spaces.
-	// These spaces carry the background color when rendered.
-	paddedLines := make([]string, len(m.renderedLines))
-	for i, line := range m.renderedLines {
-		lineWidth := lipgloss.Width(line)
-		if lineWidth < m.contentW {
-			line += strings.Repeat(" ", m.contentW-lineWidth)
+	case "macAddress":
+		val := m.macAddress
+		cursor := m.effectiveCursor("macAddress", val)
+		if cursorOffset >= 0 {
+			cursor = cursorOffset
 		}
-		paddedLines[i] = line
-	}
+		return m.renderTextInput("MAC Address", val, cursor, focused)
 
-	// Pad to full content height with blank lines so the viewport
-	// content always fills the available area.
-	blankLine := strings.Repeat(" ", m.contentW)
-	for len(paddedLines) < m.contentH {
-		paddedLines = append(paddedLines, blankLine)
-	}
-
-	totalContent := strings.Join(paddedLines, "\n")
-	m.vp.SetContent(totalContent)
-	// Ensure focused line is visible
-	if m.focusedLineIndex() >= 0 {
-		m.vp.SetYOffset(clampOffset(m.vp.YOffset, m.focusedLineIndex(), m.vp.Height))
-	}
-}
-
-// focusedLineIndex maps focusIndex to a rendered line index
-// Accounts for header (2 lines), then per-position line counts, plus error lines
-func (m *VMFormModel) focusedLineIndex() int {
-	line := 2 // header + blank line
-
-	for i, p := range m.positions {
-		if i == m.focusIndex {
-			return line
+	case "vncEnabled", "tpmEnabled", "networkMode":
+		label := m.fieldLabel(pos.Key)
+		rendered := m.renderToggle(label, pos.Key, focused)
+		if errMsg, ok := m.errors[pos.Key]; ok {
+			return rendered + "\n  " + styles.ErrorTextStyle().Render(errMsg)
 		}
-		// Count lines this position produces
-		switch p.kind {
-		case focusText:
-			if p.fieldName == "hardDisks_label" || p.fieldName == "cdroms_label" {
-				line++
-			} else {
-				line++ // label+input on one line (renderTextInput returns 1 line)
-				key := posKey(p)
-				if _, hasErr := m.errors[key]; hasErr {
-					line++ // error line
-				}
-			}
-		case focusListItem:
-			line++
-		case focusAddBtn:
-			line++
-		case focusToggle:
-			line++
-		case focusSaveBtn:
-			line += 2 // blank separator + button
-		}
-	}
-	return line
-}
+		return rendered
 
-// clampOffset adjusts viewport offset so targetLine is visible.
-// Uses a margin to keep focused items away from edges, ensuring multi-line
-// elements (like Save button) and content below them remain visible.
-func clampOffset(offset, targetLine, viewHeight int) int {
-	if viewHeight <= 0 {
-		return offset
-	}
-	if targetLine < offset {
-		return targetLine
-	}
-	if targetLine >= offset+viewHeight {
-		// Scrolled past view: position target at ~1/3 from top to leave room
-		// for multi-line elements and content below (e.g., Save button + footer)
-		newOffset := targetLine - viewHeight/3
-		if newOffset < 0 {
-			newOffset = 0
-		}
-		return newOffset
-	}
-	return offset
-}
-
-// renderAllLines produces the full list of output lines for the form
-func (m *VMFormModel) renderAllLines() []string {
-	var lines []string
-
-	lineIdx := 0
-
-	for i, pos := range m.positions {
-		focused := (i == m.focusIndex)
-		lines, lineIdx = m.renderPosition(lines, lineIdx, pos, focused)
-	}
-
-	// Save error at the bottom
-	if errMsg, ok := m.errors["save"]; ok {
-		lines = append(lines, "")
-		lines = append(lines, styles.ErrorTextStyle().Render("Error: "+errMsg))
-	}
-
-	// Footer
-	lines = append(lines, "")
-	lines = append(lines, styles.MutedTextStyle().Render("Tab Navigate  Space/Enter Browse  ESC Cancel"))
-
-	return lines
-}
-
-// renderPosition appends lines for one focus position
-func (m *VMFormModel) renderPosition(lines []string, lineIdx int, pos focusPos, focused bool) ([]string, int) {
-	key := posKey(pos)
-
-	switch pos.kind {
-	case focusText:
-		if pos.fieldName == "hardDisks_label" {
-			lines = append(lines, styles.FormLabelStyle().Render("Hard Disks:"))
-			return lines, lineIdx + 1
-		}
-		if pos.fieldName == "cdroms_label" {
-			lines = append(lines, styles.FormLabelStyle().Render("CD/DVD Drives (ISOs):"))
-			return lines, lineIdx + 1
-		}
-
-		// Regular text field with label
-		label := m.fieldLabel(pos.fieldName)
-		val := m.getValue(pos)
-		cursor := m.effectiveCursor(key, val)
-		rendered := m.renderTextInput(label, val, cursor, focused && m.focused)
-		lines = append(lines, rendered)
-
-		// Inline error
-		if errMsg, ok := m.errors[key]; ok {
-			lines = append(lines, "  "+styles.ErrorTextStyle().Render(errMsg))
-		}
-		return lines, lineIdx + 2 // label+input + potential error
-
-	case focusListItem:
-		val := m.getValue(pos)
-		cursor := m.effectiveCursor(key, val)
-		rendered := m.renderListItem(pos.listIndex, val, cursor, focused && m.focused)
-		lines = append(lines, rendered)
-		return lines, lineIdx + 1
-
-	case focusAddBtn:
-		btnText := styles.MutedTextStyle().Render("[+ Add]")
-		if focused && m.focused {
-			btnText = styles.SelectedTextStyle().Render("[+ Add]")
-		}
-		fieldLabel := "Disk"
-		if pos.fieldName == "cdroms" {
-			fieldLabel = "CD/DVD"
-		}
-		lines = append(lines, "  "+btnText+" "+styles.MutedTextStyle().Render(fieldLabel))
-		return lines, lineIdx + 1
-
-	case focusToggle:
-		label := m.fieldLabel(pos.fieldName)
-		rendered := m.renderToggle(label, pos.fieldName, focused && m.focused)
-		lines = append(lines, rendered)
-		// Show inline error if present (e.g., TPM binary missing)
-		if errMsg, ok := m.errors[pos.fieldName]; ok {
-			lines = append(lines, "  "+styles.ErrorTextStyle().Render(errMsg))
-			return lines, lineIdx + 2
-		}
-		return lines, lineIdx + 1
-
-	case focusSaveBtn:
-		lines = append(lines, "")
+	case "save":
 		saveText := styles.MutedTextStyle().Render("[Space/Enter] Save  [ESC] Cancel")
-		if focused && m.focused {
+		if focused {
 			saveText = styles.SuccessTextStyle().Render("[Space/Enter] Save") + "  " + styles.MutedTextStyle().Render("[ESC] Cancel")
 		}
-		lines = append(lines, saveText)
-		return lines, lineIdx + 2
+		return "\n" + saveText
+
 	}
 
-	return lines, lineIdx
+	// Handle list items (hardDisks_N, cdroms_N) and add buttons
+	if strings.HasPrefix(pos.Key, "hardDisks_") || strings.HasPrefix(pos.Key, "cdroms_") {
+		if strings.HasSuffix(pos.Key, "_add") {
+			// Add button
+			btnText := styles.MutedTextStyle().Render("[+ Add]")
+			if focused {
+				btnText = styles.SelectedTextStyle().Render("[+ Add]")
+			}
+			fieldLabel := "Disk"
+			if strings.HasPrefix(pos.Key, "cdroms_") {
+				fieldLabel = "CD/DVD"
+			}
+			return "  " + btnText + " " + styles.MutedTextStyle().Render(fieldLabel)
+		}
+
+		// List item - extract index from key like "hardDisks_0" or "cdroms_0"
+		var disks *[]string
+		var idx int
+		if strings.HasPrefix(pos.Key, "hardDisks_") {
+			disks = &m.hardDisks
+			if n, err := strconv.Atoi(pos.Key[10:]); err == nil {
+				idx = n
+			}
+		} else if strings.HasPrefix(pos.Key, "cdroms_") {
+			disks = &m.cdroms
+			if n, err := strconv.Atoi(pos.Key[7:]); err == nil {
+				idx = n
+			}
+		}
+
+		if disks != nil && idx < len(*disks) {
+			val := (*disks)[idx]
+			cursor := m.effectiveCursor(pos.Key, val)
+			if cursorOffset >= 0 {
+				cursor = cursorOffset
+			}
+			return m.renderListItem(idx, val, cursor, focused)
+		}
+	}
+
+	return ""
 }
 
 // renderTextInput renders a labeled text input with an optional cursor
 func (m *VMFormModel) renderTextInput(label, value string, cursor int, focused bool) string {
 	prefix := "  "
-	if focused && m.focused {
+	if focused {
 		prefix = styles.SelectedTextStyle().Render("> ")
 	}
 
@@ -214,7 +105,7 @@ func (m *VMFormModel) renderTextInput(label, value string, cursor int, focused b
 
 	// Build value with cursor indicator
 	var valPart string
-	if focused && m.focused {
+	if focused {
 		// Show cursor as highlighted character or underscore at end
 		if cursor < len(value) {
 			before := value[:cursor]
@@ -237,7 +128,13 @@ func (m *VMFormModel) renderTextInput(label, value string, cursor int, focused b
 		}
 	}
 
-	return prefix + labelPart + valPart
+	// Add error after the input
+	result := prefix + labelPart + valPart
+	if errMsg, ok := m.errors[strings.ToLower(label)]; ok {
+		result += "\n  " + styles.ErrorTextStyle().Render(errMsg)
+	}
+
+	return result
 }
 
 // renderListItem renders a single item in a list field
@@ -245,7 +142,7 @@ func (m *VMFormModel) renderListItem(index int, value string, cursor int, focuse
 	numPart := styles.MutedTextStyle().Render(fmt.Sprintf("  [%d] ", index+1))
 
 	var valPart string
-	if focused && m.focused {
+	if focused {
 		if cursor < len(value) {
 			before := value[:cursor]
 			at := string(value[cursor])
@@ -268,7 +165,7 @@ func (m *VMFormModel) renderListItem(index int, value string, cursor int, focuse
 	}
 
 	delPart := ""
-	if focused && m.focused {
+	if focused {
 		delPart = " " + styles.ErrorTextStyle().Render("[Del]")
 	}
 
@@ -341,7 +238,5 @@ func (m *VMFormModel) renderToggle(label, fieldName string, focused bool) string
 		}
 	}
 
-	toggleLine := prefix + labelPart + valPart
-
-	return toggleLine
+	return prefix + labelPart + valPart
 }

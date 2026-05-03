@@ -3,12 +3,14 @@ package models
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
 // StartStopScriptFormUpdate handles update messages for the start/stop script form
+// Deprecated: delegation is now through StartStopScriptModel.Update() in key_handlers.go.
 func (m *MainModel) StartStopScriptFormUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
-	form := m.startStopScriptFormModel
-	if form == nil {
+	model := m.startStopScriptModel
+	if model == nil {
 		return m, nil
 	}
 
@@ -17,9 +19,9 @@ func (m *MainModel) StartStopScriptFormUpdate(msg tea.Msg) (tea.Model, tea.Cmd) 
 		return m.handleStartStopScriptFormKeyPress(msg)
 	case FileSelectedMsg:
 		// Forward to the form model to handle file selection
-		inner, cmd := form.Update(msg)
-		if f, ok := inner.(*StartStopScriptFormModel); ok {
-			m.startStopScriptFormModel = f
+		inner, cmd := model.Update(msg)
+		if ssm, ok := inner.(*StartStopScriptModel); ok {
+			m.startStopScriptModel = ssm
 		}
 		return m, cmd
 	}
@@ -28,36 +30,37 @@ func (m *MainModel) StartStopScriptFormUpdate(msg tea.Msg) (tea.Model, tea.Cmd) 
 }
 
 // handleStartStopScriptFormKeyPress handles key presses in the start/stop script form
+// Deprecated: delegation is now through StartStopScriptModel.Update() in key_handlers.go.
 func (m *MainModel) handleStartStopScriptFormKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	form := m.startStopScriptFormModel
-	if form == nil {
+	model := m.startStopScriptModel
+	if model == nil {
 		return m, nil
 	}
+	sf := model.Form()
 
 	// Delegate to active file browser first
-	if form.fileBrowser != nil && form.fileBrowser.active {
-		inner, cmd := form.fileBrowser.Update(msg)
+	if sf.fileBrowser != nil && sf.fileBrowser.active {
+		inner, cmd := sf.fileBrowser.Update(msg)
 		if fb, ok := inner.(*FileBrowserModel); ok {
-			form.fileBrowser = fb
-			m.startStopScriptFormModel = form
+			sf.fileBrowser = fb
+			m.startStopScriptModel = model
 		}
 		return m, cmd
 	}
 
 	key := msg.String()
 
-
 	// For enter/space, delegate to form model to handle browse buttons properly
 	// The form model will create a file browser when focused on browse buttons
 	// For toggle/save/cancel, use handleStartStopScriptFormEnter directly
 	if key == "enter" || key == " " {
-		if form.focusIndex < len(form.positions) {
-			pos := form.positions[form.focusIndex]
-			if pos.kind == startStopScriptStartBrowse || pos.kind == startStopScriptStopBrowse {
+		if sf.focusIndex < len(sf.positions) {
+			pos := sf.positions[sf.focusIndex]
+			if pos.Key == "start_browse" || pos.Key == "stop_browse" {
 				// Delegate to form model to open file browser
-				inner, cmd := form.Update(msg)
-				if f, ok := inner.(*StartStopScriptFormModel); ok {
-					m.startStopScriptFormModel = f
+				inner, cmd := model.Update(msg)
+				if ssm, ok := inner.(*StartStopScriptModel); ok {
+					m.startStopScriptModel = ssm
 				}
 				return m, cmd
 			}
@@ -68,32 +71,32 @@ func (m *MainModel) handleStartStopScriptFormKeyPress(msg tea.KeyMsg) (tea.Model
 
 	switch key {
 	case "tab":
-		form.focusIndex++
-		if form.focusIndex >= len(form.positions) {
-			form.focusIndex = 0
+		sf.focusIndex++
+		if sf.focusIndex >= len(sf.positions) {
+			sf.focusIndex = 0
 		}
-		form.rebuildPositions()
+		sf.rebuildPositions()
 
 	case "shift+tab":
-		form.focusIndex--
-		if form.focusIndex < 0 {
-			form.focusIndex = len(form.positions) - 1
+		sf.focusIndex--
+		if sf.focusIndex < 0 {
+			sf.focusIndex = len(sf.positions) - 1
 		}
-		form.rebuildPositions()
+		sf.rebuildPositions()
 
 	case "up":
-		form.focusIndex--
-		if form.focusIndex < 0 {
-			form.focusIndex = len(form.positions) - 1
+		sf.focusIndex--
+		if sf.focusIndex < 0 {
+			sf.focusIndex = len(sf.positions) - 1
 		}
-		form.rebuildPositions()
+		sf.rebuildPositions()
 
 	case "down":
-		form.focusIndex++
-		if form.focusIndex >= len(form.positions) {
-			form.focusIndex = 0
+		sf.focusIndex++
+		if sf.focusIndex >= len(sf.positions) {
+			sf.focusIndex = 0
 		}
-		form.rebuildPositions()
+		sf.rebuildPositions()
 
 	case "esc":
 		m.currentView = ViewConfigMenu
@@ -102,48 +105,53 @@ func (m *MainModel) handleStartStopScriptFormKeyPress(msg tea.KeyMsg) (tea.Model
 	}
 
 	// Trigger re-render
-	form.syncViewport()
-	m.startStopScriptFormModel = form
+	sf.syncViewport()
+	m.startStopScriptModel = model
 	return m, nil
 }
 
 // handleStartStopScriptFormEnter handles Enter key in the start/stop script form
+// Deprecated: delegation is now through StartStopScriptModel.Update() in key_handlers.go.
 func (m *MainModel) handleStartStopScriptFormEnter() (tea.Model, tea.Cmd) {
-	form := m.startStopScriptFormModel
-	if form == nil {
+	model := m.startStopScriptModel
+	if model == nil {
 		return m, nil
 	}
+	sf := model.Form()
 
 	// Check which position is focused
-	if form.focusIndex < len(form.positions) {
-		pos := form.positions[form.focusIndex]
+	if sf.focusIndex < len(sf.positions) {
+		pos := sf.positions[sf.focusIndex]
 
-		switch pos.kind {
-		case startStopScriptToggle:
+		switch pos.Kind {
+		case form.FocusToggle:
 			// Toggle between builtin and custom
-			form.config.UseBuiltin = !form.config.UseBuiltin
-			form.rebuildPositions()
+			sf.config.UseBuiltin = !sf.config.UseBuiltin
+			sf.rebuildPositions()
 
-		case startStopScriptSave:
-			// Save the configuration
-			if err := m.vmManager.SaveStartStopScript(form.config); err != nil {
-				m.statusMessage = "Error saving start/stop script config: " + err.Error()
-			} else {
-				m.statusMessage = "Start/Stop script configuration saved"
+		case form.FocusButton:
+			switch pos.Key {
+			case "save":
+				// Save the configuration
+				if err := m.vmManager.SaveStartStopScript(sf.config); err != nil {
+					m.statusMessage = "Error saving start/stop script config: " + err.Error()
+				} else {
+					m.statusMessage = "Start/Stop script configuration saved"
+				}
+				m.currentView = ViewConfigMenu
+				m.breadcrumbs.Clear()
+				m.breadcrumbs.AddItem("Configuration", "config", 1)
+
+			case "cancel":
+				// Cancel and go back
+				m.currentView = ViewConfigMenu
+				m.breadcrumbs.Clear()
+				m.breadcrumbs.AddItem("Configuration", "config", 1)
 			}
-			m.currentView = ViewConfigMenu
-			m.breadcrumbs.Clear()
-			m.breadcrumbs.AddItem("Configuration", "config", 1)
-
-		case startStopScriptCancel:
-			// Cancel and go back
-			m.currentView = ViewConfigMenu
-			m.breadcrumbs.Clear()
-			m.breadcrumbs.AddItem("Configuration", "config", 1)
 		}
 	}
 
-	form.syncViewport()
-	m.startStopScriptFormModel = form
+	sf.syncViewport()
+	m.startStopScriptModel = model
 	return m, nil
 }
