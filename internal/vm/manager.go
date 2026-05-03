@@ -5,8 +5,11 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
@@ -225,14 +228,32 @@ func (m *Manager) SaveStartStopScript(cfg models.StartStopScript) error {
 // vfio-pci.ids parameter string, and writes it to the grub.cfg file.
 // It returns an error if the config cannot be read, or the grub.cfg cannot be updated.
 func (m *Manager) ApplyVFIOIDsToKernel() error {
+	if debugMode {
+		log.Println("[DEBUG] ApplyVFIOIDsToKernel: starting")
+	}
+
 	// Get current PCI passthrough config
 	pciCfg, err := m.GetPCIPassthroughConfig()
 	if err != nil {
+		if debugMode {
+			log.Printf("[DEBUG] ApplyVFIOIDsToKernel: failed to get PCI config: %v", err)
+		}
 		return fmt.Errorf("get PCI passthrough config: %w", err)
+	}
+
+	if debugMode {
+		log.Printf("[DEBUG] ApplyVFIOIDsToKernel: got %d PCI devices from config", len(pciCfg.Devices))
+		for i, dev := range pciCfg.Devices {
+			log.Printf("[DEBUG] ApplyVFIOIDsToKernel: device[%d] = %s:%s (%s)", i, dev.Vendor, dev.Device, dev.Address)
+		}
 	}
 
 	// Build vfio-pci.ids string
 	vfioIDs := BuildVFIOIDs(pciCfg.Devices)
+
+	if debugMode {
+		log.Printf("[DEBUG] ApplyVFIOIDsToKernel: built vfioIDs = %q", vfioIDs)
+	}
 
 	// Get grub config path
 	grubPath := m.cfg.GrubConfigPath
@@ -240,11 +261,36 @@ func (m *Manager) ApplyVFIOIDsToKernel() error {
 		grubPath = "/media/usb/boot/grub/grub.cfg"
 	}
 
+	if debugMode {
+		log.Printf("[DEBUG] ApplyVFIOIDsToKernel: grubPath = %s", grubPath)
+	}
+
+	// Remount /media/usb as rw before modifying grub.cfg.
+	// DKVM Hypervisor keeps the USB filesystem read-only by default.
+	remountPath := detectMountPath(grubPath)
+	if remountPath != "" {
+		if err := remountFilesystem(remountPath, "rw"); err != nil {
+			return fmt.Errorf("remount %s as rw: %w", remountPath, err)
+		}
+		// Always restore read-only after the update, regardless of outcome.
+		defer func() {
+			if err := remountFilesystem(remountPath, "ro"); err != nil {
+				log.Printf("[WARN] ApplyVFIOIDsToKernel: failed to remount %s as ro: %v", remountPath, err)
+			}
+		}()
+	}
+
 	// Update grub.cfg
 	if err := UpdateGrubVFIOIDs(vfioIDs, grubPath); err != nil {
+		if debugMode {
+			log.Printf("[DEBUG] ApplyVFIOIDsToKernel: UpdateGrubVFIOIDs failed: %v", err)
+		}
 		return fmt.Errorf("update grub.cfg: %w", err)
 	}
 
+	if debugMode {
+		log.Println("[DEBUG] ApplyVFIOIDsToKernel: completed successfully")
+	}
 	return nil
 }
 
@@ -313,4 +359,30 @@ func generateMAC() string {
 	bytes[0] = bytes[0]&0xFE | 0x02
 	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",
 		bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5])
+}
+
+// detectMountPath checks if a file path resides under /media/usb and returns
+// the mount point path, or an empty string if no remount is needed.
+func detectMountPath(filePath string) string {
+	if strings.HasPrefix(filePath, "/media/usb") {
+		return "/media/usb"
+	}
+	return ""
+}
+
+// remountFilesystem remounts the given mount point with the specified options
+// (e.g., "rw" or "ro"). It uses the mount command with the remount flag.
+func remountFilesystem(mountPath, mode string) error {
+	if debugMode {
+		log.Printf("[DEBUG] remountFilesystem: mount -o remount,%s %s", mode, mountPath)
+	}
+	cmd := exec.Command("mount", "-o", "remount,"+mode, mountPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("mount -o remount,%s %s: %s: %w", mode, mountPath, string(output), err)
+	}
+	if debugMode {
+		log.Printf("[DEBUG] remountFilesystem: successfully remounted %s as %s", mountPath, mode)
+	}
+	return nil
 }
