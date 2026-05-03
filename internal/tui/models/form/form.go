@@ -62,6 +62,11 @@ func (sf *ScrollableForm) FocusIndex() int {
 	return sf.focusIndex
 }
 
+// Focused returns whether the form has keyboard focus.
+func (sf *ScrollableForm) Focused() bool {
+	return sf.focused
+}
+
 // Model returns the underlying FormModel (for testing/internal access).
 func (sf *ScrollableForm) Model() FormModel {
 	return sf.model
@@ -97,7 +102,10 @@ func (sf *ScrollableForm) SetSize(w, h int) {
 		sf.vp.Width = w
 		sf.vp.Height = h
 	}
-	sf.model.SetSize(w, h)
+	// Note: we deliberately do NOT call sf.model.SetSize(w, h) here.
+	// The FormModel is already wrapped by this ScrollableForm, and calling
+	// back into the model's SetSize would cause infinite recursion when
+	// the model delegates SetSize to its ScrollableForm wrapper.
 	sf.syncViewport()
 }
 
@@ -106,6 +114,19 @@ func (sf *ScrollableForm) SetSize(w, h int) {
 // this, ScrollableForm will delegate unknown messages to it.
 type handleMessage interface {
 	HandleMessage(msg tea.Msg) tea.Cmd
+}
+
+// arrowKeyHandler is an optional interface for forms that need left/right
+// arrow key handling (e.g., dropdown navigation, unit cycling).
+type arrowKeyHandler interface {
+	HandleLeft(pos FocusPos)
+	HandleRight(pos FocusPos)
+}
+
+// spaceHandler is an optional interface for forms that need space key
+// handling (e.g., toggling booleans). If not implemented, space is ignored.
+type spaceHandler interface {
+	HandleSpace(pos FocusPos)
 }
 
 // Update implements tea.Model.
@@ -121,7 +142,6 @@ func (sf *ScrollableForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			sf.vp.Width = msg.Width
 			sf.vp.Height = msg.Height
 		}
-		sf.model.SetSize(msg.Width, msg.Height)
 		sf.syncViewport()
 		return sf, nil
 
@@ -164,6 +184,22 @@ func (sf *ScrollableForm) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		sf.syncViewport()
 		return sf, nil
 
+	case "left":
+		if ah, ok := sf.model.(arrowKeyHandler); ok {
+			pos := sf.currentPos()
+			ah.HandleLeft(pos)
+			sf.syncViewport()
+		}
+		return sf, nil
+
+	case "right":
+		if ah, ok := sf.model.(arrowKeyHandler); ok {
+			pos := sf.currentPos()
+			ah.HandleRight(pos)
+			sf.syncViewport()
+		}
+		return sf, nil
+
 	case "enter":
 		return sf.handleEnter()
 
@@ -178,6 +214,14 @@ func (sf *ScrollableForm) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		sf.model.HandleDelete(pos)
 		sf.syncViewport()
 		return sf, nil
+
+	case " ":
+		if sh, ok := sf.model.(spaceHandler); ok {
+			pos := sf.currentPos()
+			sh.HandleSpace(pos)
+			sf.syncViewport()
+			return sf, nil
+		}
 
 	default:
 		if len(key) == 1 {
@@ -246,7 +290,7 @@ func (sf *ScrollableForm) syncViewport() {
 
 	// Scroll to keep focused line visible
 	focusedLine := focusedLineIndex(positions, sf.focusIndex, 1) // +1 for header
-	sf.vp.YOffset = clampOffset(sf.vp.YOffset, focusedLine, sf.vp.Height)
+	sf.vp.YOffset = ClampOffset(sf.vp.YOffset, focusedLine, sf.vp.Height)
 }
 
 // cursorOffset returns the cursor offset for a field key.

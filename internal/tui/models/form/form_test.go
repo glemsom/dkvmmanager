@@ -83,12 +83,13 @@ func TestScrollableForm_WindowSizeMsg_InitializesViewport(t *testing.T) {
 		t.Fatal("expected viewport to be ready after WindowSizeMsg")
 	}
 
-	// Size was propagated to the form model
-	if mock.setSizeW != 80 {
-		t.Errorf("expected SetSize width 80, got %d", mock.setSizeW)
+	// Size was stored on the ScrollableForm
+	sf = result.(*ScrollableForm)
+	if sf.contentW != 80 {
+		t.Errorf("expected content width 80, got %d", sf.contentW)
 	}
-	if mock.setSizeH != 24 {
-		t.Errorf("expected SetSize height 24, got %d", mock.setSizeH)
+	if sf.contentH != 24 {
+		t.Errorf("expected content height 24, got %d", sf.contentH)
 	}
 
 	// No command should be returned
@@ -128,11 +129,12 @@ func TestScrollableForm_SetSize(t *testing.T) {
 
 	sf.SetSize(90, 28)
 
-	if mock.setSizeW != 90 {
-		t.Errorf("expected SetSize width 90, got %d", mock.setSizeW)
+	// Size is stored on the ScrollableForm itself
+	if sf.contentW != 90 {
+		t.Errorf("expected content width 90, got %d", sf.contentW)
 	}
-	if mock.setSizeH != 28 {
-		t.Errorf("expected SetSize height 28, got %d", mock.setSizeH)
+	if sf.contentH != 28 {
+		t.Errorf("expected content height 28, got %d", sf.contentH)
 	}
 
 	if !sf.Ready() {

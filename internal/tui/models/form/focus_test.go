@@ -99,14 +99,14 @@ func TestFocusedLineIndex_ReturnsPositionIndex(t *testing.T) {
 	}
 }
 
-// --- Viewport clampOffset ---
+// --- Viewport ClampOffset ---
 
 func TestClampOffset_AdjustsWhenTargetBelowViewport(t *testing.T) {
 	// Target line is above the visible area; offset should decrease
 	offset := 10
 	targetLine := 5
 	viewHeight := 20
-	newOffset := clampOffset(offset, targetLine, viewHeight)
+	newOffset := ClampOffset(offset, targetLine, viewHeight)
 	// The target line (5) should be at least at the top of the viewport (offset)
 	// So offset should be <= 5
 	if newOffset > targetLine {
@@ -119,7 +119,7 @@ func TestClampOffset_AdjustsWhenTargetBelowViewportBottom(t *testing.T) {
 	offset := 0
 	targetLine := 25
 	viewHeight := 20
-	newOffset := clampOffset(offset, targetLine, viewHeight)
+	newOffset := ClampOffset(offset, targetLine, viewHeight)
 	// The target line should be visible: offset + viewHeight > targetLine
 	if newOffset+viewHeight <= targetLine {
 		t.Errorf("expected offset+viewHeight > %d, got offset=%d (sum=%d)", targetLine, newOffset, newOffset+viewHeight)
@@ -131,7 +131,7 @@ func TestClampOffset_NoChangeWhenTargetVisible(t *testing.T) {
 	offset := 10
 	targetLine := 15
 	viewHeight := 20
-	newOffset := clampOffset(offset, targetLine, viewHeight)
+	newOffset := ClampOffset(offset, targetLine, viewHeight)
 	if newOffset != offset {
 		t.Errorf("expected offset to remain %d, got %d", offset, newOffset)
 	}
@@ -141,7 +141,7 @@ func TestClampOffset_NeverNegative(t *testing.T) {
 	offset := 0
 	targetLine := 0
 	viewHeight := 20
-	newOffset := clampOffset(offset, targetLine, viewHeight)
+	newOffset := ClampOffset(offset, targetLine, viewHeight)
 	if newOffset < 0 {
 		t.Errorf("expected offset >= 0, got %d", newOffset)
 	}
