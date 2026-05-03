@@ -10,12 +10,19 @@ import (
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
+// VCPUCPUKernelAppliedMsg is sent when CPU kernel parameters have been applied to grub.cfg
+type VCPUCPUKernelAppliedMsg struct {
+	Success bool
+	Error   string
+}
+
 // vcpuPinningFocusKind describes what a vCPU pinning focus position represents
 type vcpuPinningFocusKind int
 
 const (
 	vcpuPinningToggle vcpuPinningFocusKind = iota // Toggle pinning enabled
 	vcpuPinningSave                              // Save button
+	vcpuPinningApplyKernel                       // Apply to Kernel button
 )
 
 // VCPUPinningFormModel is a scrollable form for editing global vCPU pinning
@@ -48,6 +55,10 @@ type VCPUPinningFormModel struct {
 
 	// Rendering cache
 	renderedLines []string
+
+	// Kernel apply feedback
+	kernelMsg    string
+	kernelMsgErr bool
 }
 
 // NewVCPUPinningFormModel creates a new vCPU pinning form model
@@ -114,6 +125,21 @@ func (m *VCPUPinningFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)
+
+	case VCPUCPUKernelAppliedMsg:
+		if msg.Success {
+			if m.pinning.Enabled && len(m.pinning.Mappings) > 0 {
+				m.kernelMsg = "Kernel CPU isolation parameters applied to grub.cfg"
+			} else {
+				m.kernelMsg = "Kernel CPU isolation parameters removed from grub.cfg"
+			}
+			m.kernelMsgErr = false
+		} else {
+			m.kernelMsg = msg.Error
+			m.kernelMsgErr = true
+		}
+		m.syncViewport()
+		return m, nil
 	}
 	return m, nil
 }
@@ -169,15 +195,28 @@ func (m *VCPUPinningFormModel) handleEnter() (tea.Model, tea.Cmd) {
 		return m, nil
 	case vcpuPinningSave:
 		return m.validateAndSave()
+	case vcpuPinningApplyKernel:
+		return m.handleApplyKernel()
 	}
 	return m, nil
 }
 
 // moveFocus moves the focus by delta positions
 func (m *VCPUPinningFormModel) moveFocus(delta int) {
-	if m.focusPos == vcpuPinningToggle && delta > 0 {
-		m.focusPos = vcpuPinningSave
-	} else if m.focusPos == vcpuPinningSave && delta < 0 {
-		m.focusPos = vcpuPinningToggle
+	switch m.focusPos {
+	case vcpuPinningToggle:
+		if delta > 0 {
+			m.focusPos = vcpuPinningSave
+		}
+	case vcpuPinningSave:
+		if delta > 0 {
+			m.focusPos = vcpuPinningApplyKernel
+		} else if delta < 0 {
+			m.focusPos = vcpuPinningToggle
+		}
+	case vcpuPinningApplyKernel:
+		if delta < 0 {
+			m.focusPos = vcpuPinningSave
+		}
 	}
 }

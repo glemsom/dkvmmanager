@@ -16,6 +16,7 @@ var (
 	vcpuPinningEnabledStyle = styles.SuccessTextStyle()
 	vcpuPinningMutedStyle  = styles.FormMutedStyle()
 	vcpuPinningSaveStyle   = styles.FormSaveStyle()
+	vcpuPinningApplyStyle  = styles.FormSaveStyle().Background(styles.Colors.Warning)
 	vcpuPinningTitleStyle   = styles.TitleStyle()
 	vcpuPinningErrorStyle = styles.ErrorTextStyle()
 	vcpuPinningWarnStyle  = styles.WarningTextStyle()
@@ -158,10 +159,28 @@ func (m *VCPUPinningFormModel) renderAllLines() []string {
 	}
 	lines = append(lines, saveText)
 
+	// Apply to Kernel button
+	focused = m.focusPos == vcpuPinningApplyKernel
+	applyText := vcpuPinningMutedStyle.Render("[Space/Enter] Apply to Kernel") + "    " + vcpuPinningMutedStyle.Render("[ESC] Cancel")
+	if focused {
+		applyText = vcpuPinningApplyStyle.Render("[Space/Enter] Apply to Kernel") + "    " + vcpuPinningMutedStyle.Render("[ESC] Cancel")
+	}
+	lines = append(lines, applyText)
+
 	// Errors
 	if errMsg, ok := m.errors["save"]; ok {
 		lines = append(lines, "")
 		lines = append(lines, vcpuPinningErrorStyle.Render("Error: "+errMsg))
+	}
+
+	// Kernel apply status message
+	if m.kernelMsg != "" {
+		lines = append(lines, "")
+		if m.kernelMsgErr {
+			lines = append(lines, vcpuPinningErrorStyle.Render("Error: "+m.kernelMsg))
+		} else {
+			lines = append(lines, vcpuPinningSaveStyle.Render(m.kernelMsg))
+		}
 	}
 
 	lines = append(lines, "")
@@ -300,7 +319,11 @@ func (m *VCPUPinningFormModel) focusedLineIndex() int {
 	line += 3
 
 	// Now we're at the Save button line
-	// If focus is on Save, return this line; otherwise return toggle line
+	if m.focusPos == vcpuPinningApplyKernel {
+		return line + 1 // Apply to Kernel is 1 line after Save
+	}
+
+	// Save button is at this line
 	if m.focusPos == vcpuPinningSave {
 		return line
 	}
