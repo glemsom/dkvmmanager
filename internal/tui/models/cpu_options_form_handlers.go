@@ -4,116 +4,81 @@ package models
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
-// Update implements tea.Model
-func (m *CPUOptionsFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.contentW = msg.Width
-		m.contentH = msg.Height
-		if !m.ready {
-			m.vp = viewport.New(msg.Width, msg.Height)
-			m.ready = true
-		} else {
-			m.vp.Width = msg.Width
-			m.vp.Height = msg.Height
-		}
-		m.syncViewport()
-		return m, nil
-
-	case tea.KeyMsg:
-		return m.handleKey(msg)
-	}
-	return m, nil
-}
-
-// handleKey processes keyboard input
+// handleKey processes keyboard input (backward-compatible Update path).
 func (m *CPUOptionsFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	key := msg.String()
+	if m.saving {
+		return m, nil
+	}
 
-	// ESC is handled by MainModel (returnFromSubView), never reach here
+	key := msg.String()
 
 	switch key {
 	case "tab":
 		m.moveFocus(1)
-		m.syncViewport()
 	case "shift+tab":
 		m.moveFocus(-1)
-		m.syncViewport()
 	case "up":
 		m.moveFocus(-1)
-		m.syncViewport()
 	case "down":
 		m.moveFocus(1)
-		m.syncViewport()
-	case "pgup":
-		m.pageUp()
-	case "pgdown":
-		m.pageDown()
 	case "enter", " ":
-		return m.handleEnter()
+		return m.handleEnterKey()
 	case "backspace":
-		m.handleBackspace()
-		m.syncViewport()
+		m.handleBackspaceKey()
 	case "delete":
-		m.handleDelete()
-		m.syncViewport()
+		m.handleDeleteKey()
 	default:
 		if len(key) == 1 {
 			m.handleCharInput(key)
-			m.syncViewport()
 		}
 	}
 	return m, nil
 }
 
-// handleEnter acts contextually: toggle or save
-func (m *CPUOptionsFormModel) handleEnter() (tea.Model, tea.Cmd) {
+// handleEnterKey acts contextually: toggle or save (backward compat).
+func (m *CPUOptionsFormModel) handleEnterKey() (tea.Model, tea.Cmd) {
 	pos := m.currentPos()
 	switch pos.kind {
 	case cpuOptToggle:
 		m.toggleValue(pos.fieldName)
-		m.syncViewport()
 		return m, nil
 	case cpuOptSave:
-		return m.validateAndSave()
+		return m.validateAndSaveCmd()
 	default:
 		// On a text field: move to next field
 		m.moveFocus(1)
-		m.syncViewport()
 		return m, nil
 	}
 }
 
-// handleBackspace deletes the character before cursor in the focused text field
-func (m *CPUOptionsFormModel) handleBackspace() {
+// handleBackspaceKey deletes the character before cursor (backward compat).
+func (m *CPUOptionsFormModel) handleBackspaceKey() {
 	pos := m.currentPos()
 	if pos.kind != cpuOptText {
 		return
 	}
 	val := m.getTextValue(pos.fieldName)
-	key := cpuOptPosKey(pos)
-	cursor := m.effectiveCursor(key, val)
+	cursor := m.effectiveCursor(pos.fieldName, val)
 
 	if cursor > 0 {
 		newVal := val[:cursor-1] + val[cursor:]
 		m.setTextValue(pos.fieldName, newVal)
-		m.setCursorOffset(key, cursor-1)
+		m.setCursorOffset(pos.fieldName, cursor-1)
 	}
 }
 
-// handleDelete deletes the character ahead of cursor in the focused text field
-func (m *CPUOptionsFormModel) handleDelete() {
+// handleDeleteKey deletes the character at cursor (backward compat).
+func (m *CPUOptionsFormModel) handleDeleteKey() {
 	pos := m.currentPos()
 	if pos.kind != cpuOptText {
 		return
 	}
 	val := m.getTextValue(pos.fieldName)
-	key := cpuOptPosKey(pos)
-	cursor := m.effectiveCursor(key, val)
+	cursor := m.effectiveCursor(pos.fieldName, val)
 
 	if cursor < len(val) {
 		newVal := val[:cursor] + val[cursor+1:]
@@ -121,30 +86,112 @@ func (m *CPUOptionsFormModel) handleDelete() {
 	}
 }
 
-// handleCharInput inserts a character at the cursor in the focused text field
+// handleCharInput inserts a character at cursor (backward compat).
 func (m *CPUOptionsFormModel) handleCharInput(ch string) {
 	pos := m.currentPos()
 	if pos.kind != cpuOptText {
 		return
 	}
 	val := m.getTextValue(pos.fieldName)
-	key := cpuOptPosKey(pos)
-	cursor := m.effectiveCursor(key, val)
+	cursor := m.effectiveCursor(pos.fieldName, val)
 
 	newVal := val[:cursor] + ch + val[cursor:]
 	m.setTextValue(pos.fieldName, newVal)
-	m.setCursorOffset(key, cursor+1)
+	m.setCursorOffset(pos.fieldName, cursor+1)
 }
 
-// validateAndSave persists the CPU options
-func (m *CPUOptionsFormModel) validateAndSave() (tea.Model, tea.Cmd) {
+// validateAndSaveCmd persists the CPU options and returns a tea.Cmd.
+func (m *CPUOptionsFormModel) validateAndSaveCmd() (tea.Model, tea.Cmd) {
 	m.errors = make(map[string]string)
 
 	if err := m.vmManager.SaveCPUOptions(m.options); err != nil {
 		m.errors["save"] = fmt.Sprintf("Failed to save: %v", err)
-		m.syncViewport()
 		return m, nil
 	}
 
 	return m, func() tea.Msg { return CPUOptionsUpdatedMsg{} }
+}
+
+// --- FormModel Interface Implementation ---
+
+// HandleEnter is called when the user presses Enter on a position.
+func (m *CPUOptionsFormModel) HandleEnter(pos form.FocusPos) (form.FormResult, tea.Cmd) {
+	switch pos.Kind {
+	case form.FocusToggle:
+		m.toggleValue(pos.Key)
+		return form.ResultNone, nil
+	case form.FocusButton:
+		if pos.Key == "save" {
+			m.errors = make(map[string]string)
+			if err := m.vmManager.SaveCPUOptions(m.options); err != nil {
+				m.errors["save"] = fmt.Sprintf("Failed to save: %v", err)
+				return form.ResultNone, nil
+			}
+			return form.ResultNone, func() tea.Msg { return CPUOptionsUpdatedMsg{} }
+		}
+		return form.ResultNone, nil
+	default:
+		// On a text field: move to next position
+		m.focusIndex++
+		if m.focusIndex >= len(m.positions) {
+			m.focusIndex = len(m.positions) - 1
+		}
+		return form.ResultNone, nil
+	}
+}
+
+// HandleChar inserts a character at the cursor in the focused text field.
+func (m *CPUOptionsFormModel) HandleChar(pos form.FocusPos, ch string) {
+	if pos.Kind != form.FocusText {
+		return
+	}
+	val := m.getTextValue(pos.Key)
+	cursor := m.effectiveCursor(pos.Key, val)
+	newVal := val[:cursor] + ch + val[cursor:]
+	m.setTextValue(pos.Key, newVal)
+	m.cursorOffsets[pos.Key] = cursor + 1
+}
+
+// HandleBackspace deletes the character before cursor.
+func (m *CPUOptionsFormModel) HandleBackspace(pos form.FocusPos) {
+	if pos.Kind != form.FocusText {
+		return
+	}
+	val := m.getTextValue(pos.Key)
+	cursor := m.effectiveCursor(pos.Key, val)
+	if cursor > 0 {
+		newVal := val[:cursor-1] + val[cursor:]
+		m.setTextValue(pos.Key, newVal)
+		m.cursorOffsets[pos.Key] = cursor - 1
+	}
+}
+
+// HandleDelete deletes the character at cursor.
+func (m *CPUOptionsFormModel) HandleDelete(pos form.FocusPos) {
+	if pos.Kind != form.FocusText {
+		return
+	}
+	val := m.getTextValue(pos.Key)
+	cursor := m.effectiveCursor(pos.Key, val)
+	if cursor < len(val) {
+		newVal := val[:cursor] + val[cursor+1:]
+		m.setTextValue(pos.Key, newVal)
+		// Cursor stays at same position
+	}
+}
+
+// HandleMessage handles custom messages (e.g., async command results).
+func (m *CPUOptionsFormModel) HandleMessage(msg tea.Msg) tea.Cmd {
+	switch msg := msg.(type) {
+	case cpuOptionsErrorMsg:
+		m.saving = false
+		m.statusMessage = msg.err
+		return nil
+	}
+	return nil
+}
+
+// cpuOptionsErrorMsg is sent when save fails.
+type cpuOptionsErrorMsg struct {
+	err string
 }

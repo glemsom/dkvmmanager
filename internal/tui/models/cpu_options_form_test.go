@@ -16,8 +16,8 @@ func TestCPUOptionsFormInit(t *testing.T) {
 	vmManager := createTestVMManager(t)
 	form := NewCPUOptionsFormModel(vmManager)
 
-	if form.focusIndex != 0 {
-		t.Errorf("Initial focusIndex = %d, want 0", form.focusIndex)
+	if form.focusIndex != 1 {
+		t.Errorf("Initial focusIndex = %d, want 1 (first interactive element after header)", form.focusIndex)
 	}
 
 	// Default options should all be false/empty
@@ -34,13 +34,13 @@ func TestCPUOptionsFormToggle(t *testing.T) {
 	vmManager := createTestVMManager(t)
 	form := NewCPUOptionsFormModel(vmManager)
 
-	// Focus is on HideKVM (index 0, which is a toggle)
+	// Focus is on HideKVM (index 1, after header at 0)
 	pos := form.currentPos()
 	if pos.fieldName != "HideKVM" {
-		t.Fatalf("Expected first position to be HideKVM, got %s", pos.fieldName)
+		t.Fatalf("Expected current position to be HideKVM, got %s", pos.fieldName)
 	}
 	if pos.kind != cpuOptToggle {
-		t.Fatalf("Expected first position to be toggle, got %d", pos.kind)
+		t.Fatalf("Expected current position to be toggle, got %d", pos.kind)
 	}
 
 	// Toggle HideKVM via Enter key
@@ -65,30 +65,37 @@ func TestCPUOptionsFormNavigation(t *testing.T) {
 	vmManager := createTestVMManager(t)
 	form := NewCPUOptionsFormModel(vmManager)
 
-	// Start at HideKVM (index 0)
+	// Start at HideKVM (index 1, after header at 0)
 	if form.currentPos().fieldName != "HideKVM" {
 		t.Fatalf("Expected initial field HideKVM, got %s", form.currentPos().fieldName)
 	}
 
-	// Tab moves to VendorID (index 1)
+	// Tab moves to VendorID (index 2)
 	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyTab})
 	form = model.(*CPUOptionsFormModel)
 	if form.currentPos().fieldName != "VendorID" {
 		t.Errorf("Expected VendorID after Tab, got %s", form.currentPos().fieldName)
 	}
 
-	// Tab moves to HVFrequency (index 2)
+	// Tab moves to section header (index 3)
+	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyTab})
+	form = model.(*CPUOptionsFormModel)
+	if form.currentPos().fieldName != "header_hyperv" {
+		t.Errorf("Expected header_hyperv after Tab, got %s", form.currentPos().fieldName)
+	}
+
+	// Tab moves to HVFrequency (index 4)
 	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyTab})
 	form = model.(*CPUOptionsFormModel)
 	if form.currentPos().fieldName != "HVFrequency" {
 		t.Errorf("Expected HVFrequency after Tab, got %s", form.currentPos().fieldName)
 	}
 
-	// Shift+Tab moves back to VendorID
+	// Shift+Tab moves back to header_hyperv
 	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
 	form = model.(*CPUOptionsFormModel)
-	if form.currentPos().fieldName != "VendorID" {
-		t.Errorf("Expected VendorID after Shift+Tab, got %s", form.currentPos().fieldName)
+	if form.currentPos().fieldName != "header_hyperv" {
+		t.Errorf("Expected header_hyperv after Shift+Tab, got %s", form.currentPos().fieldName)
 	}
 }
 
@@ -97,7 +104,7 @@ func TestCPUOptionsFormTextEditing(t *testing.T) {
 	vmManager := createTestVMManager(t)
 	form := NewCPUOptionsFormModel(vmManager)
 
-	// Move to VendorID (index 1)
+	// Move to VendorID (index 2)
 	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyTab})
 	form = model.(*CPUOptionsFormModel)
 
@@ -199,7 +206,7 @@ func TestCPUOptionsFormAllToggles(t *testing.T) {
 // findIndexByName returns the focus index for a field name
 func (m *CPUOptionsFormModel) findIndexByName(name string) int {
 	for i, p := range m.positions {
-		if p.fieldName == name {
+		if p.Key == name {
 			return i
 		}
 	}
@@ -213,7 +220,7 @@ func TestCPUOptionsUpdateMsg(t *testing.T) {
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
 	}
-	form.rebuildPositions()
+	form.positions = form.BuildPositions()
 
 	// WindowSizeMsg initializes viewport
 	model, _ := form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
@@ -244,17 +251,17 @@ func TestCPUOptionsFieldLabels(t *testing.T) {
 	}
 }
 
-// TestCPUOptionsPositionsCount tests that rebuildPositions creates correct number of positions
+// TestCPUOptionsPositionsCount tests that BuildPositions creates correct number of positions
 func TestCPUOptionsPositionsCount(t *testing.T) {
 	form := &CPUOptionsFormModel{
 		options:       models.CPUOptions{},
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
 	}
-	form.rebuildPositions()
+	form.positions = form.BuildPositions()
 
-	// 22 toggles + 2 text fields + 1 save button = 25
-	expectedCount := 25
+	// 22 toggles + 2 text fields + 1 save button + 3 section headers = 28
+	expectedCount := 28
 	if len(form.positions) != expectedCount {
 		t.Errorf("Expected %d positions, got %d", expectedCount, len(form.positions))
 	}

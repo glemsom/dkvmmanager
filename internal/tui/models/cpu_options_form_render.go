@@ -2,35 +2,14 @@
 package models
 
 import (
-	"github.com/charmbracelet/bubbles/viewport"
+	"strings"
+
 	"github.com/charmbracelet/lipgloss"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
-// View implements tea.Model
-func (m *CPUOptionsFormModel) View() string {
-	if !m.ready {
-		return "Loading form..."
-	}
-	return m.vp.View()
-}
-
-// SetSize updates the form dimensions
-func (m *CPUOptionsFormModel) SetSize(w, h int) {
-	m.contentW = w
-	m.contentH = h
-	if !m.ready {
-		m.vp = viewport.New(w, h)
-		m.ready = true
-	} else {
-		m.vp.Width = w
-		m.vp.Height = h
-	}
-	m.syncViewport()
-}
-
-// --- Rendering ---
-
+// Style variables for the CPU options form.
 var (
 	cpuOptLabelStyle   = lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim)
 	cpuOptFocusStyle   = styles.FormFocusStyle()
@@ -41,45 +20,78 @@ var (
 	cpuOptSectionStyle = styles.DetailSectionStyle()
 )
 
-// renderAllLines produces the full list of output lines for the form
+// --- FormModel Interface Implementation ---
+
+// RenderHeader returns the form header.
+func (m *CPUOptionsFormModel) RenderHeader() string {
+	return cpuOptFocusStyle.Render("CPU Options")
+}
+
+// RenderFooter returns the form footer.
+func (m *CPUOptionsFormModel) RenderFooter() string {
+	var parts []string
+	if m.statusMessage != "" {
+		parts = append(parts, "")
+		parts = append(parts, cpuOptErrorStyle.Render(m.statusMessage))
+	}
+	if errMsg, ok := m.errors["save"]; ok {
+		parts = append(parts, "")
+		parts = append(parts, cpuOptErrorStyle.Render("Error: "+errMsg))
+	}
+	parts = append(parts, "")
+	parts = append(parts, cpuOptMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Page  Space/Enter Toggle/Save  ESC Cancel"))
+	return strings.Join(parts, "\n")
+}
+
+// RenderPosition returns the markup for a single position.
+func (m *CPUOptionsFormModel) RenderPosition(pos form.FocusPos, focused bool, cursorOffset int) string {
+	switch pos.Kind {
+	case form.FocusHeader:
+		return cpuOptSectionStyle.Render(pos.Label)
+
+	case form.FocusToggle:
+		val := m.getToggleValue(pos.Key)
+		return m.renderToggle(pos.Label, val, focused)
+
+	case form.FocusText:
+		val := m.getTextValue(pos.Key)
+		cursor := m.effectiveCursor(pos.Key, val)
+		if focused && cursorOffset >= 0 {
+			cursor = cursorOffset
+		}
+		return m.renderTextInput(pos.Label, val, cursor, focused)
+
+	case form.FocusButton:
+		if pos.Key == "save" {
+			saveText := cpuOptMutedStyle.Render("[Space/Enter] Save    [ESC] Cancel")
+			if focused {
+				saveText = cpuOptSaveStyle.Render("[Space/Enter] Save") + "    " + cpuOptMutedStyle.Render("[ESC] Cancel")
+			}
+			return saveText
+		}
+	}
+	return ""
+}
+
+// --- Backward-compatible rendering helpers ---
+
+// renderAllLines produces the full list of output lines for the viewport (backward compat).
 func (m *CPUOptionsFormModel) renderAllLines() []string {
 	var lines []string
 
-	// Section 1: Hypervisor Stealth
-	lines = append(lines, cpuOptSectionStyle.Render("== Hypervisor Stealth =="))
+	// Header
+	lines = append(lines, cpuOptFocusStyle.Render("CPU Options"))
 	lines = append(lines, "")
 
-	for i, pos := range m.positions[0:2] {
+	// Render all positions (including section headers)
+	for i, pos := range m.positions {
+		if pos.Kind == form.FocusHeader {
+			// Blank line before section header
+			lines = append(lines, "")
+		}
 		focused := (i == m.focusIndex)
-		lines = m.renderPosition(lines, pos, focused)
+		lines = m.renderPositionLine(lines, pos, focused)
 	}
-
-	lines = append(lines, "")
-
-	// Section 2: Hyper-V Enlightenments
-	lines = append(lines, cpuOptSectionStyle.Render("== Hyper-V Enlightenments =="))
-	lines = append(lines, "")
-
-	for i, pos := range m.positions[2:17] {
-		focused := (i+2 == m.focusIndex)
-		lines = m.renderPosition(lines, pos, focused)
-	}
-
-	lines = append(lines, "")
-
-	// Section 3: Advanced CPU Features
-	lines = append(lines, cpuOptSectionStyle.Render("== Advanced CPU Features =="))
-	lines = append(lines, "")
-
-	for i, pos := range m.positions[17:24] {
-		focused := (i+17 == m.focusIndex)
-		lines = m.renderPosition(lines, pos, focused)
-	}
-
-	// Save button (last position)
-	lines = append(lines, "")
-	focused := (len(m.positions)-1 == m.focusIndex)
-	lines = m.renderPosition(lines, m.positions[len(m.positions)-1], focused)
 
 	// Save error at the bottom
 	if errMsg, ok := m.errors["save"]; ok {
@@ -94,30 +106,33 @@ func (m *CPUOptionsFormModel) renderAllLines() []string {
 	return lines
 }
 
-// renderPosition appends lines for one focus position
-func (m *CPUOptionsFormModel) renderPosition(lines []string, pos cpuOptFocusPos, focused bool) []string {
-	switch pos.kind {
-	case cpuOptToggle:
-		desc := m.fieldLabel(pos.fieldName)
-		val := m.getToggleValue(pos.fieldName)
-		lines = append(lines, m.renderToggle(desc, val, focused))
+// renderPositionLine appends lines for one focus position to the lines slice.
+func (m *CPUOptionsFormModel) renderPositionLine(lines []string, pos form.FocusPos, focused bool) []string {
+	switch pos.Kind {
+	case form.FocusHeader:
+		lines = append(lines, cpuOptSectionStyle.Render(pos.Label))
 		return lines
 
-	case cpuOptText:
-		desc := m.fieldLabel(pos.fieldName)
-		val := m.getTextValue(pos.fieldName)
-		key := cpuOptPosKey(pos)
-		cursor := m.effectiveCursor(key, val)
-		lines = append(lines, m.renderTextInput(desc, val, cursor, focused))
+	case form.FocusToggle:
+		val := m.getToggleValue(pos.Key)
+		lines = append(lines, m.renderToggle(pos.Label, val, focused))
 		return lines
 
-	case cpuOptSave:
-		saveText := cpuOptMutedStyle.Render("[Space/Enter] Save    [ESC] Cancel")
-		if focused {
-			saveText = cpuOptSaveStyle.Render("[Space/Enter] Save") + "    " + cpuOptMutedStyle.Render("[ESC] Cancel")
+	case form.FocusText:
+		val := m.getTextValue(pos.Key)
+		cursor := m.effectiveCursor(pos.Key, val)
+		lines = append(lines, m.renderTextInput(pos.Label, val, cursor, focused))
+		return lines
+
+	case form.FocusButton:
+		if pos.Key == "save" {
+			saveText := cpuOptMutedStyle.Render("[Space/Enter] Save    [ESC] Cancel")
+			if focused {
+				saveText = cpuOptSaveStyle.Render("[Space/Enter] Save") + "    " + cpuOptMutedStyle.Render("[ESC] Cancel")
+			}
+			lines = append(lines, saveText)
+			return lines
 		}
-		lines = append(lines, saveText)
-		return lines
 	}
 
 	return lines

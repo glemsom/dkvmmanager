@@ -3,21 +3,32 @@ package models
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
 // CPUOptionsUpdatedMsg is a message indicating CPU options were successfully saved
 type CPUOptionsUpdatedMsg struct{}
 
-// CPUOptionsModel is a thin wrapper around CPUOptionsFormModel
+// IsFormSaved implements form.FormSavedMsg.
+func (CPUOptionsUpdatedMsg) IsFormSaved() {}
+
+// FormName implements form.FormSavedMsg.
+func (CPUOptionsUpdatedMsg) FormName() string { return "CPU Options" }
+
+// FormStatus implements form.FormSavedMsg.
+func (CPUOptionsUpdatedMsg) FormStatus() string { return "" }
+
+// CPUOptionsModel is a thin wrapper around CPUOptionsFormModel using the ScrollableForm framework.
 type CPUOptionsModel struct {
-	form *CPUOptionsFormModel
+	form *form.ScrollableForm
 }
 
 // NewCPUOptionsModel creates a new CPU options model
 func NewCPUOptionsModel(vmManager *vm.Manager) *CPUOptionsModel {
+	fm := NewCPUOptionsFormModel(vmManager)
 	return &CPUOptionsModel{
-		form: NewCPUOptionsFormModel(vmManager),
+		form: form.NewScrollableForm(fm),
 	}
 }
 
@@ -29,11 +40,18 @@ func (m *CPUOptionsModel) Init() tea.Cmd {
 // Update handles incoming messages
 func (m *CPUOptionsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	inner, cmd := m.form.Update(msg)
-	m.form = inner.(*CPUOptionsFormModel)
+	if sf, ok := inner.(*form.ScrollableForm); ok {
+		m.form = sf
+	}
 	return m, cmd
 }
 
 // View returns the view for the model
 func (m *CPUOptionsModel) View() string {
 	return m.form.View()
+}
+
+// Form returns the underlying form model (for testing/internal access).
+func (m *CPUOptionsModel) Form() *CPUOptionsFormModel {
+	return m.form.Model().(*CPUOptionsFormModel)
 }

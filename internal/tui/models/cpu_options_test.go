@@ -55,7 +55,7 @@ func TestCPUOptionsModelUpdateWindowSize(t *testing.T) {
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 50})
 	wrapped := updated.(*CPUOptionsModel)
 
-	if !wrapped.form.ready {
+	if !wrapped.form.Ready() {
 		t.Error("Form should be ready after WindowSizeMsg is forwarded")
 	}
 }
@@ -87,12 +87,13 @@ func TestCPUOptionsModelUpdateDelegatesKeyPress(t *testing.T) {
 	mgr := createTestVMManager(t)
 	m := NewCPUOptionsModel(mgr)
 
-	initialField := m.form.currentPos().fieldName
+	fm := m.Form()
+	initialField := fm.currentPos().fieldName
 
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
 	wrapped := updated.(*CPUOptionsModel)
 
-	newField := wrapped.form.currentPos().fieldName
+	newField := wrapped.Form().currentPos().fieldName
 	if newField == initialField {
 		t.Error("Key press (Tab) should be delegated to form, focus should change")
 	}

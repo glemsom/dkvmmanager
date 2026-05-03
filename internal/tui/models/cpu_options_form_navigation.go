@@ -1,55 +1,173 @@
 // Package models provides the BubbleTea models for the DKVM Manager TUI
 package models
 
-import "strings"
+import (
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
+)
 
-// rebuildPositions reconstructs the flat focus list from all fields
-func (m *CPUOptionsFormModel) rebuildPositions() {
-	m.positions = nil
+// cpuOptFocusData carries per-position metadata for the framework.
+type cpuOptFocusData struct {
+	kind      int // maps to form.FocusKind (int values: FocusText=0, FocusToggle=1, FocusButton=3)
+	fieldName string
+}
+
+// BuildPositions returns the current list of navigable positions.
+func (m *CPUOptionsFormModel) BuildPositions() []form.FocusPos {
+	var positions []form.FocusPos
+
+	// Hypervisor Stealth section header
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusHeader, Label: "== Hypervisor Stealth ==", Key: "header_stealth",
+	})
 
 	// Hypervisor Stealth section
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HideKVM"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptText, fieldName: "VendorID"})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Hides VM from guest", Key: "HideKVM",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HideKVM"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusText, Label: "Custom hypervisor vendor ID", Key: "VendorID",
+		Data: cpuOptFocusData{kind: int(form.FocusText), fieldName: "VendorID"},
+	})
+
+	// Hyper-V Enlightenments section header
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusHeader, Label: "== Hyper-V Enlightenments ==", Key: "header_hyperv",
+	})
 
 	// Hyper-V Enlightenments section
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HVFrequency"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HVRelaxed"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HVReset"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HVRuntime"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptText, fieldName: "HVSpinlocks"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HVStimer"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HVSyncIC"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HVTime"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HVVapic"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HVVPIndex"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HVNoNonarchCoresharing"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HVTLBFlush"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HVTLBFlushExt"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HVIPI"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HVAVIC"})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Expose TSC/APIC frequencies", Key: "HVFrequency",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVFrequency"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Disable watchdog timeouts", Key: "HVRelaxed",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVRelaxed"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Guest reset capability", Key: "HVReset",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVReset"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Track stolen CPU time", Key: "HVRuntime",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVRuntime"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusText, Label: "Paravirtualized spinlocks", Key: "HVSpinlocks",
+		Data: cpuOptFocusData{kind: int(form.FocusText), fieldName: "HVSpinlocks"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Synthetic timers", Key: "HVStimer",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVStimer"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Synthetic interrupt controller", Key: "HVSyncIC",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVSyncIC"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Fast clocksources", Key: "HVTime",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVTime"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Exit-less EOI processing", Key: "HVVapic",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVVapic"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Virtual CPU index", Key: "HVVPIndex",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVVPIndex"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "No non-arch core sharing", Key: "HVNoNonarchCoresharing",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVNoNonarchCoresharing"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Paravirtualized TLB flush", Key: "HVTLBFlush",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVTLBFlush"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Extended TLB flush ranges", Key: "HVTLBFlushExt",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVTLBFlushExt"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Paravirtualized IPI", Key: "HVIPI",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVIPI"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Hardware APIC virtualization", Key: "HVAVIC",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVAVIC"},
+	})
+
+	// Advanced CPU Features section header
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusHeader, Label: "== Advanced CPU Features ==", Key: "header_advanced",
+	})
 
 	// Advanced CPU Features section
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "TopoExt"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "L3Cache"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "X2APIC"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "Migratable"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "InvTSC"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "RTCUTC"})
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptToggle, fieldName: "CPUPM"})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "AMD topology extension", Key: "TopoExt",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "TopoExt"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Expose host L3 cache info", Key: "L3Cache",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "L3Cache"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "x2APIC mode (>255 vCPUs)", Key: "X2APIC",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "X2APIC"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Disable vCPU migration", Key: "Migratable",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "Migratable"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Invariant TSC", Key: "InvTSC",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "InvTSC"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Use UTC time for RTC", Key: "RTCUTC",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "RTCUTC"},
+	})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "CPU Power Management", Key: "CPUPM",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "CPUPM"},
+	})
 
 	// Save button
-	m.positions = append(m.positions, cpuOptFocusPos{kind: cpuOptSave, fieldName: "save"})
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusButton, Label: "Save", Key: "save",
+		Data: cpuOptFocusData{kind: int(form.FocusButton), fieldName: "save"},
+	})
+
+	return positions
 }
 
-// currentPos returns the focus position at the current focusIndex
-func (m *CPUOptionsFormModel) currentPos() cpuOptFocusPos {
+// cpuOptPos is a legacy position type for backward-compatible test access.
+type cpuOptPos struct {
+	kind      int
+	fieldName string
+}
+
+// currentPos returns the current focused position (for backward compatibility).
+func (m *CPUOptionsFormModel) currentPos() cpuOptPos {
 	if m.focusIndex < 0 || m.focusIndex >= len(m.positions) {
-		return cpuOptFocusPos{kind: cpuOptToggle, fieldName: "HideKVM"}
+		if len(m.positions) > 0 {
+			p := m.positions[0]
+			return cpuOptPos{kind: int(p.Kind), fieldName: p.Key}
+		}
+		return cpuOptPos{}
 	}
-	return m.positions[m.focusIndex]
+	p := m.positions[m.focusIndex]
+	return cpuOptPos{kind: int(p.Kind), fieldName: p.Key}
 }
 
-// moveFocus moves focus by delta in the flat positions list
+// Constants for backward compatibility with existing tests.
+const (
+	cpuOptToggle = int(form.FocusToggle) // toggle position kind
+	cpuOptText   = int(form.FocusText)   // text field position kind
+	cpuOptSave   = int(form.FocusButton) // save button position kind
+)
+
+// moveFocus moves focus by delta in the flat positions list (backward compat for tests).
 func (m *CPUOptionsFormModel) moveFocus(delta int) {
 	m.focusIndex += delta
 	if m.focusIndex < 0 {
@@ -58,77 +176,4 @@ func (m *CPUOptionsFormModel) moveFocus(delta int) {
 	if m.focusIndex >= len(m.positions) {
 		m.focusIndex = len(m.positions) - 1
 	}
-}
-
-// pageUp moves focus up by a page (approximately half the viewport height)
-func (m *CPUOptionsFormModel) pageUp() {
-	pageSize := 10
-	m.focusIndex -= pageSize
-	if m.focusIndex < 0 {
-		m.focusIndex = 0
-	}
-	m.syncViewport()
-}
-
-// pageDown moves focus down by a page (approximately half the viewport height)
-func (m *CPUOptionsFormModel) pageDown() {
-	pageSize := 10
-	m.focusIndex += pageSize
-	if m.focusIndex >= len(m.positions) {
-		m.focusIndex = len(m.positions) - 1
-	}
-	m.syncViewport()
-}
-
-// syncViewport regenerates the rendered lines and syncs the viewport
-func (m *CPUOptionsFormModel) syncViewport() {
-	m.renderedLines = m.renderAllLines()
-	totalContent := strings.Join(m.renderedLines, "\n")
-	m.vp.SetContent(totalContent)
-	if m.focusedLineIndex() >= 0 {
-		m.vp.SetYOffset(clampOffset(m.vp.YOffset, m.focusedLineIndex(), m.vp.Height))
-	}
-}
-
-// focusedLineIndex maps focusIndex to a rendered line index
-// Must mirror renderAllLines() structure exactly.
-func (m *CPUOptionsFormModel) focusedLineIndex() int {
-	line := 0
-
-	// Section 1: Hypervisor Stealth
-	line += 2 // "== Hypervisor Stealth ==" + blank
-	for i := 0; i < 2 && i < len(m.positions); i++ {
-		if i == m.focusIndex {
-			return line
-		}
-		line++
-	}
-
-	// Section 2: Hyper-V Enlightenments
-	line += 3 // blank + header + blank
-	for i := 2; i < 17 && i < len(m.positions); i++ {
-		if i == m.focusIndex {
-			return line
-		}
-		line++
-	}
-
-	// Section 3: Advanced CPU Features
-	line += 3 // blank + header + blank
-	for i := 17; i < 24 && i < len(m.positions); i++ {
-		if i == m.focusIndex {
-			return line
-		}
-		line++
-	}
-
-	// Save button (last position)
-	line++ // blank before save button
-	saveIdx := len(m.positions) - 1
-	if saveIdx == m.focusIndex {
-		return line
-	}
-	line++ // the save button line itself
-
-	return line
 }
