@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
@@ -25,17 +26,21 @@ var (
 	cpuTopoThreadStyle   = styles.MutedTextStyle()
 )
 
-// renderAllLines produces the full list of output lines for the form
+// --- Backward-compatible rendering helpers ---
+
+// renderAllLines produces the full list of output lines for the viewport (backward compat).
 func (m *CPUTopologyFormModel) renderAllLines() []string {
 	var lines []string
 
 	if m.scanErr != nil {
+		lines = append(lines, cpuTopoFocusStyle.Render("CPU Topology"))
+		lines = append(lines, "")
 		lines = append(lines, cpuTopoErrorStyle.Render(fmt.Sprintf("Warning: CPU scan failed: %s", m.scanErr)))
 		lines = append(lines, cpuTopoWarnStyle.Render("Topology configuration unavailable."))
 		lines = append(lines, "")
 
 		saveText := cpuTopoMutedStyle.Render("[Space/Enter] Save    [ESC] Cancel")
-		if len(m.positions) > 0 && m.positions[m.focusIndex].kind == cpuTopoSave {
+		if len(m.positions) > 0 && m.positions[m.focusIndex].Kind == form.FocusButton {
 			saveText = cpuTopoSaveStyle.Render("[Space/Enter] Save") + "    " + cpuTopoMutedStyle.Render("[ESC] Cancel")
 		}
 		lines = append(lines, saveText)
@@ -43,17 +48,21 @@ func (m *CPUTopologyFormModel) renderAllLines() []string {
 	}
 
 	if len(m.hostTopo.Dies) == 0 {
+		lines = append(lines, cpuTopoFocusStyle.Render("CPU Topology"))
+		lines = append(lines, "")
 		lines = append(lines, cpuTopoMutedStyle.Render("No CPU topology data available."))
 		lines = append(lines, "")
 		saveText := cpuTopoMutedStyle.Render("[Space/Enter] Save    [ESC] Cancel")
-		if len(m.positions) > 0 && m.positions[m.focusIndex].kind == cpuTopoSave {
+		if len(m.positions) > 0 && m.positions[m.focusIndex].Kind == form.FocusButton {
 			saveText = cpuTopoSaveStyle.Render("[Enter] Save") + "    " + cpuTopoMutedStyle.Render("[ESC] Cancel")
 		}
 		lines = append(lines, saveText)
 		return lines
 	}
 
-	// Host summary
+	// Header
+	lines = append(lines, cpuTopoFocusStyle.Render("CPU Topology"))
+	lines = append(lines, "")
 	lines = append(lines, cpuTopoLabelStyle.Render(fmt.Sprintf("Host: %d dies, %d cores, %d threads",
 		len(m.hostTopo.Dies), m.hostTopo.TotalCores, m.hostTopo.TotalCPUs)))
 	lines = append(lines, "")
@@ -61,8 +70,9 @@ func (m *CPUTopologyFormModel) renderAllLines() []string {
 	// Count allocated cores
 	allocatedCores := 0
 	for _, pos := range m.positions {
-		if pos.kind == cpuTopoToggle {
-			key := coreKey(pos.dieID, pos.coreID)
+		if pos.Kind == form.FocusToggle {
+			d := pos.Data.(cpuTopoFocusData)
+			key := coreKey(d.dieID, d.coreID)
 			if m.coreSelected[key] {
 				allocatedCores++
 			}
@@ -74,19 +84,20 @@ func (m *CPUTopologyFormModel) renderAllLines() []string {
 	for i, pos := range m.positions {
 		focused := (i == m.focusIndex)
 
-		switch pos.kind {
-		case cpuTopoToggle:
-			if pos.dieID != lastDieID {
+		switch pos.Kind {
+		case form.FocusToggle:
+			d := pos.Data.(cpuTopoFocusData)
+			if d.dieID != lastDieID {
 				if lastDieID != -1 {
 					lines = append(lines, "")
 				}
-				lines = append(lines, cpuTopoDieStyle.Render(pos.dieLabel))
-				lastDieID = pos.dieID
+				lines = append(lines, cpuTopoDieStyle.Render(d.dieLabel))
+				lastDieID = d.dieID
 			}
-			key := coreKey(pos.dieID, pos.coreID)
-			lines = append(lines, m.renderCoreLine(pos.coreInfo, m.coreSelected[key], focused))
+			key := coreKey(d.dieID, d.coreID)
+			lines = append(lines, m.renderCoreLine(d.coreInfo, m.coreSelected[key], focused))
 
-		case cpuTopoSave:
+		case form.FocusButton:
 			lines = append(lines, "")
 			hostCores := m.hostTopo.TotalCores - allocatedCores
 			lines = append(lines, cpuTopoLabelStyle.Render(fmt.Sprintf(

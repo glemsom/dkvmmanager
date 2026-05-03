@@ -22,7 +22,7 @@ The `form` package provides a `ScrollableForm` framework that handles:
 | SSHPasswordModel | ✅ Done | Reference implementation |
 | VMFormModel | ✅ Done | Fully migrated + bug fixes (openFilePickerCmd parsing, validateAndSave→validateAndSaveCmd, test fixes, ViewChangeMsg type, ClampOffset export) |
 | CPUOptionsFormModel | ✅ Done | Fully migrated |
-| CPUTopologyFormModel | Pending | |
+| CPUTopologyFormModel | ✅ Done | Fully migrated + test updates |
 | PCIPassthroughFormModel | Pending | |
 | USBPassthroughFormModel | Pending | |
 | VCPUPinningFormModel | Pending | |
@@ -105,7 +105,7 @@ func (m *SomeFormModel) View() string {
 |------------|-------|--------|
 | VMFormModel | vm_form*.go (13 files) | ✅ Migrated |
 | CPUOptionsFormModel | cpu_options_form*.go (4 files) | ✅ Migrated |
-| CPUTopologyFormModel | cpu_topology_form*.go (4 files) | Pending |
+| CPUTopologyFormModel | cpu_topology_form*.go (4 files) | ✅ Migrated |
 | PCIPassthroughFormModel | pci_passthrough_form*.go (4 files) | Pending |
 | USBPassthroughFormModel | usb_passthrough_form.go (+ render.go) | Pending |
 | VCPUPinningFormModel | vcpu_pinning_form*.go (2 files) | Pending |
@@ -303,43 +303,6 @@ Migrated CPUOptionsFormModel to form.ScrollableForm framework.
 - `cpu_options_form_values.go` and `cpu_options_form_validation.go` - unchanged.
 
 **All 10 packages pass tests.**
-
-### Phase 3: CPUTopologyFormModel
-
-Has complex positions with die/core data. Use `form.FocusPos.Data` to pass core info:
-
-For CPUTopologyFormModel:
-```go
-// cpuTopoFocusData carries per-core data through the framework
-type cpuTopoFocusData struct {
-    dieID   int
-    coreID  int
-    dieLabel string
-}
-
-// BuildPositions creates toggles for each core
-func (m *CPUTopologyFormModel) BuildPositions() []form.FocusPos {
-    var positions []form.FocusPos
-    for _, die := range m.hostTopo.Dies {
-        for _, core := range die.CoreDetails {
-            positions = append(positions, form.FocusPos{
-                Kind:  form.FocusToggle,
-                Label: fmt.Sprintf("Core %d", core.ID),
-                Key:   coreKey(die.ID, core.ID),
-                Data: cpuTopoFocusData{
-                    dieID: die.ID, coreID: core.ID,
-                },
-            })
-        }
-    }
-    positions = append(positions, form.FocusPos{
-        Kind:  form.FocusButton,
-        Label: "Save",
-        Key:   "save",
-    })
-    return positions
-}
-```
 
 ### Phase 4: PCIPassthroughFormModel
 
@@ -590,12 +553,30 @@ For each form, follow these steps:
 - [x] SSHPasswordModel implements `form.FormModel` ✅
 - [x] VMFormModel implements `form.FormModel` ✅
 - [x] CPUOptionsFormModel implements `form.FormModel` ✅
-- [x] All form wrappers use `form.ScrollableForm` (SSHPasswordModel ✅, VMCreateModel ✅, VMEditModel ✅, CPUOptionsModel ✅)
+- [x] CPUTopologyFormModel implements `form.FormModel` ✅
+- [x] All form wrappers use `form.ScrollableForm` (SSHPasswordModel ✅, VMCreateModel ✅, VMEditModel ✅, CPUOptionsModel ✅, CPUTopologyModel ✅)
 - [x] All tests pass (`go test ./...` - all 10 packages pass)
 - [ ] No behavioral regression in keyboard/input handling
 - [ ] Code coverage maintained or improved
 
 ## Progress Log
+
+### 2026-05-03: Phase 3 (CPUTopologyFormModel) - Completed
+
+Migrated CPUTopologyFormModel to form.ScrollableForm framework.
+
+**Changes (7 files):**
+- `cpu_topology_form.go`: Removed `cpuTopoFocusKind`/`cpuTopoFocusPos` types, removed viewport fields from struct, added `cpuTopoFocusData` for per-core data via `form.FocusPos.Data`. Changed `positions` to `[]form.FocusPos`. Added FormModel interface methods (BuildPositions, CurrentIndex, SetFocusIndex, RenderHeader, RenderFooter, RenderPosition, HandleEnter, HandleChar, HandleBackspace, HandleDelete, OnEnter, OnExit, SetSize, SetFocused). Renamed `validateAndSave()` → `validateAndSaveCmd()` returning `(form.FormResult, tea.Cmd)`. Kept backward-compat `currentPos()`, `handleKey()`, `handleEnterKey()`, `handleSpace()`, `Init()`, `Update()`, `View()`.
+- `cpu_topology_form_navigation.go`: Rewrote `BuildPositions()` to return `[]form.FocusPos` with toggles for each core + save button. Removed `syncViewport()` and `focusedLineIndex()`. Kept `moveFocus()` and `hostCoreCount()` for backward compat.
+- `cpu_topology_form_render.go`: Updated `renderAllLines()` to use `form.FocusPos` / `cpuTopoFocusData`. Kept `renderCoreLine()` as helper.
+- `cpu_topology_form_validation.go`: Renamed `validateAndSave()` → `validateAndSaveCmd()`, returns `(form.FormResult, tea.Cmd)` instead of `(tea.Model, tea.Cmd)`. Uses `form.FocusPos` for iteration.
+- `cpu_topology.go`: Changed wrapper from `*CPUTopologyFormModel` to `*form.ScrollableForm`. Added `Form()` accessor. Added `IsFormSaved()`/`FormName()`/`FormStatus()` on `CPUTopologyUpdatedMsg`.
+- `cpu_topology_form_test.go`: Updated tests to use `form.FocusPos` / `p.Kind == form.FocusToggle` instead of old `cpuTopoFocusKind` constants. Added `TestCPUTopologyFormModelInterface` to verify interface implementation.
+- `cpu_topology_test.go`: Updated to use `m.form.Ready()` (not `.ready`), `m.Form()` accessor. Added `TestCPUTopologyFormAccessor` and `TestCPUTopologyUpdatedMsgImplementsFormSavedMsg`.
+
+**Key design:** `cpuTopoFocusData` carries `dieID`, `coreID`, `dieLabel`, and `coreInfo` through `form.FocusPos.Data`, enabling `BuildPositions()` to build positions without needing access to `hostTopo` during rendering.
+
+**All 10 packages pass tests.**
 
 ### 2026-05-03: Phase 2 (CPUOptionsFormModel) - Completed
 

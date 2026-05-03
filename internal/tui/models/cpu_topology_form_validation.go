@@ -7,29 +7,30 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
-// validateAndSave persists the global CPU topology config
-func (m *CPUTopologyFormModel) validateAndSave() (tea.Model, tea.Cmd) {
+// validateAndSaveCmd persists the global CPU topology config and returns a tea.Cmd.
+func (m *CPUTopologyFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd) {
 	m.errors = make(map[string]string)
 
 	// Build selected CPU list from all selected cores' thread IDs
 	var selectedCPUs []int
 	for _, pos := range m.positions {
-		if pos.kind != cpuTopoToggle {
+		if pos.Kind != form.FocusToggle {
 			continue
 		}
-		key := coreKey(pos.dieID, pos.coreID)
-		if m.coreSelected[key] && pos.coreInfo != nil {
-			selectedCPUs = append(selectedCPUs, pos.coreInfo.Threads...)
+		d := pos.Data.(cpuTopoFocusData)
+		key := coreKey(d.dieID, d.coreID)
+		if m.coreSelected[key] && d.coreInfo != nil {
+			selectedCPUs = append(selectedCPUs, d.coreInfo.Threads...)
 		}
 	}
 	sort.Ints(selectedCPUs)
 
 	if len(selectedCPUs) == 0 {
 		m.errors["save"] = "At least one core must be allocated for VMs"
-		m.syncViewport()
-		return m, nil
+		return form.ResultNone, nil
 	}
 
 	topo := models.CPUTopology{
@@ -39,11 +40,10 @@ func (m *CPUTopologyFormModel) validateAndSave() (tea.Model, tea.Cmd) {
 
 	if err := m.vmManager.SaveCPUTopology(topo); err != nil {
 		m.errors["save"] = fmt.Sprintf("Failed to save: %v", err)
-		m.syncViewport()
-		return m, nil
+		return form.ResultNone, nil
 	}
 
-	return m, func() tea.Msg {
+	return form.ResultNone, func() tea.Msg {
 		return CPUTopologyUpdatedMsg{}
 	}
 }

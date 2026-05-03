@@ -3,31 +3,25 @@ package models
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
-// cpuTopoFocusKind describes what a CPU topology focus position represents
-type cpuTopoFocusKind int
-
-const (
-	cpuTopoToggle cpuTopoFocusKind = iota // Toggle physical core assignment
-	cpuTopoSave                           // Save button
-)
-
-// cpuTopoFocusPos is one navigable position in the CPU topology form
-type cpuTopoFocusPos struct {
-	kind     cpuTopoFocusKind
-	dieID    int
-	coreID   int    // Physical core ID (for toggles)
-	dieLabel string // Die label for rendering
+// cpuTopoFocusData carries per-core data through the form framework.
+type cpuTopoFocusData struct {
+	dieID   int
+	coreID  int
+	dieLabel string
 	coreInfo *models.CPUCore
 }
 
-// CPUTopologyFormModel is a scrollable form for editing global CPU topology
+// CPUTopologyFormModel is a scrollable form for editing global CPU topology.
+// It implements the form.FormModel interface for use with ScrollableForm.
 type CPUTopologyFormModel struct {
 	vmManager *vm.Manager
 
@@ -40,8 +34,8 @@ type CPUTopologyFormModel struct {
 	// Quick lookup: coreKey (dieID:coreID) -> selected for VM
 	coreSelected map[string]bool
 
-	// Flat list of focusable positions
-	positions  []cpuTopoFocusPos
+	// Focus state
+	positions  []form.FocusPos
 	focusIndex int
 
 	// Per-field inline error messages
@@ -50,13 +44,13 @@ type CPUTopologyFormModel struct {
 	// Scan error
 	scanErr error
 
-	// Scrollable viewport
-	vp       viewport.Model
-	ready    bool
+	// Size (for viewport sync, used by framework's SetSize)
 	contentW int
 	contentH int
+	vp       viewport.Model
+	ready    bool
 
-	// Rendering cache
+	// Rendering cache (for backward-compatible View)
 	renderedLines []string
 }
 
@@ -125,19 +119,55 @@ func NewCPUTopologyFormModel(vmManager *vm.Manager) (*CPUTopologyFormModel, erro
 		scanErr:      scanErr,
 	}
 
-	m.rebuildPositions()
+	m.positions = m.BuildPositions()
 	return m, nil
 }
 
-// rebuildPositions reconstructs the flat focus list from host topology
-func (m *CPUTopologyFormModel) rebuildPositions() {
-	m.positions = nil
+// --- Backward-compatible position access ---
+
+// cpuTopoPos is a legacy position type for backward-compatible test access.
+type cpuTopoPos struct {
+	kind     int
+	dieID    int
+	coreID   int
+	dieLabel string
+	coreInfo *models.CPUCore
+}
+
+// Constants for backward compatibility with existing tests.
+const (
+	cpuTopoToggle = int(form.FocusToggle) // toggle position kind
+	cpuTopoSave   = int(form.FocusButton) // save button position kind
+)
+
+// currentPos returns the focus position at the current focusIndex (for backward compatibility).
+func (m *CPUTopologyFormModel) currentPos() cpuTopoPos {
+	if m.focusIndex < 0 || m.focusIndex >= len(m.positions) {
+		return cpuTopoPos{kind: cpuTopoSave}
+	}
+	p := m.positions[m.focusIndex]
+	d := p.Data.(cpuTopoFocusData)
+	return cpuTopoPos{
+		kind:     int(p.Kind),
+		dieID:    d.dieID,
+		coreID:   d.coreID,
+		dieLabel: d.dieLabel,
+		coreInfo: d.coreInfo,
+	}
+}
+
+// --- FormModel Interface Implementation ---
+
+// BuildPositions returns the current list of navigable positions.
+func (m *CPUTopologyFormModel) BuildPositions() []form.FocusPos {
+	var positions []form.FocusPos
 
 	if m.scanErr != nil || len(m.hostTopo.Dies) == 0 {
-		m.positions = append(m.positions, cpuTopoFocusPos{
-			kind: cpuTopoSave,
+		positions = append(positions, form.FocusPos{
+			Kind: form.FocusButton, Label: "Save", Key: "save",
+			Data: cpuTopoFocusData{},
 		})
-		return
+		return positions
 	}
 
 	for _, die := range m.hostTopo.Dies {
@@ -147,66 +177,147 @@ func (m *CPUTopologyFormModel) rebuildPositions() {
 		}
 
 		for _, core := range die.CoreDetails {
-			m.positions = append(m.positions, cpuTopoFocusPos{
-				kind:     cpuTopoToggle,
-				dieID:    die.ID,
-				coreID:   core.ID,
-				dieLabel: dieLabel,
-				coreInfo: &core,
+			positions = append(positions, form.FocusPos{
+				Kind:  form.FocusToggle,
+				Label: fmt.Sprintf("Core %d", core.ID),
+				Key:   coreKey(die.ID, core.ID),
+				Data: cpuTopoFocusData{
+					dieID:    die.ID,
+					coreID:   core.ID,
+					dieLabel: dieLabel,
+					coreInfo: &core,
+				},
 			})
 		}
 	}
 
 	// Save button
-	m.positions = append(m.positions, cpuTopoFocusPos{
-		kind: cpuTopoSave,
+	positions = append(positions, form.FocusPos{
+		Kind: form.FocusButton, Label: "Save", Key: "save",
+		Data: cpuTopoFocusData{},
 	})
+
+	return positions
 }
 
-// currentPos returns the focus position at the current focusIndex
-func (m *CPUTopologyFormModel) currentPos() cpuTopoFocusPos {
-	if m.focusIndex < 0 || m.focusIndex >= len(m.positions) {
-		return cpuTopoFocusPos{kind: cpuTopoSave}
+// CurrentIndex returns the index of the currently focused position.
+func (m *CPUTopologyFormModel) CurrentIndex() int {
+	return m.focusIndex
+}
+
+// SetFocusIndex sets the focused position index.
+func (m *CPUTopologyFormModel) SetFocusIndex(i int) {
+	m.focusIndex = i
+}
+
+// RenderHeader returns the form header.
+func (m *CPUTopologyFormModel) RenderHeader() string {
+	if m.scanErr != nil || len(m.hostTopo.Dies) == 0 {
+		return cpuTopoFocusStyle.Render("CPU Topology")
 	}
-	return m.positions[m.focusIndex]
+	return cpuTopoFocusStyle.Render("CPU Topology") + "\n" +
+		cpuTopoLabelStyle.Render(fmt.Sprintf("Host: %d dies, %d cores, %d threads",
+			len(m.hostTopo.Dies), m.hostTopo.TotalCores, m.hostTopo.TotalCPUs))
 }
 
-// Init implements tea.Model
-func (m *CPUTopologyFormModel) Init() tea.Cmd {
-	return nil
+// RenderFooter returns the form footer.
+func (m *CPUTopologyFormModel) RenderFooter() string {
+	var parts []string
+
+	// Summary line (for save position rendering context)
+	// This is handled in RenderPosition for the save button
+
+	if errMsg, ok := m.errors["save"]; ok {
+		parts = append(parts, "")
+		parts = append(parts, cpuTopoErrorStyle.Render("Error: "+errMsg))
+	}
+
+	parts = append(parts, "")
+	parts = append(parts, cpuTopoMutedStyle.Render("↑/↓ Navigate  Space Toggle  ESC Cancel"))
+	return strings.Join(parts, "\n")
 }
 
-// Update implements tea.Model
-func (m *CPUTopologyFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.contentW = msg.Width
-		m.contentH = msg.Height
-		if !m.ready {
-			m.vp = viewport.New(msg.Width, msg.Height)
-			m.ready = true
-		} else {
-			m.vp.Width = msg.Width
-			m.vp.Height = msg.Height
+// RenderPosition returns the markup for a single position.
+func (m *CPUTopologyFormModel) RenderPosition(pos form.FocusPos, focused bool, cursorOffset int) string {
+	switch pos.Kind {
+	case form.FocusToggle:
+		d := pos.Data.(cpuTopoFocusData)
+		key := coreKey(d.dieID, d.coreID)
+		selected := m.coreSelected[key]
+		return m.renderCoreLine(d.coreInfo, selected, focused)
+
+	case form.FocusButton:
+		if pos.Key == "save" {
+			// Summary + save button
+			allocatedCores := 0
+			for _, p := range m.positions {
+				if p.Kind == form.FocusToggle {
+					d := p.Data.(cpuTopoFocusData)
+					key := coreKey(d.dieID, d.coreID)
+					if m.coreSelected[key] {
+						allocatedCores++
+					}
+				}
+			}
+			hostCores := m.hostTopo.TotalCores - allocatedCores
+
+			var lines []string
+			lines = append(lines, "")
+			lines = append(lines, cpuTopoLabelStyle.Render(fmt.Sprintf(
+				"Summary: %d cores for VMs, %d for host",
+				allocatedCores, hostCores)))
+			if hostCores == 0 {
+				lines = append(lines, cpuTopoErrorStyle.Render("Warning: No cores reserved for host — system may become unresponsive"))
+			}
+			lines = append(lines, "")
+			saveText := cpuTopoMutedStyle.Render("[Enter] Save    [ESC] Cancel")
+			if focused {
+				saveText = cpuTopoSaveStyle.Render("[Space/Enter] Save") + "    " + cpuTopoMutedStyle.Render("[ESC] Cancel")
+			}
+			lines = append(lines, saveText)
+			return strings.Join(lines, "\n")
 		}
-		m.syncViewport()
-		return m, nil
-
-	case tea.KeyMsg:
-		return m.handleKey(msg)
 	}
-	return m, nil
+	return ""
 }
 
-// View implements tea.Model
-func (m *CPUTopologyFormModel) View() string {
-	if !m.ready {
-		return "Loading form..."
+// HandleEnter is called when the user presses Enter on a position.
+func (m *CPUTopologyFormModel) HandleEnter(pos form.FocusPos) (form.FormResult, tea.Cmd) {
+	switch pos.Kind {
+	case form.FocusToggle:
+		d := pos.Data.(cpuTopoFocusData)
+		m.toggleCore(d.dieID, d.coreID)
+		return form.ResultNone, nil
+	case form.FocusButton:
+		if pos.Key == "save" {
+			return m.validateAndSaveCmd()
+		}
+		return form.ResultNone, nil
+	default:
+		m.focusIndex++
+		if m.focusIndex >= len(m.positions) {
+			m.focusIndex = len(m.positions) - 1
+		}
+		return form.ResultNone, nil
 	}
-	return m.vp.View()
 }
 
-// SetSize updates the form dimensions
+// HandleChar is a no-op (no text fields in CPU topology form).
+func (m *CPUTopologyFormModel) HandleChar(pos form.FocusPos, ch string) {}
+
+// HandleBackspace is a no-op (no text fields in CPU topology form).
+func (m *CPUTopologyFormModel) HandleBackspace(pos form.FocusPos) {}
+
+// HandleDelete is a no-op (no text fields in CPU topology form).
+func (m *CPUTopologyFormModel) HandleDelete(pos form.FocusPos) {}
+
+// OnEnter is called when the form becomes active.
+func (m *CPUTopologyFormModel) OnEnter() {}
+
+// OnExit is called when the form is dismissed.
+func (m *CPUTopologyFormModel) OnExit() {}
+
+// SetSize updates the form dimensions.
 func (m *CPUTopologyFormModel) SetSize(w, h int) {
 	m.contentW = w
 	m.contentH = h
@@ -217,49 +328,84 @@ func (m *CPUTopologyFormModel) SetSize(w, h int) {
 		m.vp.Width = w
 		m.vp.Height = h
 	}
-	m.syncViewport()
 }
 
-// handleKey processes keyboard input
+// SetFocused sets whether the form has keyboard focus.
+func (m *CPUTopologyFormModel) SetFocused(bool) {}
+
+// --- Backward-compatible Init/Update/View ---
+
+// Init implements tea.Model (for backward compatibility).
+func (m *CPUTopologyFormModel) Init() tea.Cmd {
+	return nil
+}
+
+// Update implements tea.Model (for backward compatibility).
+func (m *CPUTopologyFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.SetSize(msg.Width, msg.Height)
+		return m, nil
+
+	case tea.KeyMsg:
+		return m.handleKey(msg)
+	}
+	return m, nil
+}
+
+// View implements tea.Model (for backward compatibility).
+func (m *CPUTopologyFormModel) View() string {
+	if !m.ready {
+		return "Loading form..."
+	}
+	m.renderedLines = m.renderAllLines()
+	totalContent := ""
+	for i, line := range m.renderedLines {
+		if i > 0 {
+			totalContent += "\n"
+		}
+		totalContent += line
+	}
+	m.vp.SetContent(totalContent)
+	return m.vp.View()
+}
+
+// handleKey processes keyboard input (backward-compatible Update path).
 func (m *CPUTopologyFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
 	switch key {
 	case "tab", "down":
 		m.moveFocus(1)
-		m.syncViewport()
 	case "shift+tab", "up":
 		m.moveFocus(-1)
-		m.syncViewport()
 	case "enter", " ":
-		return m.handleEnter()
+		return m.handleEnterKey()
 	}
 	return m, nil
 }
 
-// handleEnter acts contextually: toggle or save
-func (m *CPUTopologyFormModel) handleEnter() (tea.Model, tea.Cmd) {
+// handleEnterKey acts contextually: toggle or save (backward compat).
+func (m *CPUTopologyFormModel) handleEnterKey() (tea.Model, tea.Cmd) {
 	pos := m.currentPos()
 	switch pos.kind {
 	case cpuTopoToggle:
 		m.toggleCore(pos.dieID, pos.coreID)
-		m.syncViewport()
 		return m, nil
 	case cpuTopoSave:
-		return m.validateAndSave()
+		_, cmd := m.validateAndSaveCmd()
+		return m, cmd
 	default:
 		m.moveFocus(1)
-		m.syncViewport()
 		return m, nil
 	}
 }
 
-// handleSpace toggles the focused core
+// handleSpace toggles the focused core (backward compat).
 func (m *CPUTopologyFormModel) handleSpace() (tea.Model, tea.Cmd) {
 	pos := m.currentPos()
 	if pos.kind == cpuTopoToggle {
 		m.toggleCore(pos.dieID, pos.coreID)
-		m.syncViewport()
 	}
 	return m, nil
 }

@@ -2,10 +2,10 @@
 package models
 
 import (
-	"strings"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
-// moveFocus moves focus by delta in the flat positions list
+// moveFocus moves focus by delta in the flat positions list (backward compat for tests).
 func (m *CPUTopologyFormModel) moveFocus(delta int) {
 	m.focusIndex += delta
 	if m.focusIndex < 0 {
@@ -16,63 +16,16 @@ func (m *CPUTopologyFormModel) moveFocus(delta int) {
 	}
 }
 
-// syncViewport regenerates the rendered lines and syncs the viewport
-func (m *CPUTopologyFormModel) syncViewport() {
-	m.renderedLines = m.renderAllLines()
-	totalContent := strings.Join(m.renderedLines, "\n")
-	m.vp.SetContent(totalContent)
-	if m.focusedLineIndex() >= 0 {
-		m.vp.SetYOffset(clampOffset(m.vp.YOffset, m.focusedLineIndex(), m.vp.Height))
-	}
-}
-
-// focusedLineIndex maps focusIndex to a rendered line index
-func (m *CPUTopologyFormModel) focusedLineIndex() int {
-	line := 0
-
-	// Header + blank + host info + blank = 4 lines
-	line += 4
-
-	if m.scanErr != nil {
-		line += 2
-	}
-
-	lastDieID := -1
-	for i, p := range m.positions {
-		// Count lines for this position BEFORE checking if it's focused
-		if p.kind == cpuTopoToggle && p.dieID != lastDieID {
-			if lastDieID != -1 {
-				line++
-			}
-			line++ // die header
-			lastDieID = p.dieID
-		}
-
-		switch p.kind {
-		case cpuTopoToggle:
-			line++
-		case cpuTopoSave:
-			line += 4 // blank + summary + blank + button
-			if m.hostCoreCount() == 0 {
-				line++ // zero-host warning
-			}
-		}
-
-		// Now check if this is the focused position
-		if i == m.focusIndex {
-			return line
-		}
-	}
-
-	return line
-}
-
 // hostCoreCount returns the number of cores not allocated to VM
 func (m *CPUTopologyFormModel) hostCoreCount() int {
 	allocated := 0
 	for _, pos := range m.positions {
-		if pos.kind == cpuTopoToggle && m.coreSelected[coreKey(pos.dieID, pos.coreID)] {
-			allocated++
+		if pos.Kind == form.FocusToggle {
+			d := pos.Data.(cpuTopoFocusData)
+			key := coreKey(d.dieID, d.coreID)
+			if m.coreSelected[key] {
+				allocated++
+			}
 		}
 	}
 	return m.hostTopo.TotalCores - allocated
