@@ -13,6 +13,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.1.7](https://github.com/glemsom/dkvmmanager/compare/v0.1.5...v0.1.7) - 2026-05-03
+
+### Added
 - **vCPU Pinning Apply to Kernel**: New "Apply to Kernel" button in the vCPU pinning form that writes CPU isolation parameters (`isolcpus`, `nohz_full`, `rcu_nocbs`) to `grub.cfg`, enabling persistent kernel-level CPU isolation for pinned VMs (`internal/vm/grub_config.go`, `internal/vm/grub_config_test.go`, `internal/vm/manager.go`, `internal/tui/models/vcpu_pinning_form*.go`, `internal/tui/models/message_handlers.go`)
 
 ### Changed
@@ -134,7 +148,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/glemsom/dkvmmanager/compare/v0.1.5...v0.1.7
 [0.1.5]: https://github.com/glemsom/dkvmmanager/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/glemsom/dkvmmanager/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/glemsom/dkvmmanager/compare/v0.1.2...v0.1.3
