@@ -143,45 +143,8 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// If we're in VM creation view, delegate to that model
 	if m.currentView == ViewVMCreate && m.vmCreateModel != nil {
-		// Forward file/disk selection messages to sub-view
-		if fsm, ok := msg.(FileSelectedMsg); ok {
-			// Route through AddDiskModel when it exists (harddisk flow).
-			// Note: addDiskModel may be inactive at this point because
-			// handleFileSelected sets active=false during cmd execution
-			// in a prior Update call. We still route through it to get
-			// the DiskAddedMsg conversion.
-			if m.vmCreateModel.form.addDiskModel != nil {
-				inner, cmd := m.vmCreateModel.form.addDiskModel.Update(fsm)
-				if adm, ok := inner.(*AddDiskModel); ok {
-					m.vmCreateModel.form.addDiskModel = adm
-				}
-				if cmd != nil {
-					return m.handleSubViewMsg(cmd())
-				}
-				return m, nil
-			}
-			// Otherwise handle directly (CDROM flow)
-			inner, cmd := m.vmCreateModel.form.Update(fsm)
-			if f, ok := inner.(*VMFormModel); ok {
-				m.vmCreateModel.form = f
-			}
-			if cmd != nil {
-				return m.handleSubViewMsg(cmd())
-			}
-			return m, nil
-		}
-		// Handle DiskAddedMsg directly — addDiskModel may already be
-		// inactive/cleared by the time this message arrives.
-		if dam, ok := msg.(DiskAddedMsg); ok {
-			inner, cmd := m.vmCreateModel.form.Update(dam)
-			if f, ok := inner.(*VMFormModel); ok {
-				m.vmCreateModel.form = f
-			}
-			if cmd != nil {
-				return m.handleSubViewMsg(cmd())
-			}
-			return m, nil
-		}
+		// All messages (including file browser messages) are handled through
+		// the ScrollableForm's HandleMessage mechanism
 		model, cmd := m.vmCreateModel.Update(msg)
 		// Update the sub-model reference
 		if vcm, ok := model.(*VMCreateModel); ok {
@@ -197,45 +160,8 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// If we're in VM edit view, delegate to that model
 	if m.currentView == ViewVMEdit && m.vmEditModel != nil {
-		// Forward file/disk selection messages to sub-view
-		if fsm, ok := msg.(FileSelectedMsg); ok {
-			// Route through AddDiskModel when it exists (harddisk flow).
-			// Note: addDiskModel may be inactive at this point because
-			// handleFileSelected sets active=false during cmd execution
-			// in a prior Update call. We still route through it to get
-			// the DiskAddedMsg conversion.
-			if m.vmEditModel.form.addDiskModel != nil {
-				inner, cmd := m.vmEditModel.form.addDiskModel.Update(fsm)
-				if adm, ok := inner.(*AddDiskModel); ok {
-					m.vmEditModel.form.addDiskModel = adm
-				}
-				if cmd != nil {
-					return m.handleSubViewMsg(cmd())
-				}
-				return m, nil
-			}
-			// Otherwise handle directly (CDROM flow)
-			inner, cmd := m.vmEditModel.form.Update(fsm)
-			if f, ok := inner.(*VMFormModel); ok {
-				m.vmEditModel.form = f
-			}
-			if cmd != nil {
-				return m.handleSubViewMsg(cmd())
-			}
-			return m, nil
-		}
-		// Handle DiskAddedMsg directly — addDiskModel may already be
-		// inactive/cleared by the time this message arrives.
-		if dam, ok := msg.(DiskAddedMsg); ok {
-			inner, cmd := m.vmEditModel.form.Update(dam)
-			if f, ok := inner.(*VMFormModel); ok {
-				m.vmEditModel.form = f
-			}
-			if cmd != nil {
-				return m.handleSubViewMsg(cmd())
-			}
-			return m, nil
-		}
+		// All messages (including file browser messages) are handled through
+		// the ScrollableForm's HandleMessage mechanism
 		model, cmd := m.vmEditModel.Update(msg)
 		if vem, ok := model.(*VMEditModel); ok {
 			m.vmEditModel = vem
@@ -282,10 +208,10 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// If we're in LV create view, delegate all incoming messages (including async lvVGsLoadedMsg)
-	if m.currentView == ViewLVCreate && m.lvCreateFormModel != nil {
-		inner, cmd := m.lvCreateFormModel.Update(msg)
-		if f, ok := inner.(*LVCreateFormModel); ok {
-			m.lvCreateFormModel = f
+	if m.currentView == ViewLVCreate && m.lvCreateModel != nil {
+		model, cmd := m.lvCreateModel.Update(msg)
+		if lv, ok := model.(*LVCreateModel); ok {
+			m.lvCreateModel = lv
 		}
 		if cmd != nil {
 			nextMsg := cmd()
@@ -346,12 +272,12 @@ func (m *MainModel) forwardWindowSizeToSubView(msg tea.WindowSizeMsg) {
 			m.sshPasswordModel.form.SetSize(msg.Width-4, contentH-2)
 		}
 	case ViewStartStopScript:
-		if m.startStopScriptFormModel != nil {
-			m.startStopScriptFormModel.SetSize(msg.Width-4, contentH-2)
+		if m.startStopScriptModel != nil {
+			m.startStopScriptModel.form.SetSize(msg.Width-4, contentH-2)
 		}
 	case ViewLVCreate:
-		if m.lvCreateFormModel != nil {
-			m.lvCreateFormModel.SetSize(msg.Width-4, contentH-2)
+		if m.lvCreateModel != nil {
+			m.lvCreateModel.form.SetSize(msg.Width-4, contentH-2)
 		}
 	case ViewVMRunning:
 		if m.vmRunningModel != nil {
@@ -509,12 +435,12 @@ func (m *MainModel) handleConfigMenuSelection() (tea.Model, tea.Cmd) {
 		m.breadcrumbs.AddItem("USB Passthrough", "usb_passthrough", 1)
 		return m, nil
 	case 7: // Edit Start/Stop Script
-		form, err := NewStartStopScriptFormModel(m.vmManager)
+		model, err := NewStartStopScriptModel(m.vmManager)
 		if err != nil {
 			m.statusMessage = "Error loading start/stop script form: " + err.Error()
 		} else {
-			m.startStopScriptFormModel = form
-			m.startStopScriptFormModel.SetSize(m.windowWidth-4, m.contentHeight()-2)
+			m.startStopScriptModel = model
+			m.startStopScriptModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
 			m.currentView = ViewStartStopScript
 			m.breadcrumbs.Clear()
 			m.breadcrumbs.AddItem("Configuration", "config", 1)
@@ -538,13 +464,13 @@ func (m *MainModel) handleConfigMenuSelection() (tea.Model, tea.Cmd) {
 		m.breadcrumbs.AddItem("Set SSH Password", "ssh_password", 1)
 		return m, nil
 	case 10: // Create Logical Volume
-		m.lvCreateFormModel = NewLVCreateFormModel()
-		m.lvCreateFormModel.SetSize(m.windowWidth-4, m.contentHeight()-2)
+		m.lvCreateModel = NewLVCreateModel()
+		m.lvCreateModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
 		m.currentView = ViewLVCreate
 		m.breadcrumbs.Clear()
 		m.breadcrumbs.AddItem("Configuration", "config", 1)
 		m.breadcrumbs.AddItem("Create Logical Volume", "lv_create", 1)
-		return m, m.lvCreateFormModel.Init()
+		return m, m.lvCreateModel.Init()
 	case 11: // Save changes
 		return m, runLBUCommit()
 	}
@@ -670,8 +596,8 @@ func (m *MainModel) isFileBrowserActiveInSubView() bool {
 			return m.vmEditModel.FileBrowserActive()
 		}
 	case ViewStartStopScript:
-		if m.startStopScriptFormModel != nil && m.startStopScriptFormModel.fileBrowser != nil && m.startStopScriptFormModel.fileBrowser.active {
-			return true
+		if m.startStopScriptModel != nil {
+			return m.startStopScriptModel.FileBrowserActive()
 		}
 	}
 	return false
@@ -859,14 +785,16 @@ func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case ViewStartStopScript:
-		// Handle keys directly in start/stop script form model
-		_, cmd := m.StartStopScriptFormUpdate(msg)
-		// Execute the command to initialize the file browser
-		if cmd != nil {
-			nextMsg := cmd()
-			return m.handleSubViewOutput(nextMsg)
+		if m.startStopScriptModel != nil {
+			inner, cmd := m.startStopScriptModel.Update(msg)
+			if ssm, ok := inner.(*StartStopScriptModel); ok {
+				m.startStopScriptModel = ssm
+			}
+			if cmd != nil {
+				nextMsg := cmd()
+				return m.handleSubViewOutput(nextMsg)
+			}
 		}
-		return m, nil
 	case ViewLVCreate:
 		// LV create is handled earlier in MainModel.update() so it can receive
 		// asynchronous non-key messages (e.g., lvVGsLoadedMsg) reliably.
@@ -885,78 +813,9 @@ func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // handleSubViewOutput processes messages produced by sub-view command execution
-// (from delegateToSubView). Unlike handleSubViewMsg, this method properly routes
-// FileSelectedMsg through addDiskModel to convert it to DiskAddedMsg.
+// (from delegateToSubView). Messages are now handled through the framework's
+// HandleMessage interface, so this just delegates to handleSubViewMsg.
 func (m *MainModel) handleSubViewOutput(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
-	switch nextMsg.(type) {
-	case DirectoryLoadedMsg:
-		// Directory loaded in file browser - refresh the form view
-		if m.startStopScriptFormModel != nil {
-			m.startStopScriptFormModel.syncViewport()
-		}
-		return m, nil
-	case FileSelectedMsg:
-		// Route FileSelectedMsg through addDiskModel when it exists
-		// (hard disk flow). addDiskModel converts it to DiskAddedMsg.
-		// For CDROMs (no addDiskModel), route through form directly.
-		// For Start/Stop Script form, route through the form model directly.
-		switch m.currentView {
-		case ViewVMCreate:
-			if m.vmCreateModel != nil {
-				if m.vmCreateModel.form.addDiskModel != nil {
-					inner, cmd := m.vmCreateModel.form.addDiskModel.Update(nextMsg)
-					if adm, ok := inner.(*AddDiskModel); ok {
-						m.vmCreateModel.form.addDiskModel = adm
-					}
-					if cmd != nil {
-						return m.handleSubViewOutput(cmd())
-					}
-					return m, nil
-				}
-				inner, cmd := m.vmCreateModel.form.Update(nextMsg)
-				if f, ok := inner.(*VMFormModel); ok {
-					m.vmCreateModel.form = f
-				}
-				if cmd != nil {
-					return m.handleSubViewOutput(cmd())
-				}
-			}
-		case ViewVMEdit:
-			if m.vmEditModel != nil {
-				if m.vmEditModel.form.addDiskModel != nil {
-					inner, cmd := m.vmEditModel.form.addDiskModel.Update(nextMsg)
-					if adm, ok := inner.(*AddDiskModel); ok {
-						m.vmEditModel.form.addDiskModel = adm
-					}
-					if cmd != nil {
-						return m.handleSubViewOutput(cmd())
-					}
-					return m, nil
-				}
-				inner, cmd := m.vmEditModel.form.Update(nextMsg)
-				if f, ok := inner.(*VMFormModel); ok {
-					m.vmEditModel.form = f
-				}
-				if cmd != nil {
-					return m.handleSubViewOutput(cmd())
-				}
-			}
-		case ViewStartStopScript:
-			if m.startStopScriptFormModel != nil {
-				inner, cmd := m.startStopScriptFormModel.Update(nextMsg)
-				if f, ok := inner.(*StartStopScriptFormModel); ok {
-					m.startStopScriptFormModel = f
-				}
-				if cmd != nil {
-					return m.handleSubViewOutput(cmd())
-				}
-			}
-		}
-		return m, nil
-	}
-
-	// For all other messages (DiskAddedMsg, VMUpdatedMsg, etc.),
-	// delegate to handleSubViewMsg
 	return m.handleSubViewMsg(nextMsg)
 }
 
