@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -294,6 +296,81 @@ func (m *Manager) ApplyVFIOIDsToKernel() error {
 	return nil
 }
 
+// ApplyCPUParamsToKernel reads the current vCPU pinning config, builds CPU isolation
+// parameter strings (isolcpus, nohz_full, rcu_nocbs), and writes them to grub.cfg.
+// It returns an error if the config cannot be read, or the grub.cfg cannot be updated.
+func (m *Manager) ApplyCPUParamsToKernel() error {
+	if debugMode {
+		log.Println("[DEBUG] ApplyCPUParamsToKernel: starting")
+	}
+
+	// Get current vCPU pinning config
+	pinning, err := m.GetVCPUPinningGlobal()
+	if err != nil {
+		if debugMode {
+			log.Printf("[DEBUG] ApplyCPUParamsToKernel: failed to get vCPU pinning config: %v", err)
+		}
+		return fmt.Errorf("get vCPU pinning config: %w", err)
+	}
+
+	if debugMode {
+		log.Printf("[DEBUG] ApplyCPUParamsToKernel: pinning enabled=%v, mappings=%d",
+			pinning.Enabled, len(pinning.Mappings))
+	}
+
+	// Build sorted, deduplicated host CPU list from mappings
+	cpuList := buildHostCPUList(pinning.Mappings)
+
+	// Build parameter values
+	var isolcpus, nohzFull, rcuNoCBS string
+	if cpuList != "" {
+		isolcpus = "domain,managed_irq," + cpuList
+		nohzFull = cpuList
+		rcuNoCBS = cpuList
+	}
+
+	if debugMode {
+		log.Printf("[DEBUG] ApplyCPUParamsToKernel: cpuList=%q, isolcpus=%q, nohzFull=%q, rcuNoCBS=%q",
+			cpuList, isolcpus, nohzFull, rcuNoCBS)
+	}
+
+	// Get grub config path
+	grubPath := m.cfg.GrubConfigPath
+	if grubPath == "" {
+		grubPath = "/media/usb/boot/grub/grub.cfg"
+	}
+
+	if debugMode {
+		log.Printf("[DEBUG] ApplyCPUParamsToKernel: grubPath = %s", grubPath)
+	}
+
+	// Remount /media/usb as rw before modifying grub.cfg.
+	remountPath := detectMountPath(grubPath)
+	if remountPath != "" {
+		if err := remountFilesystem(remountPath, "rw"); err != nil {
+			return fmt.Errorf("remount %s as rw: %w", remountPath, err)
+		}
+		defer func() {
+			if err := remountFilesystem(remountPath, "ro"); err != nil {
+				log.Printf("[WARN] ApplyCPUParamsToKernel: failed to remount %s as ro: %v", remountPath, err)
+			}
+		}()
+	}
+
+	// Update grub.cfg
+	if err := UpdateGrubCPUParams(isolcpus, nohzFull, rcuNoCBS, grubPath); err != nil {
+		if debugMode {
+			log.Printf("[DEBUG] ApplyCPUParamsToKernel: UpdateGrubCPUParams failed: %v", err)
+		}
+		return fmt.Errorf("update grub.cfg: %w", err)
+	}
+
+	if debugMode {
+		log.Println("[DEBUG] ApplyCPUParamsToKernel: completed successfully")
+	}
+	return nil
+}
+
 // copyOVMFFiles copies OVMF_CODE.fd and OVMF_VARS.fd from the configured
 // BIOS paths to the VM directory.
 func (m *Manager) copyOVMFFiles(vmDir string) error {
@@ -359,6 +436,29 @@ func generateMAC() string {
 	bytes[0] = bytes[0]&0xFE | 0x02
 	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",
 		bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5])
+}
+
+// buildHostCPUList extracts sorted, deduplicated host CPU IDs from pinning mappings
+// and returns them as a comma-separated string (e.g., "0,1,2,3").
+func buildHostCPUList(mappings []models.VCPUToHostMapping) string {
+	cpuSet := make(map[int]bool)
+	for _, m := range mappings {
+		cpuSet[m.HostCPUID] = true
+	}
+	cpus := make([]int, 0, len(cpuSet))
+	for cpu := range cpuSet {
+		cpus = append(cpus, cpu)
+	}
+	sort.Ints(cpus)
+
+	if len(cpus) == 0 {
+		return ""
+	}
+	var parts []string
+	for _, c := range cpus {
+		parts = append(parts, strconv.Itoa(c))
+	}
+	return strings.Join(parts, ",")
 }
 
 // detectMountPath checks if a file path resides under /media/usb and returns

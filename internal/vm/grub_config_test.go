@@ -320,3 +320,287 @@ menuentry 'DKVM' {
 		}
 	}
 }
+
+func TestUpdateGrubCPUParams_AddAllThree(t *testing.T) {
+	dir := t.TempDir()
+	grubPath := filepath.Join(dir, "grub.cfg")
+
+	original := `set default=0
+set timeout=5
+
+menuentry 'DKVM' {
+	linux /vmlinuz root=/dev/sda1 ro quiet
+	initrd /initrd.img
+}
+`
+	if err := os.WriteFile(grubPath, []byte(original), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := UpdateGrubCPUParams("domain,managed_irq,0,1,2,3", "0,1,2,3", "0,1,2,3", grubPath); err != nil {
+		t.Fatalf("UpdateGrubCPUParams() error: %v", err)
+	}
+
+	content, err := os.ReadFile(grubPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := string(content)
+
+	if !strings.Contains(result, "isolcpus=domain,managed_irq,0,1,2,3") {
+		t.Errorf("Expected isolcpus parameter not found. Got:\n%s", result)
+	}
+	if !strings.Contains(result, "nohz_full=0,1,2,3") {
+		t.Errorf("Expected nohz_full parameter not found. Got:\n%s", result)
+	}
+	if !strings.Contains(result, "rcu_nocbs=0,1,2,3") {
+		t.Errorf("Expected rcu_nocbs parameter not found. Got:\n%s", result)
+	}
+}
+
+func TestUpdateGrubCPUParams_ReplaceExisting(t *testing.T) {
+	dir := t.TempDir()
+	grubPath := filepath.Join(dir, "grub.cfg")
+
+	original := `set default=0
+set timeout=5
+
+menuentry 'DKVM' {
+	linux /vmlinuz root=/dev/sda1 ro quiet isolcpus=domain,managed_irq,0,1 nohz_full=0,1 rcu_nocbs=0,1
+	initrd /initrd.img
+}
+`
+	if err := os.WriteFile(grubPath, []byte(original), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := UpdateGrubCPUParams("domain,managed_irq,2,3", "2,3", "2,3", grubPath); err != nil {
+		t.Fatalf("UpdateGrubCPUParams() error: %v", err)
+	}
+
+	content, err := os.ReadFile(grubPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := string(content)
+
+	if !strings.Contains(result, "isolcpus=domain,managed_irq,2,3") {
+		t.Errorf("Expected new isolcpus not found. Got:\n%s", result)
+	}
+	if strings.Contains(result, "isolcpus=domain,managed_irq,0,1") {
+		t.Errorf("Old isolcpus should have been replaced. Got:\n%s", result)
+	}
+}
+
+func TestUpdateGrubCPUParams_RemoveAll(t *testing.T) {
+	dir := t.TempDir()
+	grubPath := filepath.Join(dir, "grub.cfg")
+
+	original := `set default=0
+set timeout=5
+
+menuentry 'DKVM' {
+	linux /vmlinuz root=/dev/sda1 ro quiet isolcpus=domain,managed_irq,0,1,2,3 nohz_full=0,1,2,3 rcu_nocbs=0,1,2,3
+	initrd /initrd.img
+}
+`
+	if err := os.WriteFile(grubPath, []byte(original), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := UpdateGrubCPUParams("", "", "", grubPath); err != nil {
+		t.Fatalf("UpdateGrubCPUParams() error: %v", err)
+	}
+
+	content, err := os.ReadFile(grubPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, param := range []string{"isolcpus=", "nohz_full=", "rcu_nocbs="} {
+		if strings.Contains(string(content), param) {
+			t.Errorf("%s should have been removed. Got:\n%s", param, string(content))
+		}
+	}
+}
+
+func TestUpdateGrubCPUParams_CoexistenceWithVFIO(t *testing.T) {
+	dir := t.TempDir()
+	grubPath := filepath.Join(dir, "grub.cfg")
+
+	original := `set default=0
+set timeout=5
+
+menuentry 'DKVM' {
+	linux /vmlinuz root=/dev/sda1 ro quiet vfio-pci.ids=1002:7550
+	initrd /initrd.img
+}
+`
+	if err := os.WriteFile(grubPath, []byte(original), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Add CPU params
+	if err := UpdateGrubCPUParams("domain,managed_irq,0,1", "0,1", "0,1", grubPath); err != nil {
+		t.Fatalf("UpdateGrubCPUParams() error: %v", err)
+	}
+
+	content, err := os.ReadFile(grubPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := string(content)
+
+	// Both vfio-pci.ids and CPU params should be present
+	if !strings.Contains(result, "vfio-pci.ids=1002:7550") {
+		t.Errorf("vfio-pci.ids should be preserved after adding CPU params. Got:\n%s", result)
+	}
+	if !strings.Contains(result, "isolcpus=domain,managed_irq,0,1") {
+		t.Errorf("isolcpus should be present. Got:\n%s", result)
+	}
+
+	// Now add VFIO params - both should coexist
+	if err := UpdateGrubVFIOIDs("8086:15d4", grubPath); err != nil {
+		t.Fatalf("UpdateGrubVFIOIDs() error: %v", err)
+	}
+
+	content, err = os.ReadFile(grubPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result = string(content)
+
+	if !strings.Contains(result, "isolcpus=domain,managed_irq,0,1") {
+		t.Errorf("isolcpus should be preserved after adding VFIO params. Got:\n%s", result)
+	}
+	if !strings.Contains(result, "vfio-pci.ids=8086:15d4") {
+		t.Errorf("vfio-pci.ids should be updated. Got:\n%s", result)
+	}
+}
+
+func TestUpdateGrubCPUParams_DuplicateParamsOnSameLine(t *testing.T) {
+	dir := t.TempDir()
+	grubPath := filepath.Join(dir, "grub.cfg")
+
+	// Simulate corrupted grub.cfg with duplicate params
+	original := `set default=0
+set timeout=5
+
+menuentry 'DKVM' {
+	linux /vmlinuz root=/dev/sda1 ro quiet isolcpus=domain,managed_irq,0,1 isolcpus=domain,managed_irq,2,3 nohz_full=0,1 nohz_full=2,3
+	initrd /initrd.img
+}
+`
+	if err := os.WriteFile(grubPath, []byte(original), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := UpdateGrubCPUParams("domain,managed_irq,4,5", "4,5", "4,5", grubPath); err != nil {
+		t.Fatalf("UpdateGrubCPUParams() error: %v", err)
+	}
+
+	content, err := os.ReadFile(grubPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := string(content)
+
+	// Each param should appear exactly once
+	for _, param := range []string{"isolcpus=", "nohz_full=", "rcu_nocbs="} {
+		count := strings.Count(result, param)
+		if count != 1 {
+			t.Errorf("Expected exactly 1 occurrence of %s, got %d. Got:\n%s", param, count, result)
+		}
+	}
+}
+
+func TestUpdateGrubCPUParams_NeverOnNonLinuxLines(t *testing.T) {
+	dir := t.TempDir()
+	grubPath := filepath.Join(dir, "grub.cfg")
+
+	// Params accidentally on non-linux lines
+	original := `set default=0
+set timeout=5 isolcpus=domain,managed_irq,0,1
+
+menuentry 'DKVM' {
+	linux /vmlinuz root=/dev/sda1 ro quiet
+	initrd /initrd.img nohz_full=0,1 rcu_nocbs=0,1
+}
+`
+	if err := os.WriteFile(grubPath, []byte(original), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := UpdateGrubCPUParams("domain,managed_irq,2,3", "2,3", "2,3", grubPath); err != nil {
+		t.Fatalf("UpdateGrubCPUParams() error: %v", err)
+	}
+
+	content, err := os.ReadFile(grubPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, line := range strings.Split(string(content), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "linux") {
+			for _, param := range []string{"isolcpus=", "nohz_full=", "rcu_nocbs="} {
+				if strings.Contains(line, param) {
+					t.Errorf("%s should not appear on non-linux line: %s", param, line)
+				}
+			}
+		}
+	}
+
+	// Params should appear on the linux line
+	if !strings.Contains(string(content), "isolcpus=domain,managed_irq,2,3") {
+		t.Errorf("Expected isolcpus on linux line. Got:\n%s", string(content))
+	}
+}
+
+func TestBuildHostCPUList(t *testing.T) {
+	tests := []struct {
+		name     string
+		mappings []models.VCPUToHostMapping
+		expected string
+	}{
+		{
+			name:     "empty mappings",
+			mappings: []models.VCPUToHostMapping{},
+			expected: "",
+		},
+		{
+			name: "single mapping",
+			mappings: []models.VCPUToHostMapping{
+				{VCPUID: 0, HostCPUID: 4},
+			},
+			expected: "4",
+		},
+		{
+			name: "multiple mappings sorted",
+			mappings: []models.VCPUToHostMapping{
+				{VCPUID: 0, HostCPUID: 6},
+				{VCPUID: 1, HostCPUID: 4},
+				{VCPUID: 2, HostCPUID: 5},
+			},
+			expected: "4,5,6",
+		},
+		{
+			name: "deduplicates same host CPU",
+			mappings: []models.VCPUToHostMapping{
+				{VCPUID: 0, HostCPUID: 2},
+				{VCPUID: 1, HostCPUID: 2},
+				{VCPUID: 2, HostCPUID: 4},
+			},
+			expected: "2,4",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := buildHostCPUList(tc.mappings)
+			if result != tc.expected {
+				t.Errorf("buildHostCPUList() = %q, want %q", result, tc.expected)
+			}
+		})
+	}
+}

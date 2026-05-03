@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
--
+- **vCPU Pinning Apply to Kernel**: New "Apply to Kernel" button in the vCPU pinning form that writes CPU isolation parameters (`isolcpus`, `nohz_full`, `rcu_nocbs`) to `grub.cfg`, enabling persistent kernel-level CPU isolation for pinned VMs (`internal/vm/grub_config.go`, `internal/vm/grub_config_test.go`, `internal/vm/manager.go`, `internal/tui/models/vcpu_pinning_form*.go`, `internal/tui/models/message_handlers.go`)
 
 ### Changed
 -

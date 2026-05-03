@@ -170,6 +170,16 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		m.breadcrumbs.Clear()
 		return m, nil
 	}
+	if kam, ok := nextMsg.(VCPUCPUKernelAppliedMsg); ok {
+		if kam.Success {
+			m.statusBar.SetMessage("CPU isolation parameters applied to kernel successfully")
+		} else {
+			m.statusBar.SetMessage("Apply to kernel failed: " + kam.Error)
+		}
+		m.currentView = ViewConfigMenu
+		m.breadcrumbs.Clear()
+		return m, nil
+	}
 	if _, ok := nextMsg.(SSHPasswordUpdatedMsg); ok {
 		m.statusBar.SetMessage("Password changed successfully")
 		m.sshPasswordModel = nil
