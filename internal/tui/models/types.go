@@ -38,6 +38,11 @@ var debugMode bool
 // Package-level dry-run mode flag
 var dryRunMode bool
 
+// ViewChangeMsg is sent by sub-models to request a view transition
+type ViewChangeMsg struct {
+	View string
+}
+
 // VMDeletedMsg is sent when a VM is deleted
 type VMDeletedMsg struct {
 	VMName string
@@ -130,10 +135,10 @@ type MainModel struct {
 	runningVMID string
 
 	// Start/Stop script form model
-	startStopScriptFormModel *StartStopScriptFormModel
+	startStopScriptModel *StartStopScriptModel
 
-	// LVM LV create form model
-	lvCreateFormModel *LVCreateFormModel
+	// LVM LV create model
+	lvCreateModel *LVCreateModel
 
 	// VM list for selection
 	vmListForSelection []models.VM

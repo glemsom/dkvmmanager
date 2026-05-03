@@ -4,54 +4,104 @@ package models
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
-
-// View implements tea.Model
-func (m *StartStopScriptFormModel) View() string {
-	// If file browser is active, show it instead of the form
-	if m.fileBrowser != nil && m.fileBrowser.active {
-		return m.fileBrowser.View()
-	}
-
-	if !m.ready {
-		return "Loading form..."
-	}
-	return m.vp.View()
-}
-
-// SetSize updates the form dimensions
-func (m *StartStopScriptFormModel) SetSize(w, h int) {
-	m.contentW = w
-	m.contentH = h
-	if !m.ready {
-		m.vp = viewport.New(w, h)
-		m.ready = true
-	} else {
-		m.vp.Width = w
-		m.vp.Height = h
-	}
-	m.syncViewport()
-}
 
 // --- Rendering ---
 
 var (
-	startStopScriptLabelStyle         = lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim)
-	startStopScriptFocusStyle         = styles.FormFocusStyle()
-	startStopScriptInputStyle         = styles.FormInputStyle()
-	startStopScriptErrorStyle         = styles.ErrorTextStyle()
-	startStopScriptMutedStyle         = styles.FormMutedStyle()
-	startStopScriptSaveStyle          = styles.FormSaveStyle()
-	startStopScriptSectionStyle       = styles.DetailSectionStyle()
-	startStopScriptToggleOn           = lipgloss.NewStyle().Foreground(styles.Colors.Success).Bold(true)
-	startStopScriptToggleOff          = lipgloss.NewStyle().Foreground(styles.Colors.Error).Bold(true)
-	// New: Side-by-side layout styles
-	startStopScriptBrowseStyle        = lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim).Bold(true)
+	startStopScriptLabelStyle        = lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim)
+	startStopScriptFocusStyle        = styles.FormFocusStyle()
+	startStopScriptInputStyle        = styles.FormInputStyle()
+	startStopScriptErrorStyle        = styles.ErrorTextStyle()
+	startStopScriptMutedStyle        = styles.FormMutedStyle()
+	startStopScriptSaveStyle         = styles.FormSaveStyle()
+	startStopScriptSectionStyle      = styles.DetailSectionStyle()
+	startStopScriptToggleOn          = lipgloss.NewStyle().Foreground(styles.Colors.Success).Bold(true)
+	startStopScriptToggleOff         = lipgloss.NewStyle().Foreground(styles.Colors.Error).Bold(true)
+	startStopScriptBrowseStyle       = lipgloss.NewStyle().Foreground(styles.Colors.ForegroundDim).Bold(true)
 	startStopScriptBrowseFocusStyle  = lipgloss.NewStyle().Foreground(styles.Colors.Primary).Bold(true)
 )
+
+// --- FormModel Render Helpers ---
+
+// renderTogglePosition renders the mode toggle for RenderPosition.
+func (m *StartStopScriptFormModel) renderTogglePosition(focused bool) string {
+	prefix := "  "
+	if focused {
+		prefix = startStopScriptFocusStyle.Render("> ")
+	}
+
+	var toggleStr string
+	if m.config.UseBuiltin {
+		toggleStr = prefix + startStopScriptToggleOn.Render("[Builtin]") + " " + startStopScriptMutedStyle.Render("|") + " " + startStopScriptLabelStyle.Render("[Custom]")
+	} else {
+		toggleStr = prefix + startStopScriptLabelStyle.Render("[Builtin]") + " " + startStopScriptMutedStyle.Render("|") + " " + startStopScriptToggleOff.Render("[Custom]")
+	}
+
+	return toggleStr
+}
+
+// renderTextPosition renders a text input field for RenderPosition.
+func (m *StartStopScriptFormModel) renderTextPosition(pos form.FocusPos, focused bool, cursorOffset int) string {
+	val := m.getScriptPath(pos.Key)
+
+	var row string
+	if focused {
+		row = startStopScriptFocusStyle.Render(pos.Label + ": ")
+	} else {
+		row = startStopScriptLabelStyle.Render(pos.Label + ": ")
+	}
+
+	pathWidth := 30
+	paddedPath := padRight(val, pathWidth)
+
+	// Insert cursor indicator for focused field
+	if focused && cursorOffset >= 0 && cursorOffset <= len(val) {
+		display := val
+		if cursorOffset < len(display) {
+			display = display[:cursorOffset] + "▌" + display[cursorOffset:]
+		} else {
+			display = display + "▌"
+		}
+		row += startStopScriptInputStyle.Render(padRight(display, pathWidth))
+	} else {
+		row += startStopScriptInputStyle.Render(paddedPath)
+	}
+
+	return row
+}
+
+// renderButtonPosition renders a button for RenderPosition.
+func (m *StartStopScriptFormModel) renderButtonPosition(pos form.FocusPos, focused bool) string {
+	if pos.Key == "start_browse" || pos.Key == "stop_browse" {
+		if focused {
+			return "  " + startStopScriptBrowseFocusStyle.Render("[Browse →]")
+		}
+		return "  " + startStopScriptBrowseStyle.Render("[Browse →]")
+	}
+
+	// Save/Cancel buttons: render as footer-style help
+	if pos.Key == "save" {
+		if focused {
+			return startStopScriptSaveStyle.Render("[Space/Enter] Save") + "    " + startStopScriptMutedStyle.Render("[ESC] Cancel")
+		}
+		return startStopScriptMutedStyle.Render("[Space/Enter] Save    [ESC] Cancel")
+	}
+
+	if pos.Key == "cancel" {
+		if focused {
+			return startStopScriptMutedStyle.Render("[Space/Enter] Save") + "    " + startStopScriptLabelStyle.Render("[ESC] Cancel")
+		}
+		return startStopScriptMutedStyle.Render("[Space/Enter] Save    [ESC] Cancel")
+	}
+
+	return ""
+}
+
+// --- Backward-compatible rendering ---
 
 // renderAllLines produces the full list of output lines for the form
 func (m *StartStopScriptFormModel) renderAllLines() []string {
@@ -81,7 +131,7 @@ func (m *StartStopScriptFormModel) renderAllLines() []string {
 	return lines
 }
 
-// renderToggle renders the mode toggle
+// renderToggle renders the mode toggle (backward compat)
 func (m *StartStopScriptFormModel) renderToggle(lines []string) []string {
 	focused := (m.focusIndex == 0)
 
@@ -92,10 +142,8 @@ func (m *StartStopScriptFormModel) renderToggle(lines []string) []string {
 
 	var toggleStr string
 	if m.config.UseBuiltin {
-		// Builtin is active: highlight green
 		toggleStr = prefix + startStopScriptToggleOn.Render("[Builtin]") + " " + startStopScriptMutedStyle.Render("|") + " " + startStopScriptLabelStyle.Render("[Custom]")
 	} else {
-		// Custom is active: highlight red
 		toggleStr = prefix + startStopScriptLabelStyle.Render("[Builtin]") + " " + startStopScriptMutedStyle.Render("|") + " " + startStopScriptToggleOff.Render("[Custom]")
 	}
 
@@ -123,51 +171,48 @@ func (m *StartStopScriptFormModel) renderBuiltinDevices(lines []string) []string
 
 // renderCustomPaths renders the script path fields when using custom scripts
 func (m *StartStopScriptFormModel) renderCustomPaths(lines []string) []string {
-	// Find start and stop path positions by searching through all positions
-	var startPathIdx, stopPathIdx int = -1, -1
+	// Find start and stop path/browse positions by searching through all positions
+	var startPathIdx, stopPathIdx, startBrowseIdx, stopBrowseIdx int = -1, -1, -1, -1
 	for i, pos := range m.positions {
-		if pos.fieldName == "start_path" {
+		switch pos.Key {
+		case "start_path":
 			startPathIdx = i
-		} else if pos.fieldName == "stop_path" {
+		case "start_browse":
+			startBrowseIdx = i
+		case "stop_path":
 			stopPathIdx = i
+		case "stop_browse":
+			stopBrowseIdx = i
 		}
 	}
 
 	// Start script row
 	if startPathIdx >= 0 {
 		focusedPath := (m.focusIndex == startPathIdx)
-		focusedBrowse := (m.focusIndex == startPathIdx+1) // browse is next position
+		focusedBrowse := (m.focusIndex == startBrowseIdx)
 
 		val := m.config.StartScript
 		if val == "" {
 			val = "/media/dkvmdata/start.sh"
 		}
 
-		// Build row: "Start Script:  <path>    [Browse →]"
 		var row string
 
-		// Label
 		if focusedPath || focusedBrowse {
 			row = startStopScriptFocusStyle.Render("Start Script: ")
 		} else {
 			row = startStopScriptLabelStyle.Render("Start Script: ")
 		}
 
-		// Path (padded to fill space before browse button)
-		pathWidth := 30 // configurable width
+		pathWidth := 30
 		paddedPath := padRight(val, pathWidth)
-		if focusedPath {
-			row += startStopScriptInputStyle.Render(paddedPath)
-		} else {
-			row += startStopScriptInputStyle.Render(paddedPath)
-		}
+		row += startStopScriptInputStyle.Render(paddedPath)
 
-		// Gap and Browse button
 		row += "  "
 		if focusedBrowse {
 			row += startStopScriptBrowseFocusStyle.Render("[Browse →]")
 		} else {
-			row += startStopScriptBrowseStyle.Render("[Browse]")
+			row += startStopScriptBrowseStyle.Render("[Browse →]")
 		}
 
 		lines = append(lines, row)
@@ -176,38 +221,30 @@ func (m *StartStopScriptFormModel) renderCustomPaths(lines []string) []string {
 	// Stop script row
 	if stopPathIdx >= 0 {
 		focusedPath := (m.focusIndex == stopPathIdx)
-		focusedBrowse := (m.focusIndex == stopPathIdx+1) // browse is next position
+		focusedBrowse := (m.focusIndex == stopBrowseIdx)
 
 		val := m.config.StopScript
 		if val == "" {
 			val = "/media/dkvmdata/stop.sh"
 		}
 
-		// Build row: "Stop Script:   <path>    [Browse →]"
 		var row string
 
-		// Label
 		if focusedPath || focusedBrowse {
 			row = startStopScriptFocusStyle.Render("Stop Script: ")
 		} else {
 			row = startStopScriptLabelStyle.Render("Stop Script: ")
 		}
 
-		// Path (padded to fill space before browse button)
 		pathWidth := 30
 		paddedPath := padRight(val, pathWidth)
-		if focusedPath {
-			row += startStopScriptInputStyle.Render(paddedPath)
-		} else {
-			row += startStopScriptInputStyle.Render(paddedPath)
-		}
+		row += startStopScriptInputStyle.Render(paddedPath)
 
-		// Gap and Browse button
 		row += "  "
 		if focusedBrowse {
 			row += startStopScriptBrowseFocusStyle.Render("[Browse →]")
 		} else {
-			row += startStopScriptBrowseStyle.Render("[Browse]")
+			row += startStopScriptBrowseStyle.Render("[Browse →]")
 		}
 
 		lines = append(lines, row)
@@ -234,14 +271,13 @@ func (m *StartStopScriptFormModel) renderButtons(lines []string) []string {
 	// Find save and cancel positions
 	var saveIdx, cancelIdx int
 	for i, pos := range m.positions {
-		if pos.fieldName == "save" {
+		if pos.Key == "save" {
 			saveIdx = i
-		} else if pos.fieldName == "cancel" {
+		} else if pos.Key == "cancel" {
 			cancelIdx = i
 		}
 	}
 
-	// Save button - match pattern from other views: "[Space/Enter] Save    [ESC] Cancel"
 	focused := (m.focusIndex == saveIdx || m.focusIndex == cancelIdx)
 	if focused && m.focusIndex == saveIdx {
 		lines = append(lines, startStopScriptSaveStyle.Render("[Space/Enter] Save")+"    "+startStopScriptMutedStyle.Render("[ESC] Cancel"))
@@ -252,20 +288,4 @@ func (m *StartStopScriptFormModel) renderButtons(lines []string) []string {
 	}
 
 	return lines
-}
-
-// syncViewport updates the viewport content
-func (m *StartStopScriptFormModel) syncViewport() {
-	lines := m.renderAllLines()
-	m.renderedLines = lines
-
-	content := ""
-	for i, line := range lines {
-		if i > 0 {
-			content += "\n"
-		}
-		content += line
-	}
-
-	m.vp.SetContent(content)
 }

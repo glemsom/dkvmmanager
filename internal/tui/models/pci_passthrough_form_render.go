@@ -3,9 +3,11 @@ package models
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
@@ -45,105 +47,95 @@ var pciHeaderStyle = lipgloss.NewStyle().Bold(true).Foreground(styles.Colors.Pri
 // pciAddrStyle is the PCI address style (bold/high-contrast for quick scanning)
 var pciAddrStyle = lipgloss.NewStyle().Bold(true).Foreground(styles.Colors.Primary)
 
-// renderAllLines produces the full list of output lines for the form
-func (m *PCIPassthroughFormModel) renderAllLines() []string {
-	var lines []string
+// --- FormModel interface methods ---
+
+// RenderHeader returns the form header.
+func (m *PCIPassthroughFormModel) RenderHeader() string {
+	var sb strings.Builder
+	sb.WriteString(pciHeaderStyle.Render("PCI Passthrough Configuration"))
 
 	if m.scanErr != nil {
-		lines = append(lines, pciErrorStyle.Render(fmt.Sprintf("Warning: PCI scan failed: %s", m.scanErr)))
-		lines = append(lines, pciWarnStyle.Render("Devices cannot be configured without a scan."))
-		lines = append(lines, "")
+		sb.WriteString("\n")
+		sb.WriteString(pciErrorStyle.Render(fmt.Sprintf("Warning: PCI scan failed: %s", m.scanErr)))
+		sb.WriteString("\n")
+		sb.WriteString(pciWarnStyle.Render("Devices cannot be configured without a scan."))
 	}
 
 	if len(m.devices) == 0 {
-		lines = append(lines, pciMutedStyle.Render("No PCI devices found on this system."))
-		lines = append(lines, "")
-		saveText := pciMutedStyle.Render("[Space/Enter] Save") + "    " + pciMutedStyle.Render("[ESC] Cancel")
-		if m.currentPos().kind == pciSave && m.focusIndex == len(m.positions)-2 {
-			saveText = pciSaveStyle.Render("[Space/Enter] Save") + "    " + pciMutedStyle.Render("[ESC] Cancel")
-		}
-		lines = append(lines, saveText)
-		lines = append(lines, "")
-		applyText := pciMutedStyle.Render("[Space/Enter] Apply to Kernel")
-		if m.currentPos().kind == pciApplyKernel {
-			applyText = pciApplyStyle.Render("[Space/Enter] Apply to Kernel")
-		}
-		lines = append(lines, applyText)
-		return lines
+		sb.WriteString("\n")
+		sb.WriteString(pciMutedStyle.Render("No PCI devices found on this system."))
 	}
 
-	// Render each position
-	for i, pos := range m.positions {
-		focused := (i == m.focusIndex)
-		lines = m.renderPosition(lines, pos, focused)
-	}
+	return sb.String()
+}
+
+// RenderFooter returns the form footer.
+func (m *PCIPassthroughFormModel) RenderFooter() string {
+	var parts []string
 
 	// Save error at the bottom
 	if errMsg, ok := m.errors["save"]; ok {
-		lines = append(lines, "")
-		lines = append(lines, pciErrorStyle.Render("Error: "+errMsg))
+		parts = append(parts, "")
+		parts = append(parts, pciErrorStyle.Render("Error: "+errMsg))
 	}
 
 	// Kernel apply status message
 	if m.kernelMsg != "" {
-		lines = append(lines, "")
+		parts = append(parts, "")
 		if m.kernelMsgErr {
-			lines = append(lines, pciErrorStyle.Render("Error: "+m.kernelMsg))
+			parts = append(parts, pciErrorStyle.Render("Error: "+m.kernelMsg))
 		} else {
-			lines = append(lines, pciSaveStyle.Render(m.kernelMsg))
+			parts = append(parts, pciSaveStyle.Render(m.kernelMsg))
 		}
 	}
 
 	// Validation warnings
 	for _, w := range m.warnings {
-		lines = append(lines, "")
-		lines = append(lines, pciWarnStyle.Render("Warning: "+w))
+		parts = append(parts, "")
+		parts = append(parts, pciWarnStyle.Render("Warning: "+w))
 	}
 
-	// Footer
-	lines = append(lines, "")
-	lines = append(lines, pciMutedStyle.Render("Tab Navigate  Space/Enter Toggle/Action  ESC Cancel"))
+	// Footer help text
+	parts = append(parts, "")
+	parts = append(parts, pciMutedStyle.Render("Tab Navigate  Space/Enter Toggle/Action  ESC Cancel"))
 
-	return lines
+	return strings.Join(parts, "\n")
 }
 
-// renderPosition appends lines for one focus position
-func (m *PCIPassthroughFormModel) renderPosition(lines []string, pos pciFocusPos, focused bool) []string {
-	switch pos.kind {
-	case pciGroupHeader:
-		lines = append(lines, m.renderGroupHeader(pos))
-		return lines
+// RenderPosition renders a single position for the form framework.
+func (m *PCIPassthroughFormModel) RenderPosition(pos form.FocusPos, focused bool, cursorOffset int) string {
+	switch pos.Kind {
+	case form.FocusHeader:
+		return m.renderGroupHeader(pos)
 
-	case pciToggle:
-		dev := m.getDeviceByAddr(pos.deviceAddr)
+	case form.FocusToggle:
+		fd := pos.Data.(pciFocusData)
+		dev := m.getDeviceByAddr(fd.Address)
 		if dev == nil {
-			lines = append(lines, "  ???")
-			return lines
+			return "  ???"
 		}
-		selected := m.selected[pos.deviceAddr]
-		lines = append(lines, m.renderDeviceToggle(dev, selected, focused))
-		return lines
+		selected := m.selected[fd.Address]
+		return m.renderDeviceToggle(dev, selected, focused)
 
-	case pciSave:
-		lines = append(lines, "")
-		saveText := pciMutedStyle.Render("[Space/Enter] Save") + "    " + pciMutedStyle.Render("[ESC] Cancel")
-		if focused {
-			saveText = pciSaveStyle.Render("[Space/Enter] Save") + "    " + pciMutedStyle.Render("[ESC] Cancel")
+	case form.FocusButton:
+		if pos.Key == "save" {
+			saveText := pciMutedStyle.Render("[Space/Enter] Save") + "    " + pciMutedStyle.Render("[ESC] Cancel")
+			if focused {
+				saveText = pciSaveStyle.Render("[Space/Enter] Save") + "    " + pciMutedStyle.Render("[ESC] Cancel")
+			}
+			return "\n" + saveText
 		}
-		lines = append(lines, saveText)
-		return lines
 
-	case pciApplyKernel:
-		lines = append(lines, "")
-		applyText := pciMutedStyle.Render("[Space/Enter] Apply to Kernel") + "    " + pciMutedStyle.Render("[ESC] Cancel")
-		if focused {
-			applyText = pciApplyStyle.Render("[Space/Enter] Apply to Kernel") + "    " + pciMutedStyle.Render("[ESC] Cancel")
+		if pos.Key == "apply_kernel" {
+			applyText := pciMutedStyle.Render("[Space/Enter] Apply to Kernel") + "    " + pciMutedStyle.Render("[ESC] Cancel")
+			if focused {
+				applyText = pciApplyStyle.Render("[Space/Enter] Apply to Kernel") + "    " + pciMutedStyle.Render("[ESC] Cancel")
+			}
+			return "\n" + applyText
 		}
-		lines = append(lines, applyText)
-		return lines
 	}
 
-	return lines
+	return ""
 }
 
 // renderDeviceToggle renders a PCI device as a toggle line.
@@ -196,32 +188,14 @@ func (m *PCIPassthroughFormModel) renderDeviceToggle(dev *models.PCIDevice, sele
 
 // renderGroupHeader renders an IOMMU group header line.
 // Format: ── IOMMU Group 1 (2 devices, all selected) ──
-func (m *PCIPassthroughFormModel) renderGroupHeader(pos pciFocusPos) string {
-	groupNum := pos.groupNum
+func (m *PCIPassthroughFormModel) renderGroupHeader(pos form.FocusPos) string {
+	fd := pos.Data.(pciFocusData)
+	groupNum := fd.GroupNum
 
-	// Find all devices in this group (consecutive toggles after this header)
-	headerIdx := -1
-	for i, p := range m.positions {
-		if p.kind == pciGroupHeader && p.groupNum == groupNum {
-			headerIdx = i
-			break
-		}
-	}
-	if headerIdx < 0 {
+	// Find devices in this group from the IOMMU group index
+	devices, ok := m.iommuGroups[groupNum]
+	if !ok {
 		return ""
-	}
-
-	// Walk forward collecting device pointers from this group
-	var devices []*models.PCIDevice
-	for i := headerIdx + 1; i < len(m.positions); i++ {
-		if m.positions[i].kind == pciToggle {
-			d := m.getDeviceByAddr(m.positions[i].deviceAddr)
-			if d != nil {
-				devices = append(devices, d)
-			}
-		} else {
-			break // Hit next header or save button
-		}
 	}
 
 	// Count selected devices in this group

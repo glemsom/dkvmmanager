@@ -69,37 +69,9 @@ func (m *MainModel) handleLBUCommitMsg(lcm LBUCommitMsg) (tea.Model, tea.Cmd) {
 
 // handleSubViewMsg processes messages from sub-view command execution
 func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
-	// Forward disk selection messages to the active sub-view's form.
-	// Note: FileSelectedMsg is NOT handled here — it must be routed through
-	// addDiskModel.Update() (in the view-specific blocks above) to convert
-	// it to DiskAddedMsg. handleSubViewMsg would send it directly to
-	// form.Update which only handles the CDROM case, bypassing addDiskModel.
-	switch nextMsg.(type) {
-	case DiskAddedMsg:
-		switch m.currentView {
-		case ViewVMCreate:
-			if m.vmCreateModel != nil {
-				inner, cmd := m.vmCreateModel.form.Update(nextMsg)
-				if f, ok := inner.(*VMFormModel); ok {
-					m.vmCreateModel.form = f
-				}
-				if cmd != nil {
-					return m.handleSubViewMsg(cmd())
-				}
-			}
-		case ViewVMEdit:
-			if m.vmEditModel != nil {
-				inner, cmd := m.vmEditModel.form.Update(nextMsg)
-				if f, ok := inner.(*VMFormModel); ok {
-					m.vmEditModel.form = f
-				}
-				if cmd != nil {
-					return m.handleSubViewMsg(cmd())
-				}
-			}
-		}
-		return m, nil
-	}
+	// Note: FileSelectedMsg and DiskAddedMsg are handled by the VMFormModel's
+	// HandleMessage method, which is delegated to by ScrollableForm.Update.
+	// No manual routing needed here.
 
 	if vcm, ok := nextMsg.(ViewChangeMsg); ok {
 		m.currentView = vcm.View
@@ -193,12 +165,17 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	if _, ok := nextMsg.(LVCreateUpdatedMsg); ok {
-		if m.lvCreateFormModel != nil && m.lvCreateFormModel.preview != "" {
-			m.statusBar.SetMessage(m.lvCreateFormModel.preview)
+		if m.lvCreateModel != nil {
+			fm := m.lvCreateModel.Form().Model().(*LVCreateFormModel)
+			if fm.Preview() != "" {
+				m.statusBar.SetMessage(fm.Preview())
+			} else {
+				m.statusBar.SetMessage("Logical volume created successfully")
+			}
 		} else {
 			m.statusBar.SetMessage("Logical volume created successfully")
 		}
-		m.lvCreateFormModel = nil
+		m.lvCreateModel = nil
 		m.currentView = ViewConfigMenu
 		m.breadcrumbs.Clear()
 		return m, nil

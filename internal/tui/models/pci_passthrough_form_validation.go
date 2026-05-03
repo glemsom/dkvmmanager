@@ -7,11 +7,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
-// validateAndSave persists the PCI passthrough config
-func (m *PCIPassthroughFormModel) validateAndSave() (tea.Model, tea.Cmd) {
+// validateAndSaveCmd persists the PCI passthrough config and returns a form result + tea.Cmd.
+func (m *PCIPassthroughFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd) {
 	m.errors = make(map[string]string)
 	m.warnings = nil
 
@@ -35,8 +36,7 @@ func (m *PCIPassthroughFormModel) validateAndSave() (tea.Model, tea.Cmd) {
 	warnings, valErrors := vm.ValidatePCIDevices(devices)
 	if len(valErrors) > 0 {
 		m.errors["save"] = strings.Join(valErrors, "; ")
-		m.syncViewport()
-		return m, nil
+		return form.ResultNone, nil
 	}
 
 	cfg := models.PCIPassthroughConfig{
@@ -45,20 +45,19 @@ func (m *PCIPassthroughFormModel) validateAndSave() (tea.Model, tea.Cmd) {
 
 	if err := m.vmManager.SavePCIPassthroughConfig(cfg); err != nil {
 		m.errors["save"] = fmt.Sprintf("Failed to save: %v", err)
-		m.syncViewport()
-		return m, nil
+		return form.ResultNone, nil
 	}
 
 	// Store warnings to display after successful save
 	m.warnings = warnings
 
-	return m, func() tea.Msg {
+	return form.ResultSave, func() tea.Msg {
 		return PCIPassthroughUpdatedMsg{}
 	}
 }
 
-// handleApplyKernel applies the current PCI passthrough config to grub.cfg
-func (m *PCIPassthroughFormModel) handleApplyKernel() (tea.Model, tea.Cmd) {
+// handleApplyKernelCmd applies the current PCI passthrough config to grub.cfg.
+func (m *PCIPassthroughFormModel) handleApplyKernelCmd() tea.Cmd {
 	m.errors = make(map[string]string)
 	m.kernelMsg = ""
 	m.kernelMsgErr = false
@@ -84,8 +83,7 @@ func (m *PCIPassthroughFormModel) handleApplyKernel() (tea.Model, tea.Cmd) {
 	if len(valErrors) > 0 {
 		m.kernelMsg = strings.Join(valErrors, "; ")
 		m.kernelMsgErr = true
-		m.syncViewport()
-		return m, nil
+		return nil
 	}
 
 	// Build the PCI passthrough config and save it first
@@ -95,12 +93,11 @@ func (m *PCIPassthroughFormModel) handleApplyKernel() (tea.Model, tea.Cmd) {
 	if err := m.vmManager.SavePCIPassthroughConfig(cfg); err != nil {
 		m.kernelMsg = fmt.Sprintf("Failed to save config: %v", err)
 		m.kernelMsgErr = true
-		m.syncViewport()
-		return m, nil
+		return nil
 	}
 
 	// Apply to kernel grub.cfg asynchronously
-	return m, func() tea.Msg {
+	return func() tea.Msg {
 		err := m.vmManager.ApplyVFIOIDsToKernel()
 		if err != nil {
 			return PCIVFIOKernelAppliedMsg{

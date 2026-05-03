@@ -2,16 +2,23 @@
 package models
 
 import (
-	"strings"
+	"strconv"
 
 	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
-// rebuildPositions reconstructs the flat focus list from IOMMU-grouped devices.
-// Group headers are inserted as pciGroupHeader positions but are marked as
-// non-focusable (they are rendered for context but skipped during navigation).
-func (m *PCIPassthroughFormModel) rebuildPositions() {
-	m.positions = nil
+// pciFocusData carries per-position metadata through form.FocusPos.Data.
+type pciFocusData struct {
+	Address  string // PCI device address (for toggles)
+	GroupNum int    // IOMMU group number (for headers and toggles)
+}
+
+// BuildPositions reconstructs the flat focus list from IOMMU-grouped devices.
+// Group headers are inserted as FocusHeader positions (render-only).
+// Returns the positions slice and stores it in m.positions.
+func (m *PCIPassthroughFormModel) BuildPositions() []form.FocusPos {
+	var positions []form.FocusPos
 
 	// Collect and sort group keys for deterministic ordering
 	var groupKeys []int
@@ -30,38 +37,53 @@ func (m *PCIPassthroughFormModel) rebuildPositions() {
 	}
 
 	for _, group := range groupKeys {
-		// Group header (non-focusable — only for visual separation)
-		m.positions = append(m.positions, pciFocusPos{
-			kind:     pciGroupHeader,
-			groupNum: group,
+		// Group header (render-only, no interaction)
+		var label string
+		if group < 0 {
+			label = "Ungrouped Devices"
+		} else {
+			label = "IOMMU Group " + strconv.Itoa(group)
+		}
+		positions = append(positions, form.FocusPos{
+			Kind:  form.FocusHeader,
+			Label: label,
+			Key:   "group_" + strconv.Itoa(group),
+			Data:  pciFocusData{GroupNum: group},
 		})
 
 		// Devices within this group
 		for _, dev := range m.iommuGroups[group] {
-			m.positions = append(m.positions, pciFocusPos{
-				kind:       pciToggle,
-				deviceAddr: dev.Address,
+			positions = append(positions, form.FocusPos{
+				Kind:  form.FocusToggle,
+				Label: dev.Name,
+				Key:   dev.Address,
+				Data:  pciFocusData{Address: dev.Address, GroupNum: group},
 			})
 		}
 	}
 
 	// Save button
-	m.positions = append(m.positions, pciFocusPos{
-		kind:       pciSave,
-		deviceAddr: "",
+	positions = append(positions, form.FocusPos{
+		Kind:  form.FocusButton,
+		Label: "Save",
+		Key:   "save",
 	})
 
 	// Apply to Kernel button
-	m.positions = append(m.positions, pciFocusPos{
-		kind:       pciApplyKernel,
-		deviceAddr: "",
+	positions = append(positions, form.FocusPos{
+		Kind:  form.FocusButton,
+		Label: "Apply to Kernel",
+		Key:   "apply_kernel",
 	})
+
+	m.positions = positions
+	return positions
 }
 
 // currentPos returns the focus position at the current focusIndex
-func (m *PCIPassthroughFormModel) currentPos() pciFocusPos {
+func (m *PCIPassthroughFormModel) currentPos() form.FocusPos {
 	if m.focusIndex < 0 || m.focusIndex >= len(m.positions) {
-		return pciFocusPos{kind: pciSave}
+		return form.FocusPos{Kind: form.FocusButton, Key: "save", Label: "Save"}
 	}
 	return m.positions[m.focusIndex]
 }
@@ -77,16 +99,16 @@ func (m *PCIPassthroughFormModel) getDeviceByAddr(addr string) *models.PCIDevice
 }
 
 // moveFocus moves focus by delta in the flat positions list,
-// skipping non-focusable positions (group headers).
+// skipping non-focusable positions (headers).
 func (m *PCIPassthroughFormModel) moveFocus(delta int) {
 	if delta == 0 {
 		return
 	}
 	m.focusIndex += delta
 
-	// Skip non-focusable positions (group headers)
+	// Skip non-focusable positions (headers)
 	for m.focusIndex >= 0 && m.focusIndex < len(m.positions) &&
-		m.positions[m.focusIndex].kind == pciGroupHeader {
+		m.positions[m.focusIndex].Kind == form.FocusHeader {
 		m.focusIndex += delta
 	}
 
@@ -131,48 +153,5 @@ func (m *PCIPassthroughFormModel) toggleDevice(addr string) {
 		} else {
 			delete(m.selected, d.Address)
 		}
-	}
-}
-
-// focusedLineIndex maps focusIndex to a rendered line index
-func (m *PCIPassthroughFormModel) focusedLineIndex() int {
-	line := 0
-
-	// Header + blank = 2 lines
-	line += 2
-
-	// Scan error warning if any
-	if m.scanErr != nil {
-		line += 2
-	}
-
-	for i, p := range m.positions {
-		if i == m.focusIndex {
-			return line
-		}
-
-		switch p.kind {
-		case pciGroupHeader:
-			line++
-		case pciToggle:
-			line++
-		case pciSave:
-			line++ // blank before button
-			line++ // button
-		case pciApplyKernel:
-			line++ // button
-		}
-	}
-
-	return line
-}
-
-// syncViewport regenerates the rendered lines and syncs the viewport
-func (m *PCIPassthroughFormModel) syncViewport() {
-	m.renderedLines = m.renderAllLines()
-	totalContent := strings.Join(m.renderedLines, "\n")
-	m.vp.SetContent(totalContent)
-	if m.focusedLineIndex() >= 0 {
-		m.vp.SetYOffset(clampOffset(m.vp.YOffset, m.focusedLineIndex(), m.vp.Height))
 	}
 }

@@ -392,8 +392,9 @@ func TestScenarioFullEditFlowViaUpdate(t *testing.T) {
 	m.currentView = ViewVMEdit
 
 	// Modify and save
-	m.vmEditModel.form.vmName = "edited-via-scenario"
-	_, cmd := m.vmEditModel.form.validateAndSave()
+	fm := m.vmEditModel.form.Model().(*VMFormModel)
+	fm.vmName = "edited-via-scenario"
+	cmd := fm.validateAndSaveCmd()
 	if cmd == nil {
 		t.Fatal("Expected command from save")
 	}
