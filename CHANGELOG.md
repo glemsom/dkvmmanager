@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.1.9] - 2026-05-04
+
+### Added
+- **Mount point warning**: Warn when `/media/dkvmdata` is not a mount point, helping users detect misconfigured storage (`internal/tui/models/mount_point_warning*.go`)
+
+### Fixed
+- **Mount point warning colors**: Use `styles.Colors.Foreground` for consistent theming in the mount point warning view (`internal/tui/models/mount_point_warning*.go`)
+
 ## [0.1.8] - 2026-05-03
 
 ### Changed
@@ -160,7 +168,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/glemsom/dkvmmanager/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/glemsom/dkvmmanager/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/glemsom/dkvmanager/compare/v0.1.5...v0.1.7
 [0.1.5]: https://github.com/glemsom/dkvmmanager/compare/v0.1.4...v0.1.5
