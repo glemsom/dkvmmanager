@@ -85,7 +85,7 @@ func (m *MountPointWarningModel) View() string {
 		Bold(true)
 
 	bodyStyle := lipgloss.NewStyle().
-		Foreground(styles.Colors.Text)
+		Foreground(styles.Colors.Foreground)
 
 	noteStyle := lipgloss.NewStyle().
 		Foreground(styles.Colors.Muted).
