@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.1.10] - 2026-05-04
+
+### Added
+- **Mouse scroll support**: `tea.MouseMsg` handling in all scrollable forms (CPU, PCI, USB, SSH, scripts, vCPU pinning) for trackpad and mouse wheel scrolling
+
+### Fixed
+- **Multi-line scroll-to-focus**: ScrollableForm now tracks actual rendered line counts per position so scroll-to-focus works correctly when positions render to multiple lines (e.g. button rows with blank separators) (`internal/tui/models/form/form.go`, `internal/tui/models/form/form_test.go`)
+
 ## [0.1.9] - 2026-05-04
 
 ### Added
@@ -168,7 +176,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.9...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.10...HEAD
+[0.1.10]: https://github.com/glemsom/dkvmmanager/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/glemsom/dkvmmanager/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/glemsom/dkvmmanager/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/glemsom/dkvmanager/compare/v0.1.5...v0.1.7
