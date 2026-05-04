@@ -33,6 +33,21 @@ func NewMainModelWithConfig(cfg *config.Config) (*MainModel, error) {
 		log.Printf("[DEBUG] MainModel created with %d menu items", len(menuItems))
 	}
 
+	// Check if /media/dkvmdata is a mount point
+	initialView := ViewMainMenu
+	var mountPointWarningModel *MountPointWarningModel
+	if mounted, err := isMountPoint(dkvmDataMountPath); err == nil && !mounted {
+		if debugMode {
+			log.Printf("[DEBUG] %s is not a mount point, showing warning", dkvmDataMountPath)
+		}
+		initialView = ViewMountPointWarning
+		mountPointWarningModel = NewMountPointWarningModel()
+	} else if err != nil {
+		if debugMode {
+			log.Printf("[DEBUG] Error checking mount point %s: %v", dkvmDataMountPath, err)
+		}
+	}
+
 	// Initialize menu list
 	menuListAdapter := buildMenuListAdapter(menuItems)
 	delegate := MenuItemDelegate{}
@@ -72,18 +87,19 @@ func NewMainModelWithConfig(cfg *config.Config) (*MainModel, error) {
 	breadcrumbs := components.NewBreadcrumbs()
 
 	return &MainModel{
-		currentView:   ViewMainMenu,
-		cfg:           cfg,
-		vmManager:     vmMgr,
-		selectedIndex: 0,
-		menuItems:     menuItems,
-		menuList:      menuList,
-		configList:    configList,
-		powerList:     powerList,
-		debugMode:     debugMode,
-		tabModel:      tabModel,
-		statusBar:     statusBar,
-		breadcrumbs:   breadcrumbs,
+		currentView:            initialView,
+		cfg:                    cfg,
+		vmManager:              vmMgr,
+		selectedIndex:          0,
+		menuItems:              menuItems,
+		menuList:               menuList,
+		configList:             configList,
+		powerList:              powerList,
+		debugMode:              debugMode,
+		tabModel:               tabModel,
+		statusBar:              statusBar,
+		breadcrumbs:            breadcrumbs,
+		mountPointWarningModel: mountPointWarningModel,
 	}, nil
 }
 

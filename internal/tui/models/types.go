@@ -30,6 +30,7 @@ const (
 	ViewSSHPassword     = "ssh_password"
 	ViewStartStopScript = "start_stop_script"
 	ViewLVCreate        = "lv_create"
+	ViewMountPointWarning = "mount_point_warning"
 )
 
 // Package-level debug mode flag
@@ -139,6 +140,9 @@ type MainModel struct {
 
 	// LVM LV create model
 	lvCreateModel *LVCreateModel
+
+	// Mount point warning model
+	mountPointWarningModel *MountPointWarningModel
 
 	// VM list for selection
 	vmListForSelection []models.VM

@@ -578,7 +578,7 @@ func (m *MainModel) handlePowerSelection() (tea.Model, tea.Cmd) {
 // isSubViewActive returns true if a sub-view (create/edit/delete/select/running) is active
 func (m *MainModel) isSubViewActive() bool {
 	switch m.currentView {
-	case ViewVMCreate, ViewVMEdit, ViewVMDelete, ViewVMSelect, ViewCPUOptions, ViewVMRunning, ViewPCIPassthrough, ViewUSBPassthrough, ViewCPUTopology, ViewVCPUPinning, ViewSSHPassword, ViewStartStopScript, ViewLVCreate:
+	case ViewVMCreate, ViewVMEdit, ViewVMDelete, ViewVMSelect, ViewCPUOptions, ViewVMRunning, ViewPCIPassthrough, ViewUSBPassthrough, ViewCPUTopology, ViewVCPUPinning, ViewSSHPassword, ViewStartStopScript, ViewLVCreate, ViewMountPointWarning:
 		return true
 	}
 	return false
@@ -799,6 +799,17 @@ func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// LV create is handled earlier in MainModel.update() so it can receive
 		// asynchronous non-key messages (e.g., lvVGsLoadedMsg) reliably.
 		return m, nil
+	case ViewMountPointWarning:
+		if m.mountPointWarningModel != nil {
+			model, cmd := m.mountPointWarningModel.Update(msg)
+			if mpw, ok := model.(*MountPointWarningModel); ok {
+				m.mountPointWarningModel = mpw
+			}
+			if cmd != nil {
+				nextMsg := cmd()
+				return m.handleSubViewOutput(nextMsg)
+			}
+		}
 	case ViewVMRunning:
 		if m.vmRunningModel != nil {
 			vrm, vrmCmd := m.vmRunningModel.Update(msg)
