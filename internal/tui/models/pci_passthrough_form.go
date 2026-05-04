@@ -146,6 +146,11 @@ func (m *PCIPassthroughFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 
+	case tea.MouseMsg:
+		vp, _ := m.vp.Update(msg)
+		m.vp = vp
+		return m, nil
+
 	case PCIVFIOKernelAppliedMsg:
 		if msg.Success {
 			m.kernelMsg = "vfio-pci.ids applied to grub.cfg successfully"
@@ -179,6 +184,12 @@ func (m *PCIPassthroughFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd)
 	case "shift+tab", "up":
 		m.moveFocus(-1)
 		m.syncViewport()
+	case "pgup":
+		m.vp.HalfPageUp()
+		return m, nil
+	case "pgdown":
+		m.vp.HalfPageDown()
+		return m, nil
 	case "enter", " ":
 		return m.handleEnterOrApply()
 	}
@@ -305,7 +316,7 @@ func (m *PCIPassthroughFormModel) renderAllLines() []string {
 
 	// Footer
 	lines = append(lines, "")
-	lines = append(lines, pciMutedStyle.Render("Tab Navigate  Space/Enter Toggle/Action  ESC Cancel"))
+	lines = append(lines, pciMutedStyle.Render("Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle/Action  ESC Cancel"))
 
 	return lines
 }

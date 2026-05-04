@@ -146,7 +146,7 @@ func (m *SSHPasswordFormModel) RenderFooter() string {
 		parts = append(parts, sshPwErrorStyle.Render(m.statusMessage))
 	}
 	parts = append(parts, "")
-	parts = append(parts, sshPwMutedStyle.Render("Tab/Shift+Tab Navigate  Space/Enter Select  ESC Cancel"))
+	parts = append(parts, sshPwMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  Space/Enter Select  ESC Cancel"))
 	return strings.Join(parts, "\n")
 }
 
@@ -360,7 +360,7 @@ func (m *SSHPasswordFormModel) renderAllLines() []string {
 	if m.statusMessage != "" {
 		lines = append(lines, sshPwErrorStyle.Render(m.statusMessage), "")
 	}
-	lines = append(lines, sshPwMutedStyle.Render("Tab/Shift+Tab Navigate  Space/Enter Select  ESC Cancel"))
+	lines = append(lines, sshPwMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  Space/Enter Select  ESC Cancel"))
 	return lines
 }
 
@@ -378,6 +378,11 @@ func (m *SSHPasswordFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)
+
+	case tea.MouseMsg:
+		vp, _ := m.vp.Update(msg)
+		m.vp = vp
+		return m, nil
 
 	case sshPasswordErrorMsg:
 		m.applying = false
@@ -404,6 +409,12 @@ func (m *SSHPasswordFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.moveFocus(-1)
 	case "down":
 		m.moveFocus(1)
+	case "pgup":
+		m.vp.HalfPageUp()
+		return m, nil
+	case "pgdown":
+		m.vp.HalfPageDown()
+		return m, nil
 	case "enter", " ":
 		return m.handleEnterKey()
 	case "backspace":

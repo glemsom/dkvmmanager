@@ -121,7 +121,7 @@ func (m *CPUTopologyFormModel) renderAllLines() []string {
 	}
 
 	lines = append(lines, "")
-	lines = append(lines, cpuTopoMutedStyle.Render("↑/↓ Navigate  Space Toggle  ESC Cancel"))
+	lines = append(lines, cpuTopoMutedStyle.Render("Tab Navigate  PgUp/PgDown Scroll  Space Toggle  ESC Cancel"))
 
 	return lines
 }

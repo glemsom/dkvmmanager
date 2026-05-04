@@ -156,6 +156,11 @@ func (m *VCPUPinningFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 
+	case tea.MouseMsg:
+		vp, _ := m.vp.Update(msg)
+		m.vp = vp
+		return m, nil
+
 	case VCPUCPUKernelAppliedMsg:
 		if msg.Success {
 			if m.pinning.Enabled && len(m.pinning.Mappings) > 0 {
@@ -193,6 +198,12 @@ func (m *VCPUPinningFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "shift+tab", "up":
 		m.moveFocus(-1)
 		m.syncViewport()
+	case "pgup":
+		m.vp.HalfPageUp()
+		return m, nil
+	case "pgdown":
+		m.vp.HalfPageDown()
+		return m, nil
 	case "enter", " ":
 		return m.handleEnterOrApply()
 	}

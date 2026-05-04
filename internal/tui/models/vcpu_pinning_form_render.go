@@ -174,7 +174,7 @@ func (m *VCPUPinningFormModel) RenderFooter() string {
 
 	// Footer help text
 	parts = append(parts, "")
-	parts = append(parts, vcpuPinningMutedStyle.Render("Tab Navigate  Space/Enter Toggle/Action  ESC Cancel"))
+	parts = append(parts, vcpuPinningMutedStyle.Render("Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle/Action  ESC Cancel"))
 
 	return strings.Join(parts, "\n")
 }

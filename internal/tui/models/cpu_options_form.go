@@ -2,6 +2,8 @@
 package models
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/glemsom/dkvmmanager/internal/models"
@@ -114,6 +116,42 @@ func (m *CPUOptionsFormModel) SetSize(w, h int) {
 // SetFocused sets whether the form has keyboard focus.
 func (m *CPUOptionsFormModel) SetFocused(bool) {}
 
+// syncViewport regenerates the rendered lines and syncs the viewport.
+func (m *CPUOptionsFormModel) syncViewport() {
+	m.renderedLines = m.renderAllLines()
+	totalContent := strings.Join(m.renderedLines, "\n")
+	m.vp.SetContent(totalContent)
+	if m.focusedLineIndex() >= 0 {
+		m.vp.YOffset = form.ClampOffset(m.vp.YOffset, m.focusedLineIndex(), m.vp.Height)
+	}
+}
+
+// focusedLineIndex maps focusIndex to a rendered line index.
+func (m *CPUOptionsFormModel) focusedLineIndex() int {
+	line := 0
+	// Header + blank = 2 lines
+	line += 2
+
+	for i, p := range m.positions {
+		if i == m.focusIndex {
+			return line
+		}
+
+		switch p.Kind {
+		case form.FocusHeader:
+			line += 2 // blank + header
+		case form.FocusToggle:
+			line++
+		case form.FocusText:
+			line++
+		case form.FocusButton:
+			line++
+		}
+	}
+
+	return line
+}
+
 // --- Backward-compatible Init/Update/View ---
 
 // Init implements tea.Model (for backward compatibility).
@@ -130,6 +168,11 @@ func (m *CPUOptionsFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)
+
+	case tea.MouseMsg:
+		vp, _ := m.vp.Update(msg)
+		m.vp = vp
+		return m, nil
 
 	case cpuOptionsErrorMsg:
 		m.saving = false

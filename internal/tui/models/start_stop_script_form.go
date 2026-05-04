@@ -94,7 +94,7 @@ func (m *StartStopScriptFormModel) RenderHeader() string {
 
 // RenderFooter returns the form footer markup (help text).
 func (m *StartStopScriptFormModel) RenderFooter() string {
-	return startStopScriptMutedStyle.Render("Tab Navigate  Space/Enter Select  ESC Cancel")
+	return startStopScriptMutedStyle.Render("Tab Navigate  PgUp/PgDown Scroll  Space/Enter Select  ESC Cancel")
 }
 
 // RenderPosition returns the markup for a single position.
@@ -325,8 +325,18 @@ func (m *StartStopScriptFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.focusIndex >= len(m.positions) {
 				m.focusIndex = 0
 			}
+		case "pgup":
+			m.vp.HalfPageUp()
+			return m, nil
+		case "pgdown":
+			m.vp.HalfPageDown()
+			return m, nil
 		}
 		m.syncViewport()
+	case tea.MouseMsg:
+		vp, _ := m.vp.Update(msg)
+		m.vp = vp
+		return m, nil
 	case DirectoryLoadedMsg:
 		// Directory loaded in file browser - trigger view refresh
 		m.syncViewport()

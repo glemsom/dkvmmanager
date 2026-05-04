@@ -17,14 +17,18 @@ func (m *CPUOptionsFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
 	switch key {
-	case "tab":
+	case "tab", "down":
 		m.moveFocus(1)
-	case "shift+tab":
+		m.syncViewport()
+	case "shift+tab", "up":
 		m.moveFocus(-1)
-	case "up":
-		m.moveFocus(-1)
-	case "down":
-		m.moveFocus(1)
+		m.syncViewport()
+	case "pgup":
+		m.vp.HalfPageUp()
+		return m, nil
+	case "pgdown":
+		m.vp.HalfPageDown()
+		return m, nil
 	case "enter", " ":
 		return m.handleEnterKey()
 	case "backspace":

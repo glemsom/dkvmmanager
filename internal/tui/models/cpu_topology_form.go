@@ -233,7 +233,7 @@ func (m *CPUTopologyFormModel) RenderFooter() string {
 	}
 
 	parts = append(parts, "")
-	parts = append(parts, cpuTopoMutedStyle.Render("↑/↓ Navigate  Space Toggle  ESC Cancel"))
+	parts = append(parts, cpuTopoMutedStyle.Render("Tab Navigate  PgUp/PgDown Scroll  Space Toggle  ESC Cancel"))
 	return strings.Join(parts, "\n")
 }
 
@@ -349,6 +349,11 @@ func (m *CPUTopologyFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)
+
+	case tea.MouseMsg:
+		vp, _ := m.vp.Update(msg)
+		m.vp = vp
+		return m, nil
 	}
 	return m, nil
 }
@@ -379,6 +384,12 @@ func (m *CPUTopologyFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.moveFocus(1)
 	case "shift+tab", "up":
 		m.moveFocus(-1)
+	case "pgup":
+		m.vp.HalfPageUp()
+		return m, nil
+	case "pgdown":
+		m.vp.HalfPageDown()
+		return m, nil
 	case "enter", " ":
 		return m.handleEnterKey()
 	}

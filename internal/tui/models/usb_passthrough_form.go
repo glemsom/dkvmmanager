@@ -147,6 +147,11 @@ func (m *USBPassthroughFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)
+
+	case tea.MouseMsg:
+		vp, _ := m.vp.Update(msg)
+		m.vp = vp
+		return m, nil
 	}
 	return m, nil
 }
@@ -170,6 +175,12 @@ func (m *USBPassthroughFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd)
 	case "shift+tab", "up":
 		m.moveFocus(-1)
 		m.syncViewport()
+	case "pgup":
+		m.vp.HalfPageUp()
+		return m, nil
+	case "pgdown":
+		m.vp.HalfPageDown()
+		return m, nil
 	case "enter", " ":
 		return m.handleEnterOrSave()
 	}
@@ -285,7 +296,7 @@ func (m *USBPassthroughFormModel) renderAllLines() []string {
 
 	// Footer
 	lines = append(lines, "")
-	lines = append(lines, usbMutedStyle.Render("Tab Navigate  Space/Enter Toggle  ESC Cancel"))
+	lines = append(lines, usbMutedStyle.Render("Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle  ESC Cancel"))
 
 	return lines
 }

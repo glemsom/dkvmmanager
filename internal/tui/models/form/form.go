@@ -148,6 +148,13 @@ func (sf *ScrollableForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return sf.handleKey(msg)
 
+	case tea.MouseMsg:
+		// Forward mouse events (including wheel) to the viewport for
+		// free scrolling without changing focus.
+		vp, _ := sf.vp.Update(msg)
+		sf.vp = vp
+		return sf, nil
+
 	default:
 		// Delegate custom messages (e.g., async results) to the form
 		if hm, ok := sf.model.(handleMessage); ok {
@@ -215,6 +222,14 @@ func (sf *ScrollableForm) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		sf.syncViewport()
 		return sf, nil
 
+	case "pgup":
+		sf.vp.HalfPageUp()
+		return sf, nil
+
+	case "pgdown":
+		sf.vp.HalfPageDown()
+		return sf, nil
+
 	case " ":
 		if sh, ok := sf.model.(spaceHandler); ok {
 			pos := sf.currentPos()
@@ -272,15 +287,39 @@ func (sf *ScrollableForm) View() string {
 func (sf *ScrollableForm) syncViewport() {
 	positions := sf.model.BuildPositions()
 
+	// Build content while tracking rendered line counts per position.
+	// This is necessary because positions can render to multiple lines
+	// (e.g. buttons with blank separators), and the scroll-to-focus
+	// logic must account for actual line counts, not position indices.
 	var content strings.Builder
 	content.WriteString(sf.model.RenderHeader())
 	content.WriteString("\n")
+	headerLines := 1 // default: at least one line for the header
+	if h := sf.model.RenderHeader(); h != "" {
+		headerLines = strings.Count(h, "\n")
+		if !strings.HasSuffix(h, "\n") {
+			headerLines++ // non-terminated last line
+		}
+	}
 
+	posLineOffsets := make([]int, len(positions))
+	posLineCounts := make([]int, len(positions))
+	lineCount := headerLines
 	for i, pos := range positions {
+		posLineOffsets[i] = lineCount
 		focused := i == sf.focusIndex
 		cursorOff := sf.cursorOffset(pos.Key)
-		content.WriteString(sf.model.RenderPosition(pos, focused, cursorOff))
+		rendered := sf.model.RenderPosition(pos, focused, cursorOff)
+		content.WriteString(rendered)
 		content.WriteString("\n")
+		var n int
+		if rendered != "" {
+			n = strings.Count(rendered, "\n") + 1
+		} else {
+			n = 1
+		}
+		posLineCounts[i] = n
+		lineCount += n
 	}
 
 	content.WriteString(sf.model.RenderFooter())
@@ -288,9 +327,14 @@ func (sf *ScrollableForm) syncViewport() {
 	// Update viewport content
 	sf.vp.SetContent(content.String())
 
-	// Scroll to keep focused line visible
-	focusedLine := focusedLineIndex(positions, sf.focusIndex, 1) // +1 for header
-	sf.vp.YOffset = ClampOffset(sf.vp.YOffset, focusedLine, sf.vp.Height)
+	// Scroll to keep the focused position fully visible, using actual
+	// rendered line counts. For multi-line positions (e.g. the CPU
+	// Topology save button with summary + warning + button text), we
+	// clamp based on the last line so the entire position fits in view.
+	if sf.focusIndex >= 0 && sf.focusIndex < len(posLineOffsets) {
+		focusedLastLine := posLineOffsets[sf.focusIndex] + posLineCounts[sf.focusIndex] - 1
+		sf.vp.YOffset = ClampOffset(sf.vp.YOffset, focusedLastLine, sf.vp.Height)
+	}
 }
 
 // cursorOffset returns the cursor offset for a field key.
