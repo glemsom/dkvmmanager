@@ -151,6 +151,11 @@ func (m *MainModel) renderActiveContentWithWidth(width int) string {
 			return m.lvCreateModel.View()
 		}
 		return "Loading..."
+	case ViewMountPointWarning:
+		if m.mountPointWarningModel != nil {
+			return m.mountPointWarningModel.View()
+		}
+		return "Loading..."
 	case ViewVMRunning:
 		if m.vmRunningModel != nil {
 			return m.vmRunningModel.View()
