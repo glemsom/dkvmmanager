@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **PCI bridge detection**: New `IsBridge` field on `PCIDevice` to identify PCI-to-PCI bridges (class code `0604`), enabling better device classification in the PCI passthrough form (`internal/models/models.go`, `internal/vm/pci_scanner.go`, `internal/tui/models/pci_passthrough_form.go`)
 
 ### Changed
 

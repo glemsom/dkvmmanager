@@ -962,3 +962,94 @@ func TestPCIPassthroughFormModelInterface(t *testing.T) {
 		t.Errorf("Expected second-to-last position to be save button, got Kind=%v Key=%s", savePos.Kind, savePos.Key)
 	}
 }
+
+// TestFilterPCIBridges verifies that PCI bridge devices are filtered out
+func TestFilterPCIBridges(t *testing.T) {
+	devices := []models.PCIDevice{
+		{
+			Address:   "0000:01:00.0",
+			Name:      "NVIDIA GeForce GTX 1080",
+			ClassCode: "0300",
+			IsGPU:     true,
+		},
+		{
+			Address:   "0000:05:00.0",
+			Name:      "Intel Corporation 82801 PCI Bridge",
+			ClassCode: "0604",
+			IsBridge:  true,
+		},
+		{
+			Address:   "0000:00:14.0",
+			Name:      "Intel USB 3.0 xHCI Controller",
+			ClassCode: "0c03",
+			IsUSB:     true,
+		},
+		{
+			Address:   "0000:06:00.0",
+			Name:      "PCIe Switch Downstream Port",
+			ClassCode: "0604",
+			IsBridge:  true,
+		},
+	}
+
+	filtered := filterPCIBridges(devices)
+
+	// Should have removed 2 bridges, leaving 2 end devices
+	if len(filtered) != 2 {
+		t.Errorf("Expected 2 non-bridge devices, got %d", len(filtered))
+	}
+
+	// Verify remaining devices are non-bridges
+	for _, d := range filtered {
+		if d.IsBridge {
+			t.Errorf("Filtered list should not contain bridge device %s", d.Address)
+		}
+	}
+
+	// Verify correct devices remain
+	addrs := make(map[string]bool)
+	for _, d := range filtered {
+		addrs[d.Address] = true
+	}
+	if !addrs["0000:01:00.0"] {
+		t.Error("GPU device should be present after filtering")
+	}
+	if !addrs["0000:00:14.0"] {
+		t.Error("USB controller should be present after filtering")
+	}
+	if addrs["0000:05:00.0"] {
+		t.Error("PCI bridge should be removed by filtering")
+	}
+	if addrs["0000:06:00.0"] {
+		t.Error("PCIe Switch Downstream Port should be removed by filtering")
+	}
+}
+
+// TestFilterPCIBridgesEmptyAndAllBridges verifies edge cases
+func TestFilterPCIBridgesEmptyAndAllBridges(t *testing.T) {
+	// Empty input
+	filtered := filterPCIBridges([]models.PCIDevice{})
+	if len(filtered) != 0 {
+		t.Errorf("Empty input should yield empty output, got %d devices", len(filtered))
+	}
+
+	// All bridges
+	allBridges := []models.PCIDevice{
+		{Address: "0000:01:00.0", ClassCode: "0604", IsBridge: true},
+		{Address: "0000:02:00.0", ClassCode: "0604", IsBridge: true},
+	}
+	filtered = filterPCIBridges(allBridges)
+	if len(filtered) != 0 {
+		t.Errorf("All-bridges input should yield empty output, got %d devices", len(filtered))
+	}
+
+	// No bridges
+	noBridges := []models.PCIDevice{
+		{Address: "0000:01:00.0", ClassCode: "0300", IsGPU: true},
+		{Address: "0000:02:00.0", ClassCode: "0c03", IsUSB: true},
+	}
+	filtered = filterPCIBridges(noBridges)
+	if len(filtered) != 2 {
+		t.Errorf("No-bridges input should keep all 2 devices, got %d", len(filtered))
+	}
+}

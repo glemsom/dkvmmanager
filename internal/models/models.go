@@ -35,6 +35,7 @@ type PCIDevice struct {
 	Name       string `json:"name" yaml:"name"`               // e.g., "NVIDIA GeForce GTX 1080"
 	IsGPU      bool   `json:"is_gpu" yaml:"is_gpu"`           // True if VGA/GPU device
 	IsUSB      bool   `json:"is_usb" yaml:"is_usb"`           // True if USB controller
+	IsBridge   bool   `json:"is_bridge" yaml:"is_bridge"`     // True if PCI bridge (switch/root port)
 	IOMMUGroup int    `json:"iommu_group" yaml:"iommu_group"` // IOMMU group number, -1 if none
 }
 

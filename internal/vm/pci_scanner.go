@@ -93,6 +93,8 @@ func (s *PCIScanner) parseLspciOutput(output string) []models.PCIDevice {
 		isGPU := classCode == "0300" || classCode == "0302" || classCode == "0380"
 		// Class 0c03 = USB controller
 		isUSB := classCode == "0c03"
+		// Class 0604 = PCI-to-PCI bridge (PCIe switch ports, root ports, downstream ports)
+		isBridge := classCode == "0604"
 
 		devices = append(devices, models.PCIDevice{
 			Address:    addr,
@@ -102,6 +104,7 @@ func (s *PCIScanner) parseLspciOutput(output string) []models.PCIDevice {
 			Name:       name,
 			IsGPU:      isGPU,
 			IsUSB:      isUSB,
+			IsBridge:   isBridge,
 			IOMMUGroup: -1, // Will be filled by IOMMU lookup
 		})
 	}

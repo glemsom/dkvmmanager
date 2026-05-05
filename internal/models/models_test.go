@@ -51,6 +51,7 @@ func TestPCIDeviceFields(t *testing.T) {
 		Name:       "NVIDIA GeForce GTX 1080",
 		IsGPU:      true,
 		IsUSB:      false,
+		IsBridge:   false,
 		IOMMUGroup: 1,
 	}
 
@@ -74,6 +75,9 @@ func TestPCIDeviceFields(t *testing.T) {
 	}
 	if pci.IsUSB {
 		t.Errorf("PCIDevice.IsUSB = %v, want false", pci.IsUSB)
+	}
+	if pci.IsBridge {
+		t.Errorf("PCIDevice.IsBridge = %v, want false", pci.IsBridge)
 	}
 	if pci.IOMMUGroup != 1 {
 		t.Errorf("PCIDevice.IOMMUGroup = %v, want 1", pci.IOMMUGroup)

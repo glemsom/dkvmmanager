@@ -12,6 +12,18 @@ import (
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
+// filterPCIBridges removes PCI bridge devices (switch ports, root ports) from the list.
+// Bridges should never be passed through directly — only end devices are valid targets.
+func filterPCIBridges(devices []models.PCIDevice) []models.PCIDevice {
+	var filtered []models.PCIDevice
+	for _, d := range devices {
+		if !d.IsBridge {
+			filtered = append(filtered, d)
+		}
+	}
+	return filtered
+}
+
 // PCIPassthroughFormModel is a scrollable form for editing PCI passthrough config.
 // It implements the form.FormModel interface for use with ScrollableForm.
 type PCIPassthroughFormModel struct {
@@ -68,7 +80,7 @@ func NewPCIPassthroughFormModel(vmManager *vm.Manager) (*PCIPassthroughFormModel
 
 	m := &PCIPassthroughFormModel{
 		vmManager:   vmManager,
-		devices:     allDevices,
+		devices:     filterPCIBridges(allDevices),
 		config:      cfg,
 		selected:    selected,
 		errors:      make(map[string]string),

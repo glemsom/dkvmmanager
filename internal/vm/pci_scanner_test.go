@@ -15,11 +15,12 @@ func TestPCIScannerParseLspciOutput(t *testing.T) {
 0000:01:00.1 Audio device [0403]: Advanced Micro Devices, Inc. [AMD/ATI] Navi 48 HDMI/DP Audio [1002:ab28]
 0000:00:1f.3 Audio device [0403]: Intel Corporation 100 Series/C230 Series Chipset Family HD Audio Controller [8086:a170] (rev 31)
 0000:00:14.0 USB controller [0c03]: Intel Corporation 100 Series/C230 Series Chipset Family USB xHCI [8086:a12f] (rev 31)
-0000:03:00.0 Non-Volatile memory controller [0108]: Samsung Electronics Co Ltd NVMe SSD Controller SM981/PM981/PM983 [144d:a808]`
+0000:03:00.0 Non-Volatile memory controller [0108]: Samsung Electronics Co Ltd NVMe SSD Controller SM981/PM981/PM983 [144d:a808]
+0000:05:00.0 PCI bridge [0604]: Intel Corporation 82801 PCI Bridge [8086:244e] (rev f1)`
 
 	devices := scanner.parseLspciOutput(lspciOutput)
 
-	if len(devices) != 6 {
+	if len(devices) != 7 {
 		t.Fatalf("Expected 6 devices, got %d", len(devices))
 	}
 
@@ -96,6 +97,27 @@ func TestPCIScannerParseLspciOutput(t *testing.T) {
 	}
 	if nvme.IsUSB {
 		t.Error("NVMe IsUSB should be false")
+	}
+	if nvme.IsBridge {
+		t.Error("NVMe IsBridge should be false")
+	}
+
+	// PCI Bridge (PCIe Switch Downstream Port)
+	bridge := devices[6]
+	if bridge.Address != "0000:05:00.0" {
+		t.Errorf("Bridge address = %s, want 0000:05:00.0", bridge.Address)
+	}
+	if bridge.ClassCode != "0604" {
+		t.Errorf("Bridge class = %s, want 0604", bridge.ClassCode)
+	}
+	if !bridge.IsBridge {
+		t.Error("PCI bridge IsBridge should be true")
+	}
+	if bridge.IsGPU {
+		t.Error("PCI bridge IsGPU should be false")
+	}
+	if bridge.IsUSB {
+		t.Error("PCI bridge IsUSB should be false")
 	}
 }
 
