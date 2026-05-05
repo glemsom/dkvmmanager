@@ -12,18 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-05-05
+
 ### Added
 - **PCI bridge detection**: New `IsBridge` field on `PCIDevice` to identify PCI-to-PCI bridges (class code `0604`), enabling better device classification in the PCI passthrough form (`internal/models/models.go`, `internal/vm/pci_scanner.go`, `internal/tui/models/pci_passthrough_form.go`)
-
-### Changed
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [0.1.10] - 2026-05-04
 
@@ -177,7 +169,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.10...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.11...HEAD
+[0.1.11]: https://github.com/glemsom/dkvmmanager/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/glemsom/dkvmmanager/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/glemsom/dkvmmanager/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/glemsom/dkvmmanager/compare/v0.1.7...v0.1.8
