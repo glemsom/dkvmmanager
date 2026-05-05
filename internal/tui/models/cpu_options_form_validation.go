@@ -55,13 +55,13 @@ func (m *CPUOptionsFormModel) saveWithValidation() error {
 	m.clearErrors()
 
 	// Validate VendorID
-	if err := m.validateField("VendorID", m.options.VendorID); err != "" {
+	if err := m.validateField("VendorID", m.getTextValue("VendorID")); err != "" {
 		m.setError("VendorID", err)
 		return fmt.Errorf("VendorID: %s", err)
 	}
 
-	// Save to VM manager
-	if err := m.vmManager.SaveCPUOptions(m.options); err != nil {
+	// Save to VM manager (dereference pointer)
+	if err := m.vmManager.SaveCPUOptions(*m.options); err != nil {
 		return fmt.Errorf("failed to save: %w", err)
 	}
 

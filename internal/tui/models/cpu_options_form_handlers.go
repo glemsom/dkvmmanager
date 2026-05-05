@@ -108,7 +108,7 @@ func (m *CPUOptionsFormModel) handleCharInput(ch string) {
 func (m *CPUOptionsFormModel) validateAndSaveCmd() (tea.Model, tea.Cmd) {
 	m.errors = make(map[string]string)
 
-	if err := m.vmManager.SaveCPUOptions(m.options); err != nil {
+	if err := m.vmManager.SaveCPUOptions(*m.options); err != nil {
 		m.errors["save"] = fmt.Sprintf("Failed to save: %v", err)
 		return m, nil
 	}
@@ -127,7 +127,7 @@ func (m *CPUOptionsFormModel) HandleEnter(pos form.FocusPos) (form.FormResult, t
 	case form.FocusButton:
 		if pos.Key == "save" {
 			m.errors = make(map[string]string)
-			if err := m.vmManager.SaveCPUOptions(m.options); err != nil {
+			if err := m.vmManager.SaveCPUOptions(*m.options); err != nil {
 				m.errors["save"] = fmt.Sprintf("Failed to save: %v", err)
 				return form.ResultNone, nil
 			}

@@ -730,8 +730,10 @@ func TestScrollableForm_HeaderLines_NoTrailingNewline(t *testing.T) {
 	sf.SetSize(40, 20)
 
 	// Position should start at line 3 (0-indexed)
-	pos := sf.vp.YContent()
-	_ = pos // Just verifying no crash; content is built correctly
+	// Verify viewport was initialized and content set without crashing
+	if !sf.Ready() {
+		t.Fatal("expected viewport to be ready after SetSize")
+	}
 }
 
 func TestScrollableForm_HeaderLines_WithTrailingNewline(t *testing.T) {
@@ -747,6 +749,8 @@ func TestScrollableForm_HeaderLines_WithTrailingNewline(t *testing.T) {
 
 	// Position should start at line 3 (0-indexed), NOT line 4
 	// The fix ensures strings.Count + hasSuffix logic handles this correctly
-	pos := sf.vp.YContent()
-	_ = pos
+	// Verify viewport was initialized and content set without crashing
+	if !sf.Ready() {
+		t.Fatal("expected viewport to be ready after SetSize")
+	}
 }

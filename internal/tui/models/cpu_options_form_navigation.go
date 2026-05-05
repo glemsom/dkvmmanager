@@ -41,7 +41,7 @@ func (m *CPUOptionsFormModel) BuildPositions() []form.FocusPos {
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVFrequency"},
 	})
 	positions = append(positions, form.FocusPos{
-		Kind: form.FocusToggle, Label: "Disable watchdog timeouts", Key: "HVRelaxed",
+		Kind: form.FocusToggle, Label: "Relaxed timing checks", Key: "HVRelaxed",
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVRelaxed"},
 	})
 	positions = append(positions, form.FocusPos{
@@ -49,7 +49,7 @@ func (m *CPUOptionsFormModel) BuildPositions() []form.FocusPos {
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVReset"},
 	})
 	positions = append(positions, form.FocusPos{
-		Kind: form.FocusToggle, Label: "Track stolen CPU time", Key: "HVRuntime",
+		Kind: form.FocusToggle, Label: "Hypervisor runtime info", Key: "HVRuntime",
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVRuntime"},
 	})
 	positions = append(positions, form.FocusPos{
@@ -65,7 +65,7 @@ func (m *CPUOptionsFormModel) BuildPositions() []form.FocusPos {
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVSyncIC"},
 	})
 	positions = append(positions, form.FocusPos{
-		Kind: form.FocusToggle, Label: "Fast clocksources", Key: "HVTime",
+		Kind: form.FocusToggle, Label: "Reference TSC page", Key: "HVTime",
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVTime"},
 	})
 	positions = append(positions, form.FocusPos{
@@ -77,7 +77,7 @@ func (m *CPUOptionsFormModel) BuildPositions() []form.FocusPos {
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVVPIndex"},
 	})
 	positions = append(positions, form.FocusPos{
-		Kind: form.FocusToggle, Label: "No non-arch core sharing", Key: "HVNoNonarchCoresharing",
+		Kind: form.FocusToggle, Label: "SMT perf counter isolation", Key: "HVNoNonarchCoresharing",
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVNoNonarchCoresharing"},
 	})
 	positions = append(positions, form.FocusPos{
@@ -93,7 +93,7 @@ func (m *CPUOptionsFormModel) BuildPositions() []form.FocusPos {
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVIPI"},
 	})
 	positions = append(positions, form.FocusPos{
-		Kind: form.FocusToggle, Label: "Hardware APIC virtualization", Key: "HVAVIC",
+		Kind: form.FocusToggle, Label: "Hyper-V nested APIC virt", Key: "HVAVIC",
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "HVAVIC"},
 	})
 
@@ -116,7 +116,7 @@ func (m *CPUOptionsFormModel) BuildPositions() []form.FocusPos {
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "X2APIC"},
 	})
 	positions = append(positions, form.FocusPos{
-		Kind: form.FocusToggle, Label: "Disable vCPU migration", Key: "Migratable",
+		Kind: form.FocusToggle, Label: "Expose all host features (no live migration)", Key: "Migratable",
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "Migratable"},
 	})
 	positions = append(positions, form.FocusPos{
@@ -128,7 +128,7 @@ func (m *CPUOptionsFormModel) BuildPositions() []form.FocusPos {
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "RTCUTC"},
 	})
 	positions = append(positions, form.FocusPos{
-		Kind: form.FocusToggle, Label: "CPU Power Management", Key: "CPUPM",
+		Kind: form.FocusToggle, Label: "Allow guest C/P-state control", Key: "CPUPM",
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "CPUPM"},
 	})
 

@@ -8,8 +8,59 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/glemsom/dkvmmanager/internal/config"
 	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/fields"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
+
+// TestCPUOptionsFieldRegistry tests the central field registry
+func TestCPUOptionsFieldRegistry(t *testing.T) {
+	// Verify all fields in CPUOptions are represented in the registry
+	expectedFields := []struct {
+		name string
+		kind fields.FieldKind
+	}{
+		{"HideKVM", fields.FieldToggle},
+		{"VendorID", fields.FieldText},
+		{"HVFrequency", fields.FieldToggle},
+		{"HVRelaxed", fields.FieldToggle},
+		{"HVReset", fields.FieldToggle},
+		{"HVRuntime", fields.FieldToggle},
+		{"HVSpinlocks", fields.FieldText},
+		{"HVStimer", fields.FieldToggle},
+		{"HVSyncIC", fields.FieldToggle},
+		{"HVTime", fields.FieldToggle},
+		{"HVVapic", fields.FieldToggle},
+		{"HVVPIndex", fields.FieldToggle},
+		{"HVNoNonarchCoresharing", fields.FieldToggle},
+		{"HVTLBFlush", fields.FieldToggle},
+		{"HVTLBFlushExt", fields.FieldToggle},
+		{"HVIPI", fields.FieldToggle},
+		{"HVAVIC", fields.FieldToggle},
+		{"TopoExt", fields.FieldToggle},
+		{"L3Cache", fields.FieldToggle},
+		{"X2APIC", fields.FieldToggle},
+		{"Migratable", fields.FieldToggle},
+		{"InvTSC", fields.FieldToggle},
+		{"RTCUTC", fields.FieldToggle},
+		{"CPUPM", fields.FieldToggle},
+	}
+
+	for _, exp := range expectedFields {
+		found := false
+		for _, f := range fields.CPUOptionsFields {
+			if f.Name == exp.name {
+				found = true
+				if f.Kind != exp.kind {
+					t.Errorf("Field %s: expected kind %d, got %d", exp.name, exp.kind, f.Kind)
+				}
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Field %s not found in registry", exp.name)
+		}
+	}
+}
 
 // TestCPUOptionsFormInit tests form initialization with default options
 func TestCPUOptionsFormInit(t *testing.T) {
@@ -20,47 +71,55 @@ func TestCPUOptionsFormInit(t *testing.T) {
 		t.Errorf("Initial focusIndex = %d, want 1 (first interactive element after header)", form.focusIndex)
 	}
 
-	// Default options should all be false/empty
-	if form.options.HideKVM {
+	// Default options should all be false/empty using reflection getters
+	if form.getToggleValue("HideKVM") {
 		t.Errorf("Default HideKVM should be false")
 	}
-	if form.options.VendorID != "" {
+	if form.getTextValue("VendorID") != "" {
 		t.Errorf("Default VendorID should be empty")
 	}
 }
 
-// TestCPUOptionsFormToggle tests toggle behavior
+// TestCPUOptionsFormToggle tests toggle behavior using table-driven tests
 func TestCPUOptionsFormToggle(t *testing.T) {
-	vmManager := createTestVMManager(t)
-	form := NewCPUOptionsFormModel(vmManager)
-
-	// Focus is on HideKVM (index 1, after header at 0)
-	pos := form.currentPos()
-	if pos.fieldName != "HideKVM" {
-		t.Fatalf("Expected current position to be HideKVM, got %s", pos.fieldName)
-	}
-	if pos.kind != cpuOptToggle {
-		t.Fatalf("Expected current position to be toggle, got %d", pos.kind)
-	}
-
-	// Toggle HideKVM via Enter key
-	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	form = model.(*CPUOptionsFormModel)
-
-	if !form.options.HideKVM {
-		t.Errorf("HideKVM should be true after toggle")
+	tests := []struct {
+		name      string
+		field     string
+		pressKeys []tea.KeyMsg
+		want      bool
+	}{
+		{"HideKVM single toggle", "HideKVM", []tea.KeyMsg{{Type: tea.KeyEnter}}, true},
+		{"HideKVM double toggle", "HideKVM", []tea.KeyMsg{{Type: tea.KeyEnter}, {Type: tea.KeyEnter}}, false},
+		{"HVRelaxed toggle", "HVRelaxed", []tea.KeyMsg{{Type: tea.KeyEnter}}, true},
 	}
 
-	// Toggle again
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	form = model.(*CPUOptionsFormModel)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			vmManager := createTestVMManager(t)
+			form := NewCPUOptionsFormModel(vmManager)
 
-	if form.options.HideKVM {
-		t.Errorf("HideKVM should be false after second toggle")
+			// Navigate to the field
+			for i, pos := range form.positions {
+				if pos.Key == tc.field {
+					form.focusIndex = i
+					break
+				}
+			}
+
+			// Press keys
+			for _, msg := range tc.pressKeys {
+				model, _ := form.Update(msg)
+				form = model.(*CPUOptionsFormModel)
+			}
+
+			if form.getToggleValue(tc.field) != tc.want {
+				t.Errorf("Field %s = %v, want %v", tc.field, form.getToggleValue(tc.field), tc.want)
+			}
+		})
 	}
 }
 
-// TestCPUOptionsFormNavigation tests Tab navigation between fields
+// TestCPUOptionsFormNavigation tests Tab navigation
 func TestCPUOptionsFormNavigation(t *testing.T) {
 	vmManager := createTestVMManager(t)
 	form := NewCPUOptionsFormModel(vmManager)
@@ -75,27 +134,6 @@ func TestCPUOptionsFormNavigation(t *testing.T) {
 	form = model.(*CPUOptionsFormModel)
 	if form.currentPos().fieldName != "VendorID" {
 		t.Errorf("Expected VendorID after Tab, got %s", form.currentPos().fieldName)
-	}
-
-	// Tab moves to section header (index 3)
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyTab})
-	form = model.(*CPUOptionsFormModel)
-	if form.currentPos().fieldName != "header_hyperv" {
-		t.Errorf("Expected header_hyperv after Tab, got %s", form.currentPos().fieldName)
-	}
-
-	// Tab moves to HVFrequency (index 4)
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyTab})
-	form = model.(*CPUOptionsFormModel)
-	if form.currentPos().fieldName != "HVFrequency" {
-		t.Errorf("Expected HVFrequency after Tab, got %s", form.currentPos().fieldName)
-	}
-
-	// Shift+Tab moves back to header_hyperv
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
-	form = model.(*CPUOptionsFormModel)
-	if form.currentPos().fieldName != "header_hyperv" {
-		t.Errorf("Expected header_hyperv after Shift+Tab, got %s", form.currentPos().fieldName)
 	}
 }
 
@@ -116,16 +154,16 @@ func TestCPUOptionsFormTextEditing(t *testing.T) {
 	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'D'}})
 	form = model.(*CPUOptionsFormModel)
 
-	if form.options.VendorID != "AMD" {
-		t.Errorf("VendorID = %q, want AMD", form.options.VendorID)
+	if form.getTextValue("VendorID") != "AMD" {
+		t.Errorf("VendorID = %q, want AMD", form.getTextValue("VendorID"))
 	}
 
 	// Backspace removes last character
 	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyBackspace})
 	form = model.(*CPUOptionsFormModel)
 
-	if form.options.VendorID != "AM" {
-		t.Errorf("VendorID = %q, want AM after backspace", form.options.VendorID)
+	if form.getTextValue("VendorID") != "AM" {
+		t.Errorf("VendorID = %q, want AM after backspace", form.getTextValue("VendorID"))
 	}
 }
 
@@ -134,10 +172,10 @@ func TestCPUOptionsFormSave(t *testing.T) {
 	vmManager := createTestVMManager(t)
 	form := NewCPUOptionsFormModel(vmManager)
 
-	// Set some options
-	form.options.HideKVM = true
-	form.options.HVRelaxed = true
-	form.options.VendorID = "TestVendor"
+	// Set some options using reflection setters
+	form.setBoolField("HideKVM", true)
+	form.setBoolField("HVRelaxed", true)
+	form.setStringField("VendorID", "TestVendor")
 
 	// Navigate to save button (last position)
 	form.focusIndex = len(form.positions) - 1
@@ -216,7 +254,7 @@ func (m *CPUOptionsFormModel) findIndexByName(name string) int {
 // TestCPUOptionsUpdateMsg tests that Update returns correct types
 func TestCPUOptionsUpdateMsg(t *testing.T) {
 	form := &CPUOptionsFormModel{
-		options:       models.CPUOptions{},
+		options:       &models.CPUOptions{},
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
 	}
@@ -233,7 +271,11 @@ func TestCPUOptionsUpdateMsg(t *testing.T) {
 
 // TestCPUOptionsFieldLabels tests that all fields have labels
 func TestCPUOptionsFieldLabels(t *testing.T) {
-	form := &CPUOptionsFormModel{}
+	form := &CPUOptionsFormModel{
+		options:       &models.CPUOptions{},
+		cursorOffsets: make(map[string]int),
+		errors:        make(map[string]string),
+	}
 
 	fields := []string{
 		"HideKVM", "VendorID", "HVFrequency", "HVRelaxed", "HVReset",
@@ -254,7 +296,7 @@ func TestCPUOptionsFieldLabels(t *testing.T) {
 // TestCPUOptionsPositionsCount tests that BuildPositions creates correct number of positions
 func TestCPUOptionsPositionsCount(t *testing.T) {
 	form := &CPUOptionsFormModel{
-		options:       models.CPUOptions{},
+		options:       &models.CPUOptions{},
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
 	}

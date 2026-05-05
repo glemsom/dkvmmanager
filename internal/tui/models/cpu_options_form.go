@@ -2,11 +2,13 @@
 package models
 
 import (
+	"reflect"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/fields"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -15,7 +17,7 @@ import (
 // It implements the form.FormModel interface for use with ScrollableForm.
 type CPUOptionsFormModel struct {
 	vmManager *vm.Manager
-	options   models.CPUOptions
+	options   *models.CPUOptions
 
 	// Focus state
 	positions  []form.FocusPos
@@ -48,7 +50,7 @@ func NewCPUOptionsFormModel(vmManager *vm.Manager) *CPUOptionsFormModel {
 	opts, _ := vmManager.GetCPUOptions()
 	m := &CPUOptionsFormModel{
 		vmManager:     vmManager,
-		options:       opts,
+		options:       &opts,
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
 	}
@@ -56,6 +58,42 @@ func NewCPUOptionsFormModel(vmManager *vm.Manager) *CPUOptionsFormModel {
 	// Start focus at first interactive element (skip section header)
 	m.focusIndex = 1
 	return m
+}
+
+// getBoolField returns a boolean field value by name using reflection.
+func (m *CPUOptionsFormModel) getBoolField(name string) bool {
+	v := reflect.ValueOf(m.options).Elem().FieldByName(name)
+	if !v.IsValid() {
+		panic("field not found: " + name)
+	}
+	return v.Bool()
+}
+
+// setBoolField sets a boolean field value by name using reflection.
+func (m *CPUOptionsFormModel) setBoolField(name string, val bool) {
+	v := reflect.ValueOf(m.options).Elem().FieldByName(name)
+	if !v.IsValid() {
+		panic("field not found: " + name)
+	}
+	v.SetBool(val)
+}
+
+// getStringField returns a string field value by name using reflection.
+func (m *CPUOptionsFormModel) getStringField(name string) string {
+	v := reflect.ValueOf(m.options).Elem().FieldByName(name)
+	if !v.IsValid() {
+		panic("field not found: " + name)
+	}
+	return v.String()
+}
+
+// setStringField sets a string field value by name using reflection.
+func (m *CPUOptionsFormModel) setStringField(name string, val string) {
+	v := reflect.ValueOf(m.options).Elem().FieldByName(name)
+	if !v.IsValid() {
+		panic("field not found: " + name)
+	}
+	v.SetString(val)
 }
 
 // cursorOffset returns the cursor offset for the given position key.
@@ -197,4 +235,34 @@ func (m *CPUOptionsFormModel) View() string {
 	}
 	m.vp.SetContent(totalContent)
 	return m.vp.View()
+}
+
+// getToggleValue returns the boolean value for a toggle field (uses reflection).
+func (m *CPUOptionsFormModel) getToggleValue(fieldName string) bool {
+	return m.getBoolField(fieldName)
+}
+
+// toggleValue toggles a boolean field (uses reflection).
+func (m *CPUOptionsFormModel) toggleValue(fieldName string) {
+	m.setBoolField(fieldName, !m.getBoolField(fieldName))
+}
+
+// getTextValue returns the text value for a field (uses reflection).
+func (m *CPUOptionsFormModel) getTextValue(fieldName string) string {
+	return m.getStringField(fieldName)
+}
+
+// setTextValue sets the text value for a field (uses reflection).
+func (m *CPUOptionsFormModel) setTextValue(fieldName string, val string) {
+	m.setStringField(fieldName, val)
+}
+
+// getFieldKind returns the field kind for a given field name from the registry.
+func getFieldKind(name string) fields.FieldKind {
+	for _, f := range fields.CPUOptionsFields {
+		if f.Name == name {
+			return f.Kind
+		}
+	}
+	return fields.FieldToggle // default
 }
