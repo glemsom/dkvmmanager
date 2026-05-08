@@ -265,7 +265,7 @@ func newTestVCPUPinningFormModel(t *testing.T) *VCPUPinningFormModel {
 	vmManager := createTestVMManager(t)
 
 	// Try the real constructor (may fail without real CPU topology hardware)
-	formModel, err := NewVCPUPinningFormModel(vmManager)
+	formModel, err := NewVCPUPinningFormModel(vmManager, vmManager.Repository())
 	if err == nil {
 		formModel.focusIndex = 0
 		formModel.pinning.Enabled = false

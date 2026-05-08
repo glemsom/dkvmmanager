@@ -21,6 +21,7 @@ type VCPUCPUKernelAppliedMsg struct {
 // It implements the form.FormModel interface for use with ScrollableForm.
 type VCPUPinningFormModel struct {
 	vmManager *vm.Manager
+	repo      *vm.Repository
 
 	// Host topology data (read-only, for display)
 	hostTopo models.HostCPUTopology
@@ -56,19 +57,19 @@ type VCPUPinningFormModel struct {
 }
 
 // NewVCPUPinningFormModel creates a new vCPU pinning form model
-func NewVCPUPinningFormModel(vmManager *vm.Manager) (*VCPUPinningFormModel, error) {
+func NewVCPUPinningFormModel(vmManager *vm.Manager, repo *vm.Repository) (*VCPUPinningFormModel, error) {
 	// Scan host topology
 	scanner := vm.NewCPUScanner()
 	hostTopo, scanErr := scanner.ScanTopology()
 
 	// Load global CPU topology config (needed to compute pinning)
-	topology, err := vmManager.GetCPUTopology()
+	topology, err := repo.GetCPUTopology()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load CPU topology: %w", err)
 	}
 
 	// Load global vCPU pinning config
-	pinning, err := vmManager.GetVCPUPinningGlobal()
+	pinning, err := repo.GetVCPUPinningGlobal()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load vcpu pinning: %w", err)
 	}
@@ -78,12 +79,13 @@ func NewVCPUPinningFormModel(vmManager *vm.Manager) (*VCPUPinningFormModel, erro
 		pinning, err = vm.ComputePinningFromTopology(topology, hostTopo)
 		if err != nil {
 			// Fall back to saved config, will show warning
-			pinning, _ = vmManager.GetVCPUPinningGlobal()
+			pinning, _ = repo.GetVCPUPinningGlobal()
 		}
 	}
 
 	m := &VCPUPinningFormModel{
 		vmManager: vmManager,
+		repo:      repo,
 		hostTopo:  hostTopo,
 		topology:  topology,
 		pinning:   pinning,

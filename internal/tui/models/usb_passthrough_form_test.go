@@ -26,11 +26,12 @@ func newTestUSBForm(t *testing.T) *USBPassthroughFormModel {
 	t.Helper()
 	vmManager := createTestVMManager(t)
 
-	formModel, err := NewUSBPassthroughFormModel(vmManager)
+	formModel, err := NewUSBPassthroughFormModel(vmManager.Repository(), &noopHostDiscovery{})
 	if err != nil {
 		// In CI, real scanning may fail; construct form manually with mock devices
 		formModel = &USBPassthroughFormModel{
-			vmManager: vmManager,
+			repo:          vmManager.Repository(),
+			hostDiscovery: &noopHostDiscovery{},
 			devices:   mockUSBDevices(),
 			selected:  make(map[string]bool),
 			errors:    make(map[string]string),
@@ -54,11 +55,12 @@ func newTestUSBForm(t *testing.T) *USBPassthroughFormModel {
 func TestUSBPassthroughFormModelInterface(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
-	m, err := NewUSBPassthroughFormModel(vmManager)
+	m, err := NewUSBPassthroughFormModel(vmManager.Repository(), &noopHostDiscovery{})
 	if err != nil {
 		// In CI, real scanning may fail; construct manually
 		m = &USBPassthroughFormModel{
-			vmManager: vmManager,
+			repo:          vmManager.Repository(),
+			hostDiscovery: &noopHostDiscovery{},
 			devices:   mockUSBDevices(),
 			selected:  make(map[string]bool),
 			errors:    make(map[string]string),
@@ -339,7 +341,8 @@ func TestUSBViewShowsNoDevicesMessage(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
 	m := &USBPassthroughFormModel{
-		vmManager: vmManager,
+		repo:          vmManager.Repository(),
+		hostDiscovery: &noopHostDiscovery{},
 		devices:   []models.USBDevice{},
 		selected:  make(map[string]bool),
 		errors:    make(map[string]string),
@@ -391,7 +394,8 @@ func TestUSBFormEmptyDevices(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
 	m := &USBPassthroughFormModel{
-		vmManager: vmManager,
+		repo:          vmManager.Repository(),
+		hostDiscovery: &noopHostDiscovery{},
 		devices:   []models.USBDevice{},
 		selected:  make(map[string]bool),
 		errors:    make(map[string]string),

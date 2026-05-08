@@ -82,6 +82,12 @@ type MainModel struct {
 	// VM manager
 	vmManager *vm.Manager
 
+	// Config repository for persistence operations (CPU options, PCI/USB passthrough, etc.)
+	configRepo *vm.Repository
+
+	// Host discovery for hardware scanning
+	hostDiscovery vm.HostDiscovery
+
 	// Menu state
 	selectedIndex int
 	menuItems     []MenuItem

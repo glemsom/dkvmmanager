@@ -51,14 +51,16 @@ func setupEditModel(t *testing.T) *MainModel {
 	tabModel := components.NewTabModel()
 
 	return &MainModel{
-		currentView:  ViewVMEdit,
-		vmManager:    mgr,
-		vmEditModel:  editModel,
-		tabModel:     tabModel,
-		windowWidth:  80,
-		windowHeight: 24,
-		breadcrumbs:  components.NewBreadcrumbs(),
-		statusBar:    components.NewStatusBar(),
+		currentView:   ViewVMEdit,
+		vmManager:     mgr,
+		configRepo:    mgr.Repository(),
+		hostDiscovery: &vm.DefaultHostDiscovery{},
+		vmEditModel:   editModel,
+		tabModel:      tabModel,
+		windowWidth:   80,
+		windowHeight:  24,
+		breadcrumbs:   components.NewBreadcrumbs(),
+		statusBar:     components.NewStatusBar(),
 	}
 }
 

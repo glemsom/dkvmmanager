@@ -133,7 +133,7 @@ func (m *MainModel) handleStartStopScriptFormEnter() (tea.Model, tea.Cmd) {
 			switch pos.Key {
 			case "save":
 				// Save the configuration
-				if err := m.vmManager.SaveStartStopScript(sf.config); err != nil {
+				if err := m.configRepo.SaveStartStopScript(sf.config); err != nil {
 					m.statusMessage = "Error saving start/stop script config: " + err.Error()
 				} else {
 					m.statusMessage = "Start/Stop script configuration saved"

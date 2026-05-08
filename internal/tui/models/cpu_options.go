@@ -25,8 +25,8 @@ type CPUOptionsModel struct {
 }
 
 // NewCPUOptionsModel creates a new CPU options model
-func NewCPUOptionsModel(vmManager *vm.Manager) *CPUOptionsModel {
-	fm := NewCPUOptionsFormModel(vmManager)
+func NewCPUOptionsModel(repo *vm.Repository) *CPUOptionsModel {
+	fm := NewCPUOptionsFormModel(repo)
 	return &CPUOptionsModel{
 		form: form.NewScrollableForm(fm),
 	}

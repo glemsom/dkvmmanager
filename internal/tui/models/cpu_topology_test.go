@@ -10,7 +10,7 @@ import (
 func TestCPUTopologyModelInit(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
-	model, err := NewCPUTopologyModel(vmManager)
+	model, err := NewCPUTopologyModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("NewCPUTopologyModel returned error: %v", err)
 	}
@@ -29,7 +29,7 @@ func TestCPUTopologyModelInit(t *testing.T) {
 func TestCPUTopologyModelUpdate(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
-	model, err := NewCPUTopologyModel(vmManager)
+	model, err := NewCPUTopologyModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("NewCPUTopologyModel returned error: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestCPUTopologyModelUpdate(t *testing.T) {
 func TestCPUTopologyModelView(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
-	model, err := NewCPUTopologyModel(vmManager)
+	model, err := NewCPUTopologyModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("NewCPUTopologyModel returned error: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestCPUTopologyModelView(t *testing.T) {
 func TestCPUTopologyFormAccessor(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
-	model, err := NewCPUTopologyModel(vmManager)
+	model, err := NewCPUTopologyModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("NewCPUTopologyModel returned error: %v", err)
 	}

@@ -91,6 +91,14 @@ func TestNewMainModelWithConfig(t *testing.T) {
 		t.Error("Expected vmManager to be set")
 	}
 
+	if m.configRepo == nil {
+		t.Error("Expected configRepo to be set")
+	}
+
+	if m.hostDiscovery == nil {
+		t.Error("Expected hostDiscovery to be set")
+	}
+
 	if m.tabModel == nil {
 		t.Error("Expected tabModel to be set")
 	}

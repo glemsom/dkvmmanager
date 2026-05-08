@@ -13,8 +13,8 @@ type StartStopScriptModel struct {
 }
 
 // NewStartStopScriptModel creates a new start/stop script model
-func NewStartStopScriptModel(vmManager *vm.Manager) (*StartStopScriptModel, error) {
-	fm, err := NewStartStopScriptFormModel(vmManager)
+func NewStartStopScriptModel(repo *vm.Repository) (*StartStopScriptModel, error) {
+	fm, err := NewStartStopScriptFormModel(repo)
 	if err != nil {
 		return nil, err
 	}

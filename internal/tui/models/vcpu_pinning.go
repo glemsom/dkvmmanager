@@ -13,8 +13,8 @@ type VCPUPinningModel struct {
 }
 
 // NewVCPUPinningModel creates a new vCPU pinning model
-func NewVCPUPinningModel(vmManager *vm.Manager) (*VCPUPinningModel, error) {
-	fm, err := NewVCPUPinningFormModel(vmManager)
+func NewVCPUPinningModel(vmManager *vm.Manager, repo *vm.Repository) (*VCPUPinningModel, error) {
+	fm, err := NewVCPUPinningFormModel(vmManager, repo)
 	if err != nil {
 		return nil, err
 	}

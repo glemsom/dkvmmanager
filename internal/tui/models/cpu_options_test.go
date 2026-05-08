@@ -9,7 +9,7 @@ import (
 
 func TestNewCPUOptionsModel(t *testing.T) {
 	mgr := createTestVMManager(t)
-	m := NewCPUOptionsModel(mgr)
+	m := NewCPUOptionsModel(mgr.Repository())
 
 	if m == nil {
 		t.Fatal("NewCPUOptionsModel returned nil")
@@ -21,7 +21,7 @@ func TestNewCPUOptionsModel(t *testing.T) {
 
 func TestCPUOptionsModelInit(t *testing.T) {
 	mgr := createTestVMManager(t)
-	m := NewCPUOptionsModel(mgr)
+	m := NewCPUOptionsModel(mgr.Repository())
 
 	cmd := m.Init()
 	if cmd != nil {
@@ -31,7 +31,7 @@ func TestCPUOptionsModelInit(t *testing.T) {
 
 func TestCPUOptionsModelUpdate(t *testing.T) {
 	mgr := createTestVMManager(t)
-	m := NewCPUOptionsModel(mgr)
+	m := NewCPUOptionsModel(mgr.Repository())
 
 	updated, cmd := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	if updated == nil {
@@ -50,7 +50,7 @@ func TestCPUOptionsModelUpdate(t *testing.T) {
 
 func TestCPUOptionsModelUpdateWindowSize(t *testing.T) {
 	mgr := createTestVMManager(t)
-	m := NewCPUOptionsModel(mgr)
+	m := NewCPUOptionsModel(mgr.Repository())
 
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 50})
 	wrapped := updated.(*CPUOptionsModel)
@@ -62,7 +62,7 @@ func TestCPUOptionsModelUpdateWindowSize(t *testing.T) {
 
 func TestCPUOptionsModelView(t *testing.T) {
 	mgr := createTestVMManager(t)
-	m := NewCPUOptionsModel(mgr)
+	m := NewCPUOptionsModel(mgr.Repository())
 
 	view := m.View()
 	if view == "" {
@@ -72,7 +72,7 @@ func TestCPUOptionsModelView(t *testing.T) {
 
 func TestCPUOptionsModelViewContainsHeader(t *testing.T) {
 	mgr := createTestVMManager(t)
-	m := NewCPUOptionsModel(mgr)
+	m := NewCPUOptionsModel(mgr.Repository())
 
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	m = updated.(*CPUOptionsModel)
@@ -85,7 +85,7 @@ func TestCPUOptionsModelViewContainsHeader(t *testing.T) {
 
 func TestCPUOptionsModelUpdateDelegatesKeyPress(t *testing.T) {
 	mgr := createTestVMManager(t)
-	m := NewCPUOptionsModel(mgr)
+	m := NewCPUOptionsModel(mgr.Repository())
 
 	fm := m.Form()
 	initialField := fm.currentPos().fieldName

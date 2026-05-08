@@ -16,7 +16,7 @@ import (
 // TestCustomScriptFormInit tests form initialization with default config
 func TestCustomScriptFormInit(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
@@ -41,7 +41,7 @@ func TestCustomScriptFormInit(t *testing.T) {
 // TestCustomScriptFormToggleBuiltin tests toggling between builtin and custom mode
 func TestCustomScriptFormToggleBuiltin(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestCustomScriptFormToggleBuiltin(t *testing.T) {
 // TestCustomScriptFormNavigation tests Tab navigation between fields
 func TestCustomScriptFormNavigation(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestCustomScriptFormNavigation(t *testing.T) {
 // TestCustomScriptFormRenderBuiltin tests rendering in builtin mode
 func TestCustomScriptFormRenderBuiltin(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestCustomScriptFormRenderBuiltin(t *testing.T) {
 // TestCustomScriptFormRenderCustom tests rendering in custom mode
 func TestCustomScriptFormRenderCustom(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
 	}
@@ -173,7 +173,7 @@ func TestCustomScriptFormRenderCustom(t *testing.T) {
 // TestCustomScriptFormRebuildPositions tests rebuildPositions updates positions correctly
 func TestCustomScriptFormRebuildPositions(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
 	}
@@ -203,7 +203,7 @@ func TestCustomScriptFormRebuildPositions(t *testing.T) {
 // TestCustomScriptFormEffectiveCursor tests cursor position calculation
 func TestCustomScriptFormEffectiveCursor(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
 	}
@@ -239,7 +239,7 @@ func TestCustomScriptFormEffectiveCursor(t *testing.T) {
 // TestCustomScriptFormViewContent tests viewport content updates
 func TestCustomScriptFormViewContent(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
 	}
@@ -278,7 +278,7 @@ func createTestVMManagerForScript(t *testing.T) *vm.Manager {
 			{Address: "0000:01:00.0", Name: "NVIDIA GPU"},
 		},
 	}
-	if err := mgr.SavePCIPassthroughConfig(pciCfg); err != nil {
+	if err := mgr.Repository().SavePCIPassthroughConfig(pciCfg); err != nil {
 		t.Logf("Warning: could not save PCI config: %v", err)
 	}
 
@@ -288,7 +288,7 @@ func createTestVMManagerForScript(t *testing.T) *vm.Manager {
 // TestEnterOnStartBrowseCreatesFileBrowser tests that Enter on start script browse button opens file browser
 func TestEnterOnStartBrowseCreatesFileBrowser(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
 	}
@@ -319,7 +319,7 @@ func TestEnterOnStartBrowseCreatesFileBrowser(t *testing.T) {
 // TestEnterOnStopBrowseCreatesFileBrowser tests that Enter on stop script browse button opens file browser
 func TestEnterOnStopBrowseCreatesFileBrowser(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
 	}
@@ -349,7 +349,7 @@ func TestEnterOnStopBrowseCreatesFileBrowser(t *testing.T) {
 // TestFileSelectedStartPath tests that selecting a file sets the start script path
 func TestFileSelectedStartPath(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
 	}
@@ -373,7 +373,7 @@ func TestFileSelectedStartPath(t *testing.T) {
 // TestFileSelectedStopPath tests that selecting a file sets the stop script path
 func TestFileSelectedStopPath(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
 	}
@@ -397,7 +397,7 @@ func TestFileSelectedStopPath(t *testing.T) {
 // TestFileSelectedCanceled tests that canceling file selection clears the browser
 func TestFileSelectedCanceled(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
 	}
@@ -423,7 +423,7 @@ func TestFileSelectedCanceled(t *testing.T) {
 // TestStartStopScriptKeyDelegationToFileBrowser tests that keys are delegated to active file browser
 func TestStartStopScriptKeyDelegationToFileBrowser(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
 	}
@@ -451,7 +451,7 @@ func TestStartStopScriptKeyDelegationToFileBrowser(t *testing.T) {
 // TestStartStopScriptViewShowsFileBrowserWhenActive tests that the View shows file browser when active
 func TestStartStopScriptViewShowsFileBrowserWhenActive(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
-	fm, err := NewStartStopScriptFormModel(vmManager)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("Failed to create form: %v", err)
 	}

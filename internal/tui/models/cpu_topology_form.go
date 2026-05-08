@@ -23,7 +23,7 @@ type cpuTopoFocusData struct {
 // CPUTopologyFormModel is a scrollable form for editing global CPU topology.
 // It implements the form.FormModel interface for use with ScrollableForm.
 type CPUTopologyFormModel struct {
-	vmManager *vm.Manager
+	repo *vm.Repository
 
 	// Host topology data
 	hostTopo models.HostCPUTopology
@@ -60,13 +60,13 @@ func coreKey(dieID, coreID int) string {
 }
 
 // NewCPUTopologyFormModel creates a new CPU topology form model
-func NewCPUTopologyFormModel(vmManager *vm.Manager) (*CPUTopologyFormModel, error) {
+func NewCPUTopologyFormModel(repo *vm.Repository) (*CPUTopologyFormModel, error) {
 	// Scan host topology
 	scanner := vm.NewCPUScanner()
 	hostTopo, scanErr := scanner.ScanTopology()
 
 	// Load global CPU topology config
-	topology, err := vmManager.GetCPUTopology()
+	topology, err := repo.GetCPUTopology()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load CPU topology: %w", err)
 	}
@@ -111,7 +111,7 @@ func NewCPUTopologyFormModel(vmManager *vm.Manager) (*CPUTopologyFormModel, erro
 	}
 
 	m := &CPUTopologyFormModel{
-		vmManager:    vmManager,
+		repo:         repo,
 		hostTopo:     hostTopo,
 		topology:     topology,
 		coreSelected: coreSelected,

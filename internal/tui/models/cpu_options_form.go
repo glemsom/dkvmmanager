@@ -16,8 +16,8 @@ import (
 // CPUOptionsFormModel is a scrollable toggle form for editing global CPU options.
 // It implements the form.FormModel interface for use with ScrollableForm.
 type CPUOptionsFormModel struct {
-	vmManager *vm.Manager
-	options   *models.CPUOptions
+	repo    *vm.Repository
+	options *models.CPUOptions
 
 	// Focus state
 	positions  []form.FocusPos
@@ -46,10 +46,10 @@ type CPUOptionsFormModel struct {
 }
 
 // NewCPUOptionsFormModel creates a new CPU options form model
-func NewCPUOptionsFormModel(vmManager *vm.Manager) *CPUOptionsFormModel {
-	opts, _ := vmManager.GetCPUOptions()
+func NewCPUOptionsFormModel(repo *vm.Repository) *CPUOptionsFormModel {
+	opts, _ := repo.GetCPUOptions()
 	m := &CPUOptionsFormModel{
-		vmManager:     vmManager,
+		repo:          repo,
 		options:       &opts,
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),

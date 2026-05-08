@@ -24,7 +24,7 @@ func (m *VCPUPinningFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd) {
 	}
 
 	// Save the pinning configuration
-	if err := m.vmManager.SaveVCPUPinningGlobal(m.pinning); err != nil {
+	if err := m.repo.SaveVCPUPinningGlobal(m.pinning); err != nil {
 		m.errors["save"] = fmt.Sprintf("failed to save: %v", err)
 		return form.ResultNone, nil
 	}
@@ -50,7 +50,7 @@ func (m *VCPUPinningFormModel) handleApplyKernelCmd() tea.Cmd {
 	}
 
 	// Save config to disk first
-	if err := m.vmManager.SaveVCPUPinningGlobal(m.pinning); err != nil {
+	if err := m.repo.SaveVCPUPinningGlobal(m.pinning); err != nil {
 		m.kernelMsg = fmt.Sprintf("Failed to save config: %v", err)
 		m.kernelMsgErr = true
 		return nil

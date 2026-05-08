@@ -24,7 +24,7 @@ func TestUSBPassthroughConfigPersistence(t *testing.T) {
 	}
 
 	// Initially, config should be empty
-	loadedCfg, err := mgr.GetUSBPassthroughConfig()
+	loadedCfg, err := mgr.Repository().GetUSBPassthroughConfig()
 	if err != nil {
 		t.Fatalf("GetUSBPassthroughConfig error: %v", err)
 	}
@@ -44,13 +44,13 @@ func TestUSBPassthroughConfigPersistence(t *testing.T) {
 		},
 	}
 
-	err = mgr.SaveUSBPassthroughConfig(saveCfg)
+	err = mgr.Repository().SaveUSBPassthroughConfig(saveCfg)
 	if err != nil {
 		t.Fatalf("SaveUSBPassthroughConfig error: %v", err)
 	}
 
 	// Load and verify
-	loadedCfg, err = mgr.GetUSBPassthroughConfig()
+	loadedCfg, err = mgr.Repository().GetUSBPassthroughConfig()
 	if err != nil {
 		t.Fatalf("GetUSBPassthroughConfig error: %v", err)
 	}
@@ -105,12 +105,12 @@ func TestUSBPassthroughConfigMultipleDevices(t *testing.T) {
 		},
 	}
 
-	err = mgr.SaveUSBPassthroughConfig(saveCfg)
+	err = mgr.Repository().SaveUSBPassthroughConfig(saveCfg)
 	if err != nil {
 		t.Fatalf("SaveUSBPassthroughConfig error: %v", err)
 	}
 
-	loadedCfg, err := mgr.GetUSBPassthroughConfig()
+	loadedCfg, err := mgr.Repository().GetUSBPassthroughConfig()
 	if err != nil {
 		t.Fatalf("GetUSBPassthroughConfig error: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestUSBPassthroughConfigOverwrite(t *testing.T) {
 			{Vendor: "046d", Product: "c52b", Name: "Logitech", BusID: "1-1"},
 		},
 	}
-	if err := mgr.SaveUSBPassthroughConfig(saveCfg); err != nil {
+	if err := mgr.Repository().SaveUSBPassthroughConfig(saveCfg); err != nil {
 		t.Fatalf("SaveUSBPassthroughConfig error: %v", err)
 	}
 
@@ -158,11 +158,11 @@ func TestUSBPassthroughConfigOverwrite(t *testing.T) {
 			{Vendor: "045e", Product: "028e", Name: "Xbox Controller", BusID: "3-2"},
 		},
 	}
-	if err := mgr.SaveUSBPassthroughConfig(newCfg); err != nil {
+	if err := mgr.Repository().SaveUSBPassthroughConfig(newCfg); err != nil {
 		t.Fatalf("SaveUSBPassthroughConfig error: %v", err)
 	}
 
-	loadedCfg, err := mgr.GetUSBPassthroughConfig()
+	loadedCfg, err := mgr.Repository().GetUSBPassthroughConfig()
 	if err != nil {
 		t.Fatalf("GetUSBPassthroughConfig error: %v", err)
 	}

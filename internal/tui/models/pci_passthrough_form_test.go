@@ -9,6 +9,21 @@ import (
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
+// noopHostDiscovery is a test double that returns empty scans
+type noopHostDiscovery struct{}
+
+func (noopHostDiscovery) ScanPCIDevices() ([]models.PCIDevice, error) {
+	return nil, nil
+}
+
+func (noopHostDiscovery) ScanUSBDevices() ([]models.USBDevice, error) {
+	return nil, nil
+}
+
+func (noopHostDiscovery) ScanCPUTopology() (models.HostCPUTopology, error) {
+	return models.HostCPUTopology{}, nil
+}
+
 // --- Test Fixtures ---
 
 // mockPCIDevices returns a deterministic set of PCI devices for testing
@@ -73,12 +88,14 @@ func newTestPCIForm(t *testing.T) *PCIPassthroughFormModel {
 	t.Helper()
 	vmManager := createTestVMManager(t)
 
-	formModel, err := NewPCIPassthroughFormModel(vmManager)
+	formModel, err := NewPCIPassthroughFormModel(vmManager.Repository(), vmManager, &noopHostDiscovery{})
 	if err != nil {
 		// In CI, real scanning may fail; construct form manually with mock devices
 		formModel = &PCIPassthroughFormModel{
-			vmManager: vmManager,
-			devices:   mockPCIDevices(),
+			repo:          vmManager.Repository(),
+			vmManager:     vmManager,
+			hostDiscovery: &noopHostDiscovery{},
+			devices:       mockPCIDevices(),
 			selected:  make(map[string]bool),
 			errors:    make(map[string]string),
 		}
@@ -481,7 +498,7 @@ func TestPCIFORMSavePreservesSelectedDevices(t *testing.T) {
 	}
 
 	// Verify saved config
-	saved, err := m.vmManager.GetPCIPassthroughConfig()
+	saved, err := m.repo.GetPCIPassthroughConfig()
 	if err != nil {
 		t.Fatalf("Failed to load saved PCI config: %v", err)
 	}
@@ -515,7 +532,7 @@ func TestPCIFORMNoROMInSavedConfig(t *testing.T) {
 	}
 	cmd()
 
-	saved, err := m.vmManager.GetPCIPassthroughConfig()
+	saved, err := m.repo.GetPCIPassthroughConfig()
 	if err != nil {
 		t.Fatalf("Failed to load saved PCI config: %v", err)
 	}
@@ -532,8 +549,10 @@ func TestPCIFORMEmptyDevices(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
 	m := &PCIPassthroughFormModel{
-		vmManager:   vmManager,
-		devices:     []models.PCIDevice{},
+		repo:          vmManager.Repository(),
+		vmManager:     vmManager,
+		hostDiscovery: &noopHostDiscovery{},
+		devices:       []models.PCIDevice{},
 		selected:    make(map[string]bool),
 		errors:      make(map[string]string),
 		iommuGroups: make(map[int][]*models.PCIDevice),
@@ -558,8 +577,10 @@ func TestPCIFORMViewShowsNoDevicesMessage(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
 	m := &PCIPassthroughFormModel{
-		vmManager:   vmManager,
-		devices:     []models.PCIDevice{},
+		repo:          vmManager.Repository(),
+		vmManager:     vmManager,
+		hostDiscovery: &noopHostDiscovery{},
+		devices:       []models.PCIDevice{},
 		selected:    make(map[string]bool),
 		errors:      make(map[string]string),
 		iommuGroups: make(map[int][]*models.PCIDevice),
@@ -868,7 +889,7 @@ func TestPCIFORMSelectMultipleGroups(t *testing.T) {
 	}
 	cmd()
 
-	saved, err := m.vmManager.GetPCIPassthroughConfig()
+	saved, err := m.repo.GetPCIPassthroughConfig()
 	if err != nil {
 		t.Fatalf("Failed to load saved PCI config: %v", err)
 	}
@@ -912,12 +933,14 @@ func TestPCIFORMRenderGroupHeaderSelectionStatus(t *testing.T) {
 func TestPCIPassthroughFormModelInterface(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
-	m, err := NewPCIPassthroughFormModel(vmManager)
+	m, err := NewPCIPassthroughFormModel(vmManager.Repository(), vmManager, &noopHostDiscovery{})
 	if err != nil {
 		// In CI, real scanning may fail; construct manually
 		m = &PCIPassthroughFormModel{
-			vmManager:   vmManager,
-			devices:     mockPCIDevices(),
+			repo:          vmManager.Repository(),
+			vmManager:     vmManager,
+			hostDiscovery: &noopHostDiscovery{},
+			devices:       mockPCIDevices(),
 			selected:    make(map[string]bool),
 			errors:      make(map[string]string),
 		}

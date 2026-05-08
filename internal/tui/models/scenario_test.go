@@ -316,7 +316,7 @@ func TestScenarioESCFromCPUOptions(t *testing.T) {
 	m := setupTestModelForScenarios(t)
 
 	m.currentView = ViewCPUOptions
-	m.cpuOptionsModel = NewCPUOptionsModel(m.vmManager)
+	m.cpuOptionsModel = NewCPUOptionsModel(m.configRepo)
 
 	m = sendKeys(t, m, tea.KeyEsc)
 

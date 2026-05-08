@@ -27,8 +27,10 @@ func filterPCIBridges(devices []models.PCIDevice) []models.PCIDevice {
 // PCIPassthroughFormModel is a scrollable form for editing PCI passthrough config.
 // It implements the form.FormModel interface for use with ScrollableForm.
 type PCIPassthroughFormModel struct {
-	vmManager *vm.Manager
-	devices   []models.PCIDevice          // All scanned devices
+	repo          *vm.Repository
+	vmManager     *vm.Manager
+	hostDiscovery vm.HostDiscovery
+	devices       []models.PCIDevice          // All scanned devices
 	config    models.PCIPassthroughConfig // Current config (selected devices)
 	selected  map[string]bool             // Quick lookup: address -> selected
 
@@ -64,13 +66,12 @@ type PCIPassthroughFormModel struct {
 }
 
 // NewPCIPassthroughFormModel creates a new PCI passthrough form model
-func NewPCIPassthroughFormModel(vmManager *vm.Manager) (*PCIPassthroughFormModel, error) {
+func NewPCIPassthroughFormModel(repo *vm.Repository, vmManager *vm.Manager, hostDiscovery vm.HostDiscovery) (*PCIPassthroughFormModel, error) {
 	// Scan devices
-	scanner := vm.NewPCIScanner()
-	allDevices, scanErr := scanner.ScanDevices()
+	allDevices, scanErr := hostDiscovery.ScanPCIDevices()
 
 	// Load existing config
-	cfg, _ := vmManager.GetPCIPassthroughConfig()
+	cfg, _ := repo.GetPCIPassthroughConfig()
 
 	// Build lookup maps
 	selected := make(map[string]bool)
@@ -79,8 +80,10 @@ func NewPCIPassthroughFormModel(vmManager *vm.Manager) (*PCIPassthroughFormModel
 	}
 
 	m := &PCIPassthroughFormModel{
-		vmManager:   vmManager,
-		devices:     filterPCIBridges(allDevices),
+		repo:          repo,
+		vmManager:     vmManager,
+		hostDiscovery: hostDiscovery,
+		devices:       filterPCIBridges(allDevices),
 		config:      cfg,
 		selected:    selected,
 		errors:      make(map[string]string),

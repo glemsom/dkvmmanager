@@ -383,7 +383,7 @@ func (m *MainModel) handleConfigMenuSelection() (tea.Model, tea.Cmd) {
 	case 2: // Delete VM
 		return m.showVMSelectionForDeletion()
 	case 3: // Edit CPU Topology
-		cpuModel, err := NewCPUTopologyModel(m.vmManager)
+		cpuModel, err := NewCPUTopologyModel(m.configRepo)
 		if err != nil {
 			m.statusBar.SetMessage("Error loading CPU topology: " + err.Error())
 			return m, nil
@@ -396,7 +396,7 @@ func (m *MainModel) handleConfigMenuSelection() (tea.Model, tea.Cmd) {
 		m.breadcrumbs.AddItem("CPU Topology", "cpu_topology", 1)
 		return m, nil
 	case 4: // Edit vCPU Pinning
-		vcpuModel, err := NewVCPUPinningModel(m.vmManager)
+		vcpuModel, err := NewVCPUPinningModel(m.vmManager, m.configRepo)
 		if err != nil {
 			m.statusBar.SetMessage("Error loading vCPU pinning: " + err.Error())
 			return m, nil
@@ -409,7 +409,7 @@ func (m *MainModel) handleConfigMenuSelection() (tea.Model, tea.Cmd) {
 		m.breadcrumbs.AddItem("vCPU Pinning", "vcpu_pinning", 1)
 		return m, nil
 	case 5: // Edit PCI Passthrough
-		pciModel, err := NewPCIPassthroughModel(m.vmManager)
+		pciModel, err := NewPCIPassthroughModel(m.configRepo, m.vmManager, m.hostDiscovery)
 		if err != nil {
 			m.statusBar.SetMessage("Error loading PCI passthrough: " + err.Error())
 			return m, nil
@@ -422,7 +422,7 @@ func (m *MainModel) handleConfigMenuSelection() (tea.Model, tea.Cmd) {
 		m.breadcrumbs.AddItem("PCI Passthrough", "pci_passthrough", 1)
 		return m, nil
 	case 6: // Edit USB Passthrough
-		usbModel, err := NewUSBPassthroughModel(m.vmManager)
+		usbModel, err := NewUSBPassthroughModel(m.configRepo, m.hostDiscovery)
 		if err != nil {
 			m.statusBar.SetMessage("Error loading USB passthrough: " + err.Error())
 			return m, nil
@@ -435,7 +435,7 @@ func (m *MainModel) handleConfigMenuSelection() (tea.Model, tea.Cmd) {
 		m.breadcrumbs.AddItem("USB Passthrough", "usb_passthrough", 1)
 		return m, nil
 	case 7: // Edit Start/Stop Script
-		model, err := NewStartStopScriptModel(m.vmManager)
+		model, err := NewStartStopScriptModel(m.configRepo)
 		if err != nil {
 			m.statusMessage = "Error loading start/stop script form: " + err.Error()
 		} else {
@@ -448,7 +448,7 @@ func (m *MainModel) handleConfigMenuSelection() (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case 8: // Edit CPU Options
-		m.cpuOptionsModel = NewCPUOptionsModel(m.vmManager)
+		m.cpuOptionsModel = NewCPUOptionsModel(m.configRepo)
 		m.cpuOptionsModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
 		m.currentView = ViewCPUOptions
 		m.breadcrumbs.Clear()
@@ -506,31 +506,31 @@ func (m *MainModel) handleVMSelection() (tea.Model, tea.Cmd) {
 		// Create runner
 		runner := vm.NewVMRunner(vmObj, m.cfg)
 		// Load and inject PCI passthrough config
-		if pciCfg, err := m.vmManager.GetPCIPassthroughConfig(); err == nil {
+		if pciCfg, err := m.configRepo.GetPCIPassthroughConfig(); err == nil {
 			runner.SetPCIPassthroughConfig(pciCfg)
 		}
 		// Load and inject USB passthrough config
-		if usbCfg, err := m.vmManager.GetUSBPassthroughConfig(); err == nil {
+		if usbCfg, err := m.configRepo.GetUSBPassthroughConfig(); err == nil {
 			runner.SetUSBPassthroughConfig(usbCfg)
 		}
 		// Load and inject CPU options for feature flags
-		if cpuOpts, err := m.vmManager.GetCPUOptions(); err == nil {
+		if cpuOpts, err := m.configRepo.GetCPUOptions(); err == nil {
 			runner.SetCPUOptions(cpuOpts)
 		}
 		// Load and inject start/stop script config
-		if scriptCfg, err := m.vmManager.GetStartStopScript(); err == nil {
+		if scriptCfg, err := m.configRepo.GetStartStopScript(); err == nil {
 			runner.SetStartStopScript(scriptCfg)
 		}
 		// Load and inject vCPU pinning config
-		if vcpuPinning, err := m.vmManager.GetVCPUPinningGlobal(); err == nil {
+		if vcpuPinning, err := m.configRepo.GetVCPUPinningGlobal(); err == nil {
 			runner.SetVCPUPinning(vcpuPinning)
 		}
 		// Load and inject CPU topology config
-		if cpuTopo, err := m.vmManager.GetCPUTopology(); err == nil {
+		if cpuTopo, err := m.configRepo.GetCPUTopology(); err == nil {
 			runner.SetCPUTopology(cpuTopo)
 		}
 		// Load host CPU topology for topology-aware allocation
-		if hostTopo, err := m.vmManager.ScanCPUTopology(); err == nil {
+		if hostTopo, err := m.hostDiscovery.ScanCPUTopology(); err == nil {
 			runner.SetHostCPUTopology(hostTopo)
 		}
 

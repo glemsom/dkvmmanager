@@ -61,7 +61,7 @@ func (m *CPUOptionsFormModel) saveWithValidation() error {
 	}
 
 	// Save to VM manager (dereference pointer)
-	if err := m.vmManager.SaveCPUOptions(*m.options); err != nil {
+	if err := m.repo.SaveCPUOptions(*m.options); err != nil {
 		return fmt.Errorf("failed to save: %w", err)
 	}
 

@@ -65,7 +65,7 @@ func TestCPUOptionsFieldRegistry(t *testing.T) {
 // TestCPUOptionsFormInit tests form initialization with default options
 func TestCPUOptionsFormInit(t *testing.T) {
 	vmManager := createTestVMManager(t)
-	form := NewCPUOptionsFormModel(vmManager)
+	form := NewCPUOptionsFormModel(vmManager.Repository())
 
 	if form.focusIndex != 1 {
 		t.Errorf("Initial focusIndex = %d, want 1 (first interactive element after header)", form.focusIndex)
@@ -96,7 +96,7 @@ func TestCPUOptionsFormToggle(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			vmManager := createTestVMManager(t)
-			form := NewCPUOptionsFormModel(vmManager)
+			form := NewCPUOptionsFormModel(vmManager.Repository())
 
 			// Navigate to the field
 			for i, pos := range form.positions {
@@ -122,7 +122,7 @@ func TestCPUOptionsFormToggle(t *testing.T) {
 // TestCPUOptionsFormNavigation tests Tab navigation
 func TestCPUOptionsFormNavigation(t *testing.T) {
 	vmManager := createTestVMManager(t)
-	form := NewCPUOptionsFormModel(vmManager)
+	form := NewCPUOptionsFormModel(vmManager.Repository())
 
 	// Start at HideKVM (index 1, after header at 0)
 	if form.currentPos().fieldName != "HideKVM" {
@@ -140,7 +140,7 @@ func TestCPUOptionsFormNavigation(t *testing.T) {
 // TestCPUOptionsFormTextEditing tests text field editing
 func TestCPUOptionsFormTextEditing(t *testing.T) {
 	vmManager := createTestVMManager(t)
-	form := NewCPUOptionsFormModel(vmManager)
+	form := NewCPUOptionsFormModel(vmManager.Repository())
 
 	// Move to VendorID (index 2)
 	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyTab})
@@ -170,7 +170,7 @@ func TestCPUOptionsFormTextEditing(t *testing.T) {
 // TestCPUOptionsFormSave tests saving via Enter on save button
 func TestCPUOptionsFormSave(t *testing.T) {
 	vmManager := createTestVMManager(t)
-	form := NewCPUOptionsFormModel(vmManager)
+	form := NewCPUOptionsFormModel(vmManager.Repository())
 
 	// Set some options using reflection setters
 	form.setBoolField("HideKVM", true)
@@ -195,7 +195,7 @@ func TestCPUOptionsFormSave(t *testing.T) {
 	}
 
 	// Verify saved options
-	saved, _ := vmManager.GetCPUOptions()
+	saved, _ := vmManager.Repository().GetCPUOptions()
 	if !saved.HideKVM {
 		t.Errorf("Saved HideKVM = false, want true")
 	}
@@ -210,7 +210,7 @@ func TestCPUOptionsFormSave(t *testing.T) {
 // TestCPUOptionsFormAllToggles tests toggling all boolean fields
 func TestCPUOptionsFormAllToggles(t *testing.T) {
 	vmManager := createTestVMManager(t)
-	form := NewCPUOptionsFormModel(vmManager)
+	form := NewCPUOptionsFormModel(vmManager.Repository())
 
 	toggleFields := []string{
 		"HideKVM", "HVFrequency", "HVRelaxed", "HVReset", "HVRuntime",

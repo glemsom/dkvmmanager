@@ -42,7 +42,7 @@ func (m *USBPassthroughFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd
 		Devices: devices,
 	}
 
-	if err := m.vmManager.SaveUSBPassthroughConfig(cfg); err != nil {
+	if err := m.repo.SaveUSBPassthroughConfig(cfg); err != nil {
 		m.errors["save"] = fmt.Sprintf("Failed to save: %v", err)
 		return form.ResultNone, nil
 	}

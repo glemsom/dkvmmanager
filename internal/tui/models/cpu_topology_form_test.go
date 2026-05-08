@@ -14,7 +14,7 @@ import (
 func TestCPUTopologyFormInit(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
-	formModel, err := NewCPUTopologyFormModel(vmManager)
+	formModel, err := NewCPUTopologyFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("NewCPUTopologyFormModel returned error: %v", err)
 	}
@@ -28,7 +28,7 @@ func TestCPUTopologyFormInit(t *testing.T) {
 func TestCPUTopologyFormToggle(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
-	formModel, err := NewCPUTopologyFormModel(vmManager)
+	formModel, err := NewCPUTopologyFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("NewCPUTopologyFormModel returned error: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestCPUTopologyFormToggle(t *testing.T) {
 func TestCPUTopologyFormNavigation(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
-	formModel, err := NewCPUTopologyFormModel(vmManager)
+	formModel, err := NewCPUTopologyFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("NewCPUTopologyFormModel returned error: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestCPUTopologyFormNavigation(t *testing.T) {
 func TestCPUTopologyFormSave(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
-	formModel, err := NewCPUTopologyFormModel(vmManager)
+	formModel, err := NewCPUTopologyFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("NewCPUTopologyFormModel returned error: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestCPUTopologyFormSave(t *testing.T) {
 	}
 
 	// Verify saved config
-	savedTopo, err := vmManager.GetCPUTopology()
+	savedTopo, err := vmManager.Repository().GetCPUTopology()
 	if err != nil {
 		t.Fatalf("Failed to load CPU topology: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestCPUTopologyFormSave(t *testing.T) {
 func TestCPUTopologyFormDefaultHostCore(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
-	formModel, err := NewCPUTopologyFormModel(vmManager)
+	formModel, err := NewCPUTopologyFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("NewCPUTopologyFormModel returned error: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestCPUTopologyFormDefaultHostCore(t *testing.T) {
 func TestCPUTopologyFormZeroHostWarning(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
-	formModel, err := NewCPUTopologyFormModel(vmManager)
+	formModel, err := NewCPUTopologyFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("NewCPUTopologyFormModel returned error: %v", err)
 	}
@@ -260,7 +260,7 @@ func TestCoreKey(t *testing.T) {
 func TestCPUTopologyModelWrapper(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
-	model, err := NewCPUTopologyModel(vmManager)
+	model, err := NewCPUTopologyModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("NewCPUTopologyModel returned error: %v", err)
 	}
@@ -276,7 +276,7 @@ func TestCPUTopologyModelWrapper(t *testing.T) {
 func TestCPUTopologyFormModelInterface(t *testing.T) {
 	vmManager := createTestVMManager(t)
 
-	formModel, err := NewCPUTopologyFormModel(vmManager)
+	formModel, err := NewCPUTopologyFormModel(vmManager.Repository())
 	if err != nil {
 		t.Fatalf("NewCPUTopologyFormModel returned error: %v", err)
 	}

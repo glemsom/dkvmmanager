@@ -21,8 +21,9 @@ func usbDeviceKey(vendor, product string) string {
 // USBPassthroughFormModel is a scrollable form for editing USB passthrough config.
 // It implements the form.FormModel interface for use with ScrollableForm.
 type USBPassthroughFormModel struct {
-	vmManager *vm.Manager
-	devices   []models.USBDevice          // All scanned devices
+	repo          *vm.Repository
+	hostDiscovery vm.HostDiscovery
+	devices       []models.USBDevice          // All scanned devices
 	config    models.USBPassthroughConfig // Current config (selected devices)
 	selected  map[string]bool             // Quick lookup: vendor:product -> selected
 
@@ -50,13 +51,12 @@ type USBPassthroughFormModel struct {
 }
 
 // NewUSBPassthroughFormModel creates a new USB passthrough form model
-func NewUSBPassthroughFormModel(vmManager *vm.Manager) (*USBPassthroughFormModel, error) {
+func NewUSBPassthroughFormModel(repo *vm.Repository, hostDiscovery vm.HostDiscovery) (*USBPassthroughFormModel, error) {
 	// Scan devices
-	scanner := vm.NewUSBScanner()
-	allDevices, scanErr := scanner.ScanDevices()
+	allDevices, scanErr := hostDiscovery.ScanUSBDevices()
 
 	// Load existing config
-	cfg, _ := vmManager.GetUSBPassthroughConfig()
+	cfg, _ := repo.GetUSBPassthroughConfig()
 
 	// Build lookup map
 	selected := make(map[string]bool)
@@ -65,8 +65,9 @@ func NewUSBPassthroughFormModel(vmManager *vm.Manager) (*USBPassthroughFormModel
 	}
 
 	m := &USBPassthroughFormModel{
-		vmManager: vmManager,
-		devices:   allDevices,
+		repo:          repo,
+		hostDiscovery: hostDiscovery,
+		devices:       allDevices,
 		config:    cfg,
 		selected:  selected,
 		errors:    make(map[string]string),

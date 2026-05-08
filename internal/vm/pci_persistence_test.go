@@ -24,7 +24,7 @@ func TestPCIPassthroughConfigPersistence(t *testing.T) {
 	}
 
 	// Initially, config should be empty
-	loadedCfg, err := mgr.GetPCIPassthroughConfig()
+	loadedCfg, err := mgr.Repository().GetPCIPassthroughConfig()
 	if err != nil {
 		t.Fatalf("GetPCIPassthroughConfig error: %v", err)
 	}
@@ -46,13 +46,13 @@ func TestPCIPassthroughConfigPersistence(t *testing.T) {
 		},
 	}
 
-	err = mgr.SavePCIPassthroughConfig(saveCfg)
+	err = mgr.Repository().SavePCIPassthroughConfig(saveCfg)
 	if err != nil {
 		t.Fatalf("SavePCIPassthroughConfig error: %v", err)
 	}
 
 	// Load it back
-	loadedCfg, err = mgr.GetPCIPassthroughConfig()
+	loadedCfg, err = mgr.Repository().GetPCIPassthroughConfig()
 	if err != nil {
 		t.Fatalf("GetPCIPassthroughConfig after save error: %v", err)
 	}
@@ -117,12 +117,12 @@ func TestPCIPassthroughConfigMultipleDevices(t *testing.T) {
 		},
 	}
 
-	err = mgr.SavePCIPassthroughConfig(saveCfg)
+	err = mgr.Repository().SavePCIPassthroughConfig(saveCfg)
 	if err != nil {
 		t.Fatalf("SavePCIPassthroughConfig error: %v", err)
 	}
 
-	loadedCfg, err := mgr.GetPCIPassthroughConfig()
+	loadedCfg, err := mgr.Repository().GetPCIPassthroughConfig()
 	if err != nil {
 		t.Fatalf("GetPCIPassthroughConfig error: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestPCIPassthroughConfigOverwrite(t *testing.T) {
 			{Address: "0000:01:00.0", Vendor: "10de", Device: "1b80", Name: "GPU 1", ClassCode: "0300"},
 		},
 	}
-	if err := mgr.SavePCIPassthroughConfig(cfg1); err != nil {
+	if err := mgr.Repository().SavePCIPassthroughConfig(cfg1); err != nil {
 		t.Fatalf("First save error: %v", err)
 	}
 
@@ -178,12 +178,12 @@ func TestPCIPassthroughConfigOverwrite(t *testing.T) {
 			{Address: "0000:02:00.0", Vendor: "1002", Device: "67df", Name: "GPU 2", ClassCode: "0300"},
 		},
 	}
-	if err := mgr.SavePCIPassthroughConfig(cfg2); err != nil {
+	if err := mgr.Repository().SavePCIPassthroughConfig(cfg2); err != nil {
 		t.Fatalf("Second save error: %v", err)
 	}
 
 	// Should have the second config, not the first
-	loadedCfg, err := mgr.GetPCIPassthroughConfig()
+	loadedCfg, err := mgr.Repository().GetPCIPassthroughConfig()
 	if err != nil {
 		t.Fatalf("GetPCIPassthroughConfig error: %v", err)
 	}
@@ -217,17 +217,17 @@ func TestPCIPassthroughConfigEmptySave(t *testing.T) {
 			{Address: "0000:01:00.0", Vendor: "10de", Device: "1b80", Name: "GPU", ClassCode: "0300"},
 		},
 	}
-	if err := mgr.SavePCIPassthroughConfig(saveCfg); err != nil {
+	if err := mgr.Repository().SavePCIPassthroughConfig(saveCfg); err != nil {
 		t.Fatalf("Save error: %v", err)
 	}
 
 	// Now save empty config
 	emptyCfg := models.PCIPassthroughConfig{Devices: []models.PCIPassthroughDevice{}}
-	if err := mgr.SavePCIPassthroughConfig(emptyCfg); err != nil {
+	if err := mgr.Repository().SavePCIPassthroughConfig(emptyCfg); err != nil {
 		t.Fatalf("Empty save error: %v", err)
 	}
 
-	loadedCfg, err := mgr.GetPCIPassthroughConfig()
+	loadedCfg, err := mgr.Repository().GetPCIPassthroughConfig()
 	if err != nil {
 		t.Fatalf("GetPCIPassthroughConfig error: %v", err)
 	}

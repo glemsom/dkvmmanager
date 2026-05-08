@@ -31,8 +31,8 @@ type PCIPassthroughModel struct {
 }
 
 // NewPCIPassthroughModel creates a new PCI passthrough model
-func NewPCIPassthroughModel(vmManager *vm.Manager) (*PCIPassthroughModel, error) {
-	fm, err := NewPCIPassthroughFormModel(vmManager)
+func NewPCIPassthroughModel(repo *vm.Repository, vmManager *vm.Manager, hostDiscovery vm.HostDiscovery) (*PCIPassthroughModel, error) {
+	fm, err := NewPCIPassthroughFormModel(repo, vmManager, hostDiscovery)
 	if err != nil {
 		return nil, err
 	}

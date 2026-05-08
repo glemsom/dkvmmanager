@@ -20,8 +20,14 @@ func NewMainModel() (*MainModel, error) {
 // NewMainModelWithConfig creates a new main model with the given configuration
 func NewMainModelWithConfig(cfg *config.Config) (*MainModel, error) {
 
+	// Create config repository
+	repo, err := vm.NewRepository(cfg.VMsConfigFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create VM repository: %w", err)
+	}
+
 	// Create VM manager
-	vmMgr, err := vm.NewManager(cfg)
+	vmMgr, err := vm.NewManagerWithRepository(cfg, repo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create VM manager: %w", err)
 	}
@@ -90,6 +96,8 @@ func NewMainModelWithConfig(cfg *config.Config) (*MainModel, error) {
 		currentView:            initialView,
 		cfg:                    cfg,
 		vmManager:              vmMgr,
+		configRepo:             repo,
+		hostDiscovery:          &vm.DefaultHostDiscovery{},
 		selectedIndex:          0,
 		menuItems:              menuItems,
 		menuList:               menuList,

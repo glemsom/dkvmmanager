@@ -31,10 +31,20 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 		return nil, fmt.Errorf("failed to create VM repository: %w", err)
 	}
 
+	return NewManagerWithRepository(cfg, repo)
+}
+
+// NewManagerWithRepository creates a Manager with an existing repository.
+func NewManagerWithRepository(cfg *config.Config, repo *Repository) (*Manager, error) {
 	return &Manager{
 		cfg:        cfg,
 		repository: repo,
 	}, nil
+}
+
+// Repository returns the underlying VM repository for config persistence.
+func (m *Manager) Repository() *Repository {
+	return m.repository
 }
 
 // GetConfig returns the manager configuration
@@ -148,84 +158,6 @@ func (m *Manager) GenerateMAC() string {
 	return generateMAC()
 }
 
-// GetCPUOptions returns the global CPU options configuration
-func (m *Manager) GetCPUOptions() (models.CPUOptions, error) {
-	return m.repository.GetCPUOptions()
-}
-
-// SaveCPUOptions saves the global CPU options configuration
-func (m *Manager) SaveCPUOptions(opts models.CPUOptions) error {
-	return m.repository.SaveCPUOptions(opts)
-}
-
-// GetPCIPassthroughConfig returns the global PCI passthrough configuration
-func (m *Manager) GetPCIPassthroughConfig() (models.PCIPassthroughConfig, error) {
-	return m.repository.GetPCIPassthroughConfig()
-}
-
-// SavePCIPassthroughConfig saves the global PCI passthrough configuration
-func (m *Manager) SavePCIPassthroughConfig(cfg models.PCIPassthroughConfig) error {
-	return m.repository.SavePCIPassthroughConfig(cfg)
-}
-
-// ScanPCIDevices scans the host for available PCI devices
-func (m *Manager) ScanPCIDevices() ([]models.PCIDevice, error) {
-	scanner := NewPCIScanner()
-	return scanner.ScanDevices()
-}
-
-// GetUSBPassthroughConfig returns the global USB passthrough configuration
-func (m *Manager) GetUSBPassthroughConfig() (models.USBPassthroughConfig, error) {
-	return m.repository.GetUSBPassthroughConfig()
-}
-
-// SaveUSBPassthroughConfig saves the global USB passthrough configuration
-func (m *Manager) SaveUSBPassthroughConfig(cfg models.USBPassthroughConfig) error {
-	return m.repository.SaveUSBPassthroughConfig(cfg)
-}
-
-// ScanUSBDevices scans the host for available USB devices
-func (m *Manager) ScanUSBDevices() ([]models.USBDevice, error) {
-	scanner := NewUSBScanner()
-	return scanner.ScanDevices()
-}
-
-// ScanCPUTopology scans the host for CPU topology information
-func (m *Manager) ScanCPUTopology() (models.HostCPUTopology, error) {
-	scanner := NewCPUScanner()
-	return scanner.ScanTopology()
-}
-
-// GetCPUTopology returns the global CPU topology configuration
-func (m *Manager) GetCPUTopology() (models.CPUTopology, error) {
-	return m.repository.GetCPUTopology()
-}
-
-// SaveCPUTopology saves the global CPU topology configuration
-func (m *Manager) SaveCPUTopology(topo models.CPUTopology) error {
-	return m.repository.SaveCPUTopology(topo)
-}
-
-// GetVCPUPinningGlobal returns global vCPU pinning configuration.
-func (m *Manager) GetVCPUPinningGlobal() (models.VCPUPinningGlobal, error) {
-	return m.repository.GetVCPUPinningGlobal()
-}
-
-// SaveVCPUPinningGlobal saves global vCPU pinning configuration.
-func (m *Manager) SaveVCPUPinningGlobal(p models.VCPUPinningGlobal) error {
-	return m.repository.SaveVCPUPinningGlobal(p)
-}
-
-// GetStartStopScript returns the start/stop script configuration
-func (m *Manager) GetStartStopScript() (models.StartStopScript, error) {
-	return m.repository.GetStartStopScript()
-}
-
-// SaveStartStopScript saves the start/stop script configuration
-func (m *Manager) SaveStartStopScript(cfg models.StartStopScript) error {
-	return m.repository.SaveStartStopScript(cfg)
-}
-
 // ApplyVFIOIDsToKernel reads the current PCI passthrough config, builds the
 // vfio-pci.ids parameter string, and writes it to the grub.cfg file.
 // It returns an error if the config cannot be read, or the grub.cfg cannot be updated.
@@ -235,7 +167,7 @@ func (m *Manager) ApplyVFIOIDsToKernel() error {
 	}
 
 	// Get current PCI passthrough config
-	pciCfg, err := m.GetPCIPassthroughConfig()
+	pciCfg, err := m.repository.GetPCIPassthroughConfig()
 	if err != nil {
 		if debugMode {
 			log.Printf("[DEBUG] ApplyVFIOIDsToKernel: failed to get PCI config: %v", err)
@@ -305,7 +237,7 @@ func (m *Manager) ApplyCPUParamsToKernel() error {
 	}
 
 	// Get current vCPU pinning config
-	pinning, err := m.GetVCPUPinningGlobal()
+	pinning, err := m.repository.GetVCPUPinningGlobal()
 	if err != nil {
 		if debugMode {
 			log.Printf("[DEBUG] ApplyCPUParamsToKernel: failed to get vCPU pinning config: %v", err)

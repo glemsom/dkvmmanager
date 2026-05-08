@@ -25,8 +25,8 @@ type USBPassthroughModel struct {
 }
 
 // NewUSBPassthroughModel creates a new USB passthrough model
-func NewUSBPassthroughModel(vmManager *vm.Manager) (*USBPassthroughModel, error) {
-	fm, err := NewUSBPassthroughFormModel(vmManager)
+func NewUSBPassthroughModel(repo *vm.Repository, hostDiscovery vm.HostDiscovery) (*USBPassthroughModel, error) {
+	fm, err := NewUSBPassthroughFormModel(repo, hostDiscovery)
 	if err != nil {
 		return nil, err
 	}

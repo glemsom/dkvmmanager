@@ -30,10 +30,10 @@ func TestRepositoryVCPUPinningPersistence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewManager: %v", err)
 	}
-	if err := mgr.SaveVCPUPinningGlobal(in); err != nil {
+	if err := mgr.Repository().SaveVCPUPinningGlobal(in); err != nil {
 		t.Fatalf("manager SaveVCPUPinningGlobal: %v", err)
 	}
-	mgrOut, err := mgr.GetVCPUPinningGlobal()
+	mgrOut, err := mgr.Repository().GetVCPUPinningGlobal()
 	if err != nil {
 		t.Fatalf("manager GetVCPUPinningGlobal: %v", err)
 	}

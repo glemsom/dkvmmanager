@@ -25,8 +25,8 @@ type CPUTopologyModel struct {
 }
 
 // NewCPUTopologyModel creates a new CPU topology model
-func NewCPUTopologyModel(vmManager *vm.Manager) (*CPUTopologyModel, error) {
-	formModel, err := NewCPUTopologyFormModel(vmManager)
+func NewCPUTopologyModel(repo *vm.Repository) (*CPUTopologyModel, error) {
+	formModel, err := NewCPUTopologyFormModel(repo)
 	if err != nil {
 		return nil, err
 	}

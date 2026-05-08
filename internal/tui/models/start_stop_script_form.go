@@ -12,8 +12,8 @@ import (
 // StartStopScriptFormModel is a form for editing start/stop scripts.
 // It implements the form.FormModel interface for use with ScrollableForm.
 type StartStopScriptFormModel struct {
-	vmManager *vm.Manager
-	config    models.StartStopScript
+	repo        *vm.Repository
+	config      models.StartStopScript
 	pciConfig models.PCIPassthroughConfig // For displaying in builtin mode
 
 	// Focus state
@@ -40,12 +40,12 @@ type StartStopScriptFormModel struct {
 }
 
 // NewStartStopScriptFormModel creates a new StartStopScript form model
-func NewStartStopScriptFormModel(vmManager *vm.Manager) (*StartStopScriptFormModel, error) {
-	cfg, _ := vmManager.GetStartStopScript()
-	pciCfg, _ := vmManager.GetPCIPassthroughConfig()
+func NewStartStopScriptFormModel(repo *vm.Repository) (*StartStopScriptFormModel, error) {
+	cfg, _ := repo.GetStartStopScript()
+	pciCfg, _ := repo.GetPCIPassthroughConfig()
 
 	m := &StartStopScriptFormModel{
-		vmManager:     vmManager,
+		repo:          repo,
 		config:        cfg,
 		pciConfig:     pciCfg,
 		cursorOffsets: make(map[string]int),
@@ -136,7 +136,7 @@ func (m *StartStopScriptFormModel) HandleEnter(pos form.FocusPos) (form.FormResu
 		}
 		if pos.Key == "save" {
 			// Save the configuration
-			if err := m.vmManager.SaveStartStopScript(m.config); err != nil {
+			if err := m.repo.SaveStartStopScript(m.config); err != nil {
 				m.errors["save"] = err.Error()
 			}
 			return form.ResultSave, nil
