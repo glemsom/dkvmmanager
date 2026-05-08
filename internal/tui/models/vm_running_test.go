@@ -434,32 +434,6 @@ func TestVMRunningModelMaxLogLinesExact(t *testing.T) {
 	}
 }
 
-func TestVMRunningModelViewShowsThreads(t *testing.T) {
-	m := setupRunningModel(t, "running")
-	m.threads = []int{100, 101}
-	m.updateViewport()
-	view := m.View()
-	if !strings.Contains(view, "vCPU Threads:") {
-		t.Error("View should show 'vCPU Threads:' when threads present")
-	}
-	if !strings.Contains(view, "100") {
-		t.Error("View should show thread ID 100")
-	}
-	if !strings.Contains(view, "101") {
-		t.Error("View should show thread ID 101")
-	}
-}
-
-func TestVMRunningModelViewNoThreadsWhenEmpty(t *testing.T) {
-	m := setupRunningModel(t, "running")
-	m.threads = nil
-	m.updateViewport()
-	view := m.View()
-	if strings.Contains(view, "vCPU Threads:") {
-		t.Error("View should not show 'vCPU Threads:' when threads empty")
-	}
-}
-
 // --- Async VM Start Tests ---
 
 func TestVMStartedMsgHandlerSetsRunner(t *testing.T) {

@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **vCPU threads display**: Removed thread ID display from the VM running view (`internal/tui/models/vm_running.go`)
+
 ## [0.1.11] - 2026-05-05
 
 ### Added

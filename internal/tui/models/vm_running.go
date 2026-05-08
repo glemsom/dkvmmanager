@@ -314,11 +314,6 @@ func (m *VMRunningModel) calculateInfoHeight() int {
 		if len(m.runner.USBPassthroughDevices()) > 0 {
 			height += 1 + len(m.runner.USBPassthroughDevices())
 		}
-
-		// Add line for threads if available
-		if len(m.threads) > 0 {
-			height += 1
-		}
 	}
 
 	return height
@@ -470,18 +465,6 @@ func (m *VMRunningModel) renderInfoPanel() string {
 		b.WriteString("  ")
 		b.WriteString(labelStyle.Render("vCPUs: "))
 		b.WriteString(valueStyle.Render("N/A"))
-		b.WriteString("\n")
-	}
-
-	// Show thread IDs if available (for both runner present and test)
-	if len(m.threads) > 0 {
-		b.WriteString(labelStyle.Render("vCPU Threads: "))
-		for i, tid := range m.threads {
-			if i > 0 {
-				b.WriteString(", ")
-			}
-			b.WriteString(valueStyle.Render(fmt.Sprintf("%d", tid)))
-		}
 		b.WriteString("\n")
 	}
 
