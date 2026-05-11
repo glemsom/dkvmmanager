@@ -50,10 +50,10 @@ func (r *VMRunner) ApplyVCPUPinning(pinning models.VCPUPinningGlobal) error {
 		if !ok {
 			continue
 		}
+		// Track the first die we see for logging, but don't reject multi-die
+		// (asymmetric topology explicitly uses multiple dies)
 		if guestDie == -1 {
 			guestDie = v.Props.DieID
-		} else if guestDie != v.Props.DieID {
-			return fmt.Errorf("guest vcpu dies mixed in running VM: %d and %d", guestDie, v.Props.DieID)
 		}
 
 		if debugMode {
