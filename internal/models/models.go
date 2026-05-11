@@ -144,6 +144,7 @@ type CPUOptions struct {
 	X2APIC                 bool   `json:"x2apic" yaml:"x2apic"`
 	Migratable             bool   `json:"migratable" yaml:"migratable"`
 	InvTSC                 bool   `json:"invtsc" yaml:"invtsc"`
+	ForceCPUID0x80000026   bool   `json:"force_cpuid_0x80000026" yaml:"force_cpuid_0x80000026"`
 	RTCUTC                 bool   `json:"rtc_utc" yaml:"rtc_utc"`
 	CPUPM                  bool   `json:"cpu_pm" yaml:"cpu_pm"`
 }

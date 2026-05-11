@@ -41,6 +41,7 @@ func TestCPUOptionsFieldRegistry(t *testing.T) {
 		{"X2APIC", fields.FieldToggle},
 		{"Migratable", fields.FieldToggle},
 		{"InvTSC", fields.FieldToggle},
+		{"ForceCPUID0x80000026", fields.FieldToggle},
 		{"RTCUTC", fields.FieldToggle},
 		{"CPUPM", fields.FieldToggle},
 	}
@@ -302,8 +303,8 @@ func TestCPUOptionsPositionsCount(t *testing.T) {
 	}
 	form.positions = form.BuildPositions()
 
-	// 22 toggles + 2 text fields + 1 save button + 3 section headers = 28
-	expectedCount := 28
+	// 23 toggles + 2 text fields + 1 save button + 3 section headers = 29
+	expectedCount := 29
 	if len(form.positions) != expectedCount {
 		t.Errorf("Expected %d positions, got %d", expectedCount, len(form.positions))
 	}

@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **ForceCPUID0x80000026 toggle**: New CPU option to force CPUID leaf 0x80000026 (`internal/models/models.go`, `internal/tui/models/fields/cpu_options.go`, `internal/vm/repository.go`)
+- **Asymmetric vCPU topology mapper**: New `GenerateAsymmetricCPUDevices` function for building per-die CPU device declarations with correct APIC IDs (`internal/vm/vcpu_topology_mapper.go`)
+
+### Fixed
+- **Multi-die vCPU pinning**: Allow asymmetric topologies with multiple dies instead of rejecting them as errors (`internal/vm/vm_runner_pinning.go`)
+
 ### Removed
 - **vCPU threads display**: Removed thread ID display from the VM running view (`internal/tui/models/vm_running.go`)
 

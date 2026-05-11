@@ -221,6 +221,7 @@ func (m *CPUOptionsFormModel) fieldLabel(name string) string {
 		"X2APIC":                 "x2APIC mode (>255 vCPUs)",
 		"Migratable":             "Expose all host features (no live migration)",
 		"InvTSC":                 "Invariant TSC",
+		"ForceCPUID0x80000026":   "Force AMD CPUID",
 		"RTCUTC":                 "Use UTC time for RTC",
 		"CPUPM":                  "Allow guest C/P-state control",
 	}

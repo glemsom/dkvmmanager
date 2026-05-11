@@ -39,6 +39,7 @@ var CPUOptionsFields = []FieldMeta{
 	{Name: "X2APIC", Kind: FieldToggle},
 	{Name: "Migratable", Kind: FieldToggle},
 	{Name: "InvTSC", Kind: FieldToggle},
+	{Name: "ForceCPUID0x80000026", Kind: FieldToggle},
 	{Name: "RTCUTC", Kind: FieldToggle},
 	{Name: "CPUPM", Kind: FieldToggle},
 }

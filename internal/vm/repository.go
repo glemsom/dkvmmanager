@@ -197,6 +197,7 @@ func (r *Repository) GetCPUOptions() (models.CPUOptions, error) {
 	opts.X2APIC = getBool(data, "x2apic")
 	opts.Migratable = getBool(data, "migratable")
 	opts.InvTSC = getBool(data, "invtsc")
+	opts.ForceCPUID0x80000026 = getBool(data, "force_cpuid_0x80000026")
 	opts.RTCUTC = getBool(data, "rtc_utc")
 
 	return opts, nil
@@ -227,6 +228,7 @@ func (r *Repository) SaveCPUOptions(opts models.CPUOptions) error {
 		"x2apic":                    opts.X2APIC,
 		"migratable":                opts.Migratable,
 		"invtsc":                    opts.InvTSC,
+		"force_cpuid_0x80000026":    opts.ForceCPUID0x80000026,
 		"rtc_utc":                   opts.RTCUTC,
 	}
 

@@ -124,6 +124,10 @@ func (m *CPUOptionsFormModel) BuildPositions() []form.FocusPos {
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "InvTSC"},
 	})
 	positions = append(positions, form.FocusPos{
+		Kind: form.FocusToggle, Label: "Force AMD CPUID", Key: "ForceCPUID0x80000026",
+		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "ForceCPUID0x80000026"},
+	})
+	positions = append(positions, form.FocusPos{
 		Kind: form.FocusToggle, Label: "Use UTC time for RTC", Key: "RTCUTC",
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "RTCUTC"},
 	})
