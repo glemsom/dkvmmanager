@@ -70,7 +70,7 @@ func (m *CPUTopologyFormModel) renderAllLines() []string {
 	// Count allocated cores
 	allocatedCores := 0
 	for _, pos := range m.positions {
-		if pos.Kind == form.FocusToggle {
+		if pos.Kind == form.FocusToggle && pos.Key != "use_host_topology" {
 			d := pos.Data.(cpuTopoFocusData)
 			key := coreKey(d.dieID, d.coreID)
 			if m.coreSelected[key] {
@@ -86,6 +86,10 @@ func (m *CPUTopologyFormModel) renderAllLines() []string {
 
 		switch pos.Kind {
 		case form.FocusToggle:
+			if pos.Key == "use_host_topology" {
+				lines = append(lines, m.renderUseHostTopologyToggle(focused))
+				continue
+			}
 			d := pos.Data.(cpuTopoFocusData)
 			if d.dieID != lastDieID {
 				if lastDieID != -1 {
@@ -161,4 +165,24 @@ func (m *CPUTopologyFormModel) renderCoreLine(core *models.CPUCore, selected, fo
 	coreLabel := cpuTopoLabelStyle.Render(fmt.Sprintf("Core %d", core.ID))
 
 	return prefix + togglePart + " " + coreLabel + threadLabel
+}
+
+// renderUseHostTopologyToggle renders the "Use Host Topology" toggle line
+func (m *CPUTopologyFormModel) renderUseHostTopologyToggle(focused bool) string {
+	prefix := "  "
+	if focused {
+		prefix = cpuTopoFocusStyle.Render("> ")
+	}
+
+	var togglePart string
+	if m.useHostTopology {
+		togglePart = cpuTopoSelectedStyle.Render("[ ON ]")
+	} else {
+		togglePart = cpuTopoHostStyle.Render("[OFF]")
+	}
+
+	label := cpuTopoLabelStyle.Render("Use Host Topology")
+	desc := cpuTopoMutedStyle.Render("Preserve die/socket layout in guest VM")
+
+	return prefix + togglePart + " " + label + "  " + desc
 }

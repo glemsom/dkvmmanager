@@ -20,7 +20,7 @@ func (m *CPUTopologyFormModel) moveFocus(delta int) {
 func (m *CPUTopologyFormModel) hostCoreCount() int {
 	allocated := 0
 	for _, pos := range m.positions {
-		if pos.Kind == form.FocusToggle {
+		if pos.Kind == form.FocusToggle && pos.Data != nil {
 			d := pos.Data.(cpuTopoFocusData)
 			key := coreKey(d.dieID, d.coreID)
 			if m.coreSelected[key] {

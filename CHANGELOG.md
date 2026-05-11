@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Use host CPU topology toggle**: New `use_host_topology` toggle in the CPU topology form that allows inheriting the host's CPU topology automatically (`internal/tui/models/cpu_topology_form.go`, `internal/tui/models/cpu_topology_form_navigation.go`, `internal/tui/models/cpu_topology_form_render.go`, `internal/tui/models/cpu_topology_form_validation.go`, `internal/tui/models/cpu_topology_form_test.go`)
+  - Added navigation support for the new toggle position
+  - Added rendering for the toggle in the form view
+  - Added validation and save logic to persist `UseHostTopology` in the `CPUTopology` model
+  - Added comprehensive tests for toggle navigation, rendering, and validation
 - **ForceCPUID0x80000026 toggle**: New CPU option to force CPUID leaf 0x80000026 (`internal/models/models.go`, `internal/tui/models/fields/cpu_options.go`, `internal/vm/repository.go`)
 - **Asymmetric vCPU topology mapper**: New `GenerateAsymmetricCPUDevices` function for building per-die CPU device declarations with correct APIC IDs (`internal/vm/vcpu_topology_mapper.go`)
 

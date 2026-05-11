@@ -39,10 +39,10 @@ func TestCPUTopologyFormToggle(t *testing.T) {
 
 	formModel.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
-	// Find a toggle position
+	// Find a core toggle position (skip use_host_topology)
 	found := false
 	for i, pos := range formModel.positions {
-		if pos.Kind == form.FocusToggle {
+		if pos.Kind == form.FocusToggle && pos.Data != nil {
 			formModel.focusIndex = i
 			found = true
 			break
@@ -114,7 +114,7 @@ func TestCPUTopologyFormSave(t *testing.T) {
 	// Ensure at least one core is selected for VM (default has most as VM)
 	// Toggle a HOST core to VM if needed
 	for i, pos := range formModel.positions {
-		if pos.Kind == form.FocusToggle {
+		if pos.Kind == form.FocusToggle && pos.Data != nil {
 			formModel.focusIndex = i
 			formModel.Update(tea.KeyMsg{Type: tea.KeySpace})
 			break
@@ -167,7 +167,7 @@ func TestCPUTopologyFormDefaultHostCore(t *testing.T) {
 	// Count HOST (unselected) cores — should be exactly 1
 	hostCount := 0
 	for _, pos := range formModel.positions {
-		if pos.Kind == form.FocusToggle {
+		if pos.Kind == form.FocusToggle && pos.Data != nil {
 			d := pos.Data.(cpuTopoFocusData)
 			key := coreKey(d.dieID, d.coreID)
 			if !formModel.coreSelected[key] {
@@ -203,7 +203,7 @@ func TestCPUTopologyFormZeroHostWarning(t *testing.T) {
 
 	// Toggle all HOST cores to VM
 	for i, pos := range formModel.positions {
-		if pos.Kind == form.FocusToggle {
+		if pos.Kind == form.FocusToggle && pos.Data != nil {
 			d := pos.Data.(cpuTopoFocusData)
 			key := coreKey(d.dieID, d.coreID)
 			if !formModel.coreSelected[key] {
@@ -290,10 +290,151 @@ func TestCPUTopologyFormModelInterface(t *testing.T) {
 		t.Fatal("Expected at least one position")
 	}
 
+	// First position should be the use_host_topology toggle (if scan succeeded)
+	if formModel.scanErr == nil && len(formModel.hostTopo.Dies) > 0 {
+		firstPos := positions[0]
+		if firstPos.Kind != form.FocusToggle || firstPos.Key != "use_host_topology" {
+			t.Errorf("Expected first position to be use_host_topology toggle, got Kind=%v Key=%s", firstPos.Kind, firstPos.Key)
+		}
+	}
+
 	// Last position should be save button
 	lastPos := positions[len(positions)-1]
 	if lastPos.Kind != form.FocusButton || lastPos.Key != "save" {
 		t.Errorf("Expected last position to be save button, got Kind=%v Key=%s", lastPos.Kind, lastPos.Key)
+	}
+
+	// Position count = 1 (use_host_topology toggle) + N (core toggles) + 1 (save)
+	if formModel.scanErr == nil && len(formModel.hostTopo.Dies) > 0 {
+		expectedCoreToggles := formModel.hostTopo.TotalCores
+		expectedTotal := 1 + expectedCoreToggles + 1
+		if len(positions) != expectedTotal {
+			t.Errorf("Expected %d positions (1 toggle + %d cores + 1 save), got %d", expectedTotal, expectedCoreToggles, len(positions))
+		}
+	}
+}
+
+// TestCPUTopologyFormUseHostTopologyToggle tests toggling the use_host_topology field
+func TestCPUTopologyFormUseHostTopologyToggle(t *testing.T) {
+	vmManager := createTestVMManager(t)
+
+	formModel, err := NewCPUTopologyFormModel(vmManager.Repository())
+	if err != nil {
+		t.Fatalf("NewCPUTopologyFormModel returned error: %v", err)
+	}
+
+	if formModel.scanErr != nil {
+		t.Skip("Skipping use_host_topology toggle test: CPU scan failed (expected in CI)")
+	}
+
+	formModel.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+
+	// Verify initial state matches loaded config
+	initialState := formModel.useHostTopology
+
+	// Navigate to position 0 (the use_host_topology toggle)
+	formModel.focusIndex = 0
+
+	// Verify position 0 is the use_host_topology toggle
+	pos := formModel.positions[0]
+	if pos.Key != "use_host_topology" {
+		t.Fatalf("Expected position 0 key to be 'use_host_topology', got %q", pos.Key)
+	}
+	if pos.Kind != form.FocusToggle {
+		t.Fatalf("Expected position 0 kind to be FocusToggle, got %v", pos.Kind)
+	}
+
+	// Press Space to toggle
+	model, _ := formModel.Update(tea.KeyMsg{Type: tea.KeySpace})
+	formModel = model.(*CPUTopologyFormModel)
+
+	if formModel.useHostTopology == initialState {
+		t.Errorf("useHostTopology did not change after toggle: was %v, still %v", initialState, formModel.useHostTopology)
+	}
+
+	// Toggle again to verify it flips back
+	model, _ = formModel.Update(tea.KeyMsg{Type: tea.KeySpace})
+	formModel = model.(*CPUTopologyFormModel)
+
+	if formModel.useHostTopology != initialState {
+		t.Errorf("useHostTopology did not flip back after second toggle: expected %v, got %v", initialState, formModel.useHostTopology)
+	}
+
+	// Verify rendering shows appropriate state
+	view := formModel.View()
+	if formModel.useHostTopology {
+		if !strings.Contains(view, "[ ON ]") {
+			t.Errorf("Expected '[ ON ]' in view when useHostTopology is true, but not found")
+		}
+	} else {
+		if !strings.Contains(view, "[OFF]") {
+			t.Errorf("Expected '[OFF]' in view when useHostTopology is false, but not found")
+		}
+	}
+}
+
+// TestCPUTopologyFormUseHostTopologySaved tests that the toggle state persists on save
+func TestCPUTopologyFormUseHostTopologySaved(t *testing.T) {
+	vmManager := createTestVMManager(t)
+
+	formModel, err := NewCPUTopologyFormModel(vmManager.Repository())
+	if err != nil {
+		t.Fatalf("NewCPUTopologyFormModel returned error: %v", err)
+	}
+
+	if formModel.scanErr != nil {
+		t.Skip("Skipping use_host_topology save test: CPU scan failed (expected in CI)")
+	}
+
+	formModel.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+
+	// Ensure useHostTopology is ON (toggle if needed)
+	if !formModel.useHostTopology {
+		formModel.focusIndex = 0
+		formModel.Update(tea.KeyMsg{Type: tea.KeySpace})
+	}
+
+	// Ensure at least one core is selected for VM
+	hasVMCore := false
+	for i, pos := range formModel.positions {
+		if pos.Kind == form.FocusToggle && pos.Key != "use_host_topology" {
+			d := pos.Data.(cpuTopoFocusData)
+			key := coreKey(d.dieID, d.coreID)
+			if !formModel.coreSelected[key] {
+				formModel.focusIndex = i
+				formModel.Update(tea.KeyMsg{Type: tea.KeySpace})
+				hasVMCore = true
+				break
+			}
+			hasVMCore = true
+			break
+		}
+	}
+	if !hasVMCore {
+		t.Skip("No cores available to select for VM")
+	}
+
+	// Navigate to save button and save
+	formModel.focusIndex = len(formModel.positions) - 1
+	model, cmd := formModel.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	formModel = model.(*CPUTopologyFormModel)
+
+	if cmd == nil {
+		t.Fatal("Expected command after save, got nil")
+	}
+
+	msg := cmd()
+	if _, ok := msg.(CPUTopologyUpdatedMsg); !ok {
+		t.Errorf("Expected CPUTopologyUpdatedMsg, got %T", msg)
+	}
+
+	// Verify saved config includes UseHostTopology
+	savedTopo, err := vmManager.Repository().GetCPUTopology()
+	if err != nil {
+		t.Fatalf("Failed to load CPU topology: %v", err)
+	}
+	if !savedTopo.UseHostTopology {
+		t.Errorf("Saved CPUTopology.UseHostTopology = false, want true")
 	}
 }
 

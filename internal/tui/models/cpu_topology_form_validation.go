@@ -17,7 +17,7 @@ func (m *CPUTopologyFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd) {
 	// Build selected CPU list from all selected cores' thread IDs
 	var selectedCPUs []int
 	for _, pos := range m.positions {
-		if pos.Kind != form.FocusToggle {
+		if pos.Kind != form.FocusToggle || pos.Data == nil {
 			continue
 		}
 		d := pos.Data.(cpuTopoFocusData)
@@ -34,8 +34,9 @@ func (m *CPUTopologyFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd) {
 	}
 
 	topo := models.CPUTopology{
-		Enabled:      true,
-		SelectedCPUs: selectedCPUs,
+		Enabled:         true,
+		SelectedCPUs:    selectedCPUs,
+		UseHostTopology: m.useHostTopology,
 	}
 
 	if err := m.repo.SaveCPUTopology(topo); err != nil {
