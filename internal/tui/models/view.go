@@ -259,7 +259,12 @@ func (m *MainModel) renderConfigTabWithWidth(width int) string {
 	contentWidth := width - 4
 	listWidth := max(0, contentWidth-6)
 	listHeight := max(0, height-4)
-	m.configList.SetSize(listWidth, listHeight)
+	// Only resize the list when window dimensions are known (after WindowSizeMsg).
+	// Before that, windowWidth/windowHeight are 0 and listHeight would be 0,
+	// which prevents the list from rendering its items correctly.
+	if m.windowHeight > 0 {
+		m.configList.SetSize(listWidth, listHeight)
+	}
 	content := styles.LayeredPanelStyle().
 		Width(contentWidth).
 		Height(height).
@@ -280,7 +285,12 @@ func (m *MainModel) renderPowerTabWithWidth(width int) string {
 	contentWidth := width - 4
 	listWidth := max(0, contentWidth-6)
 	listHeight := max(0, height-4)
-	m.powerList.SetSize(listWidth, listHeight)
+	// Only resize the list when window dimensions are known (after WindowSizeMsg).
+	// Before that, windowWidth/windowHeight are 0 and listHeight would be 0,
+	// which prevents the list from rendering its items correctly.
+	if m.windowHeight > 0 {
+		m.powerList.SetSize(listWidth, listHeight)
+	}
 	content := styles.LayeredPanelStyle().
 		Width(contentWidth).
 		Height(height).
