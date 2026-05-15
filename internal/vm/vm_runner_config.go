@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/glemsom/dkvmmanager/internal/models"
@@ -168,6 +169,13 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 				threadsPerCore = 1
 			}
 			coresPerDie := hostTopo.TotalCores / dies
+			// Use max cores per die (not average) since -smp cores=N defines N
+			// cores per die uniformly; QEMU requires enough room for the largest die.
+			for _, die := range hostTopo.Dies {
+				if die.Cores > coresPerDie {
+					coresPerDie = die.Cores
+				}
+			}
 			if coresPerDie == 0 {
 				coresPerDie = numCPUs
 			}
@@ -178,6 +186,12 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 			// auto-create all of them, conflicting with the explicit -device declarations.
 			args = append(args, "-smp", fmt.Sprintf("1,maxcpus=%d,sockets=1,dies=%d,cores=%d,threads=%d",
 				maxCPUs, dies, coresPerDie, threadsPerCore))
+
+			// Build a per-die mapping from physical core IDs → local (0-based) indices.
+			// QEMU -smp cores=N means N cores per die, so core-ids must be in 0:(N-1)
+			// within each die. Host physical core IDs (e.g. 10-17 on die 1) are global
+			// and must be mapped to local per-die indices.
+			dieLocalCoreMap := buildDieLocalCoreMap(hostTopo)
 
 			// Generate -device host-x86_64-cpu for each selected CPU.
 			// Skip the first CPU (i=0): QEMU auto-creates the CPU at
@@ -193,10 +207,17 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 					log.Printf("[WARNING] VM %s: CPU %d not found in host topology: %v", r.vm.Name, cpuID, err)
 					continue
 				}
+				// Map physical core ID to per-die local index (0-based within the die)
+				localCoreID, ok := dieLocalCoreMap[dieID][coreID]
+				if !ok {
+					log.Printf("[WARNING] VM %s: CPU %d core %d not found in die %d local core map",
+						r.vm.Name, cpuID, coreID, dieID)
+					continue
+				}
 				cpuIDStr := fmt.Sprintf("cpu-host%d", i)
 				args = append(args, "-device", fmt.Sprintf(
 						"host-x86_64-cpu,socket-id=0,die-id=%d,core-id=%d,thread-id=%d,id=%s",
-						dieID, coreID, threadID, cpuIDStr))
+						dieID, localCoreID, threadID, cpuIDStr))
 			}
 		} else {
 			// Fallback: flat topology (current behavior)
@@ -405,6 +426,37 @@ func (r *VMRunner) buildCPUOptsString() string {
 }
 
 
+
+// buildDieLocalCoreMap builds a mapping from physical core IDs to local (0-based) per-die
+// core indices. QEMU -smp cores=N means N cores per die, so core-ids in -device declarations
+// must be in range 0:(N-1). Host physical core IDs are often non-zero-based on multi-die
+// systems (e.g. die 0 has cores 0-7, die 1 has cores 10-17).
+func buildDieLocalCoreMap(host models.HostCPUTopology) map[int]map[int]int {
+	result := make(map[int]map[int]int)
+
+	for _, die := range host.Dies {
+		// Collect unique physical core IDs for this die (from all logical CPUs on the die)
+		coreSet := make(map[int]struct{})
+		for _, core := range die.CoreDetails {
+			coreSet[core.ID] = struct{}{}
+		}
+
+		// Sort physical core IDs and assign local (0-based) indices
+		physCoreIDs := make([]int, 0, len(coreSet))
+		for id := range coreSet {
+			physCoreIDs = append(physCoreIDs, id)
+		}
+		sort.Ints(physCoreIDs)
+
+		dieMap := make(map[int]int)
+		for localIdx, physID := range physCoreIDs {
+			dieMap[physID] = localIdx
+		}
+		result[die.ID] = dieMap
+	}
+
+	return result
+}
 
 // extractBaseDevice extracts the base device address (domain:bus:device) from a PCI address
 // by removing the function number. E.g., "0000:03:00.1" -> "0000:03:00"
