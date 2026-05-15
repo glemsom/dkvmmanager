@@ -22,3 +22,7 @@ AGENTS.md
 PROJECT_STRUCTURE.md
 .lean-ctx
 LEAN-CTX.md
+
+# Debug logs
+debug.log
+debug.log.saved

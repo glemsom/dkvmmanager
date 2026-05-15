@@ -177,8 +177,14 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 			args = append(args, "-smp", fmt.Sprintf("%d,maxcpus=%d,sockets=1,dies=%d,cores=%d,threads=%d",
 				numCPUs, maxCPUs, dies, coresPerDie, threadsPerCore))
 
-			// Generate -device host-x86_64-cpu for each selected CPU
+			// Generate -device host-x86_64-cpu for each selected CPU.
+			// Skip the first CPU (i=0): QEMU auto-creates the CPU at
+			// socket=0,die=0,core=0,thread=0 (APIC ID 0) via -smp and will
+			// reject an explicit -device declaration as a duplicate.
 			for i, cpuID := range r.cpuTopology.SelectedCPUs {
+				if i == 0 {
+					continue
+				}
 				dieID, coreID, threadID, err := CPUIndexToTopology(cpuID, hostTopo)
 				if err != nil {
 					// CPU not found in host topology — skip and log warning
