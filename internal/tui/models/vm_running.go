@@ -64,6 +64,9 @@ type VMRunningModel struct {
 	threads   []int
 	startTime time.Time
 
+	// Status polling tracking
+	pollingSince time.Time
+
 	// Dimensions
 	width  int
 	height int
@@ -165,6 +168,13 @@ func (m *VMRunningModel) pollStatus() tea.Cmd {
 
 		client := m.runner.QMPClient()
 		if client == nil {
+			// QMP not connected yet - if process has been running long enough,
+			// assume VM is running (QMP socket may never appear in some configs)
+			if !m.pollingSince.IsZero() && time.Since(m.pollingSince) > 10*time.Second {
+				if m.runner.IsRunning() {
+					return VMStatusUpdateMsg{Status: "running"}
+				}
+			}
 			return VMStatusUpdateMsg{Status: "starting"}
 		}
 
@@ -226,6 +236,7 @@ func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case VMStartedMsg:
 		m.runner = msg.Runner
 		m.status = "starting" // will be updated by initialStatus
+		m.pollingSince = time.Now()
 		return m, tea.Batch(
 			m.waitForLog(),
 			m.waitForVMExit(),

@@ -121,6 +121,7 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.vmRunningModel != nil {
 			m.vmRunningModel.runner = vsm.Runner
 			m.vmRunningModel.status = "starting" // will be updated by initialStatus
+			m.vmRunningModel.pollingSince = time.Now()
 			return m, tea.Batch(
 				m.vmRunningModel.waitForLog(),
 				m.vmRunningModel.waitForVMExit(),

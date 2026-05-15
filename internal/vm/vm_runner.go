@@ -896,16 +896,30 @@ func (r *VMRunner) executeStartScript() error {
 		}
 
 		// Read output in goroutines to avoid blocking
-		go r.readScriptOutput(stdout, "start script stdout")
-		go r.readScriptOutput(stderr, "start script stderr")
+		done := make(chan struct{})
+		go func() {
+			r.readScriptOutput(stdout, "start script stdout")
+			done <- struct{}{}
+		}()
+		go func() {
+			r.readScriptOutput(stderr, "start script stderr")
+			done <- struct{}{}
+		}()
 
 		if err := cmd.Wait(); err != nil {
 			if debugMode {
 				log.Printf("[DEBUG] start script failed: %v", err)
 			}
+			// Wait for output goroutines to finish capturing remaining output
+			<-done
+			<-done
 			r.logChan <- fmt.Sprintf("[start script] failed: %v", err)
 			return fmt.Errorf("start script execution failed: %w", err)
 		}
+
+		// Wait for output goroutines to finish capturing remaining output
+		<-done
+		<-done
 
 		r.logChan <- fmt.Sprintf("[start script] executed builtin script: %s", scriptPath)
 		if debugMode {
@@ -934,17 +948,31 @@ func (r *VMRunner) executeStartScript() error {
 			return fmt.Errorf("failed to start script: %w", err)
 		}
 
-		// Read output in goroutines to avoid blocking
-		go r.readScriptOutput(stdout, "start script stdout")
-		go r.readScriptOutput(stderr, "start script stderr")
+		// Read output in goroutines and wait for them to finish
+		done2 := make(chan struct{})
+		go func() {
+			r.readScriptOutput(stdout, "start script stdout")
+			done2 <- struct{}{}
+		}()
+		go func() {
+			r.readScriptOutput(stderr, "start script stderr")
+			done2 <- struct{}{}
+		}()
 
 		if err := cmd.Wait(); err != nil {
 			if debugMode {
 				log.Printf("[DEBUG] start script failed: %v", err)
 			}
+			// Wait for output goroutines to finish capturing remaining output
+			<-done2
+			<-done2
 			r.logChan <- fmt.Sprintf("[start script] failed: %v", err)
 			return fmt.Errorf("start script execution failed: %w", err)
 		}
+
+		// Wait for output goroutines to finish capturing remaining output
+		<-done2
+		<-done2
 
 		r.logChan <- fmt.Sprintf("[start script] executed: %s", r.startStopScript.StartScript)
 		if debugMode {
