@@ -172,10 +172,12 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 				coresPerDie = numCPUs
 			}
 
-			// Generate -smp with maxcpus
-			// online CPUs = numCPUs, max = maxCPUs, sockets=1, dies=dies, cores=coresPerDie, threads=threadsPerCore
-			args = append(args, "-smp", fmt.Sprintf("%d,maxcpus=%d,sockets=1,dies=%d,cores=%d,threads=%d",
-				numCPUs, maxCPUs, dies, coresPerDie, threadsPerCore))
+			// Generate -smp with only 1 online CPU (QEMU auto-creates CPU 0).
+			// The remaining CPUs are provisioned via explicit -device host-x86_64-cpu below.
+			// Using numCPUs here would cause duplicate APIC ID errors since QEMU would
+			// auto-create all of them, conflicting with the explicit -device declarations.
+			args = append(args, "-smp", fmt.Sprintf("1,maxcpus=%d,sockets=1,dies=%d,cores=%d,threads=%d",
+				maxCPUs, dies, coresPerDie, threadsPerCore))
 
 			// Generate -device host-x86_64-cpu for each selected CPU.
 			// Skip the first CPU (i=0): QEMU auto-creates the CPU at

@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * **ci:** include binaries in GitHub releases ([35b39b7](https://github.com/glemsom/dkvmmanager/commit/35b39b727c422668115a925991c3389fed931347))
 
+## [0.1.13] - 2026-05-15
+
+### Fixed
+- **QEMU duplicate APIC ID crash**: When using "Use host CPU topology", `-smp` previously provisioned all selected vCPUs automatically, causing QEMU to reject the explicit `-device host-x86_64-cpu` declarations with `CPU[N] with APIC ID N exists`. Fixed by setting `-smp 1,maxcpus=...` so only CPU 0 is auto-created and the remaining CPUs are added via explicit `-device` lines (`internal/vm/vm_runner_config.go`)
+
 ## [Unreleased]
 
 ### Added
@@ -184,7 +189,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.11...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.13...HEAD
+[0.1.13]: https://github.com/glemsom/dkvmmanager/compare/v0.1.12...v0.1.13
+[0.1.12]: https://github.com/glemsom/dkvmmanager/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/glemsom/dkvmmanager/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/glemsom/dkvmmanager/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/glemsom/dkvmmanager/compare/v0.1.8...v0.1.9

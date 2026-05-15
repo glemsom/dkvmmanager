@@ -3,7 +3,7 @@ package version
 
 // Version holds the current version of the application
 // Can be overridden at build time using -ldflags
-var Version = "0.1.12"
+var Version = "0.1.13"
 
 // Commit holds the Git commit hash
 // Can be overridden at build time using -ldflags
