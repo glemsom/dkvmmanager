@@ -6,16 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-### Bug Fixes
+## [0.1.14] - 2026-05-15
 
-* **ci:** include binaries in GitHub releases ([35b39b7](https://github.com/glemsom/dkvmmanager/commit/35b39b727c422668115a925991c3389fed931347))
+### Fixed
+- **Per-die core ID mapping**: On multi-die systems, host physical core IDs may not be zero-based within each die (e.g. die 0 has cores 0-7, die 1 has cores 10-17). QEMU's `-smp cores=N` requires core-ids in range 0:(N-1) per die. Added `buildDieLocalCoreMap()` to sort physical core IDs per die and assign 0-based local indices for correct `-device host-x86_64-cpu` declarations (`internal/vm/vm_runner_config.go`)
 
 ## [0.1.13] - 2026-05-15
 
 ### Fixed
 - **QEMU duplicate APIC ID crash**: When using "Use host CPU topology", `-smp` previously provisioned all selected vCPUs automatically, causing QEMU to reject the explicit `-device host-x86_64-cpu` declarations with `CPU[N] with APIC ID N exists`. Fixed by setting `-smp 1,maxcpus=...` so only CPU 0 is auto-created and the remaining CPUs are added via explicit `-device` lines (`internal/vm/vm_runner_config.go`)
+- **VM status stuck on STARTING**: Handle `VMStartedMsg` before registry dispatch to prevent VMs from permanently showing "STARTING" status after a fast QEMU exit (`internal/vm/manager.go`)
 
-## [Unreleased]
+## [0.1.12]
 
 ### Added
 - **Use host CPU topology toggle**: New `use_host_topology` toggle in the CPU topology form that allows inheriting the host's CPU topology automatically (`internal/tui/models/cpu_topology_form.go`, `internal/tui/models/cpu_topology_form_navigation.go`, `internal/tui/models/cpu_topology_form_render.go`, `internal/tui/models/cpu_topology_form_validation.go`, `internal/tui/models/cpu_topology_form_test.go`)
@@ -70,20 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **vCPU Pinning Apply to Kernel**: New "Apply to Kernel" button in the vCPU pinning form that writes CPU isolation parameters (`isolcpus`, `nohz_full`, `rcu_nocbs`) to `grub.cfg`, enabling persistent kernel-level CPU isolation for pinned VMs (`internal/vm/grub_config.go`, `internal/vm/grub_config_test.go`, `internal/vm/manager.go`, `internal/tui/models/vcpu_pinning_form*.go`, `internal/tui/models/message_handlers.go`)
 
-### Changed
--
-
-### Deprecated
--
-
-### Removed
--
-
 ### Fixed
 - **PCI passthrough Apply to Kernel**: Remount `/media/usb` as `rw` before modifying `grub.cfg` and restore to `ro` afterward, since DKVM Hypervisor keeps the USB filesystem read-only by default (`internal/vm/manager.go`)
-
-### Security
--
 
 ## [0.1.5](https://github.com/glemsom/dkvmmanager/compare/v0.1.4...v0.1.5) - 2026-05-03
 
@@ -96,19 +86,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **VM manager**: Added `ApplyVFIOIDsToKernel` method to orchestrate grub.cfg updates from PCI passthrough config (`internal/vm/manager.go`)
 - **Config**: Extended config save with additional logging (`internal/config/config.go`)
 
-### Deprecated
--
-
-### Removed
--
-
 ### Fixed
 - Ensure VM form is focused when opened (new/edit mode)
 - **CPU Power Management toggle**: Fix `-overcommit cpu-pm=on` now respects the CPUPM setting (was previously hardcoded and always enabled)
 - **GRUB VFIO config**: Rewrite `UpdateGrubVFIOIDs` to process lines individually, ensuring `vfio-pci.ids=` appears exactly once per linux line and never on non-linux lines (e.g. initrd lines) (`internal/vm/grub_config.go`)
-
-### Security
--
 
 ## [0.1.4](https://github.com/glemsom/dkvmmanager/compare/v0.1.3...v0.1.4) - 2026-05-01
 
@@ -189,7 +170,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.13...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.14...HEAD
+[0.1.14]: https://github.com/glemsom/dkvmmanager/compare/v0.1.13...v0.1.14
 [0.1.13]: https://github.com/glemsom/dkvmmanager/compare/v0.1.12...v0.1.13
 [0.1.12]: https://github.com/glemsom/dkvmmanager/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/glemsom/dkvmmanager/compare/v0.1.10...v0.1.11
