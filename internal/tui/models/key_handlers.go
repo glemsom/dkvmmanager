@@ -116,6 +116,21 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Handle VM started (runner is now available, start log/status/exit watchers)
+	if vsm, ok := msg.(VMStartedMsg); ok {
+		if m.vmRunningModel != nil {
+			m.vmRunningModel.runner = vsm.Runner
+			m.vmRunningModel.status = "starting" // will be updated by initialStatus
+			return m, tea.Batch(
+				m.vmRunningModel.waitForLog(),
+				m.vmRunningModel.waitForVMExit(),
+				m.vmRunningModel.pollStatus(),
+				m.vmRunningModel.initialStatus(),
+			)
+		}
+		return m, nil
+	}
+
 	// Handle exit request from VM running view
 	if _, ok := msg.(VMRunningViewExitMsg); ok {
 		return m.returnFromSubView()
