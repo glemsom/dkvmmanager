@@ -308,7 +308,7 @@ func TestMultipleISOsFilePicker(t *testing.T) {
 // using DiskAddedMsg for hard disk selection (the correct message type for AddDiskModel)
 func TestFilePickerViaMainModel(t *testing.T) {
 	m := setupEditModel(t)
-	fm := getVMForm(m.vmEditModel.form)
+	fm := getEditForm(m)
 
 	// Activate file picker for hardDisks
 	positions := fm.BuildPositions()
@@ -329,7 +329,7 @@ func TestFilePickerViaMainModel(t *testing.T) {
 	dam := DiskAddedMsg{Path: testFilePath, Canceled: false}
 	m.Update(dam)
 
-	fm = getVMForm(m.vmEditModel.form)
+	fm = getEditForm(m)
 	if fm.hardDisks[0] != testFilePath {
 		t.Errorf("Expected hardDisks[0]='%s', got '%s'", testFilePath, fm.hardDisks[0])
 	}

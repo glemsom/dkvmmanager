@@ -51,6 +51,12 @@ func (m *CPUOptionsModel) View() string {
 	return m.form.View()
 }
 
+// SetSize forwards window resize to the underlying form.
+func (m *CPUOptionsModel) SetSize(width, height int) { m.form.SetSize(width, height) }
+
+// FileBrowserActive returns false (CPU options has no file browser).
+func (m *CPUOptionsModel) FileBrowserActive() bool { return false }
+
 // Form returns the underlying form model (for testing/internal access).
 func (m *CPUOptionsModel) Form() *CPUOptionsFormModel {
 	return m.form.Model().(*CPUOptionsFormModel)

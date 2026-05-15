@@ -72,6 +72,12 @@ func (m *MountPointWarningModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.
 	return m, nil
 }
 
+// SetSize is a no-op for the fixed-height warning dialog.
+func (m *MountPointWarningModel) SetSize(width, height int) {}
+
+// FileBrowserActive returns false (no file browser in warning dialog).
+func (m *MountPointWarningModel) FileBrowserActive() bool { return false }
+
 // View returns the view for the model.
 func (m *MountPointWarningModel) View() string {
 	warningTitle := lipgloss.NewStyle().

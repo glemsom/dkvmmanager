@@ -76,6 +76,9 @@ type MainModel struct {
 	// Current view
 	currentView string
 
+	// View registry for sub-view management
+	viewRegistry *ViewRegistry
+
 	// Configuration
 	cfg *config.Config
 
@@ -108,47 +111,14 @@ type MainModel struct {
 	// Quitting flag
 	quitting bool
 
-	// VM creation model
-	vmCreateModel *VMCreateModel
-
-	// VM edit model
-	vmEditModel *VMEditModel
-
-	// VM delete model
+	// VM delete model (kept for selection flow)
 	vmDeleteModel *VMDeleteModel
 
-	// CPU options model
-	cpuOptionsModel *CPUOptionsModel
-
-	// VM running model
+	// VM running model (kept for Runner() convenience accessor)
 	vmRunningModel *VMRunningModel
-
-	// PCI passthrough model
-	pciPassthroughModel *PCIPassthroughModel
-
-	// USB passthrough model
-	usbPassthroughModel *USBPassthroughModel
-
-	// CPU topology model
-	cpuTopologyModel *CPUTopologyModel
-
-	// vCPU pinning model
-	vcpuPinningModel *VCPUPinningModel
-
-	// SSH password model
-	sshPasswordModel *SSHPasswordModel
 
 	// Running VM ID - tracks the currently running VM to persist across rebuildMenuList calls
 	runningVMID string
-
-	// Start/Stop script form model
-	startStopScriptModel *StartStopScriptModel
-
-	// LVM LV create model
-	lvCreateModel *LVCreateModel
-
-	// Mount point warning model
-	mountPointWarningModel *MountPointWarningModel
 
 	// VM list for selection
 	vmListForSelection []models.VM

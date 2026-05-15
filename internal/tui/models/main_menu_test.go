@@ -176,8 +176,8 @@ func TestHandlePCIPassthroughSelection(t *testing.T) {
 	if m.currentView != ViewPCIPassthrough {
 		t.Errorf("Expected ViewPCIPassthrough after PCI Passthrough selection, got %s", m.currentView)
 	}
-	if m.pciPassthroughModel == nil {
-		t.Error("Expected pciPassthroughModel to be set")
+	if m.viewRegistry == nil || m.viewRegistry.ActiveName() != ViewPCIPassthrough {
+		t.Error("Expected PCIPassthrough to be active in registry")
 	}
 }
 
@@ -193,8 +193,8 @@ func TestHandleCustomScriptSelection(t *testing.T) {
 	if m.currentView != ViewStartStopScript {
 		t.Errorf("Expected ViewStartStopScript after Edit Start/Stop Script selection, got %s", m.currentView)
 	}
-	if m.startStopScriptModel == nil {
-		t.Error("Expected startStopScriptModel to be set")
+	if m.viewRegistry == nil || m.viewRegistry.ActiveName() != ViewStartStopScript {
+		t.Error("Expected StartStopScript to be active in registry")
 	}
 	// Should have correct breadcrumbs
 	if m.breadcrumbs.Len() != 2 {
@@ -205,7 +205,8 @@ func TestHandleCustomScriptSelection(t *testing.T) {
 func TestHandleConfigMenuSelectionSave(t *testing.T) {
 	m := setupTestModel(t)
 	m.tabModel.SetActiveTab(components.TabConfiguration)
-	m.configSelectedIndex = 11 // "LBU Commit"
+	// 12 items: "Add VM" (0), "Edit VM" (1), "Delete VM" (2), ..., "Save changes" (11)
+	m.configSelectedIndex = 11
 
 	dryRunMode = true
 	defer func() { dryRunMode = false }()
@@ -233,7 +234,8 @@ func TestHandleConfigMenuSelectionSave(t *testing.T) {
 func TestHandleConfigMenuSelectionLBUCommitDryRun(t *testing.T) {
 	m := setupTestModel(t)
 	m.tabModel.SetActiveTab(components.TabConfiguration)
-	m.configSelectedIndex = 11 // "LBU Commit"
+	// 12 items: "Add VM" (0), "Edit VM" (1), "Delete VM" (2), ..., "Save changes" (11)
+	m.configSelectedIndex = 11
 
 	dryRunMode = true
 	defer func() { dryRunMode = false }()
@@ -292,14 +294,46 @@ func TestHandleVMSelectionOutOfBounds(t *testing.T) {
 }
 
 func TestBuildConfigListAdapter(t *testing.T) {
-	items := buildConfigListAdapter()
+	reg := NewViewRegistry()
 
+	// Register views matching the order from init.go's registerAllViews
+	reg.Register(&ViewDef{Name: ViewVMCreate, Factory: func(m *MainModel) (SubViewModel, error) {
+		return nil, nil
+	}, BreadcrumbLabel: "Add VM", ParentTab: 0, ConfigMenuIndex: 0})
+	reg.Register(&ViewDef{Name: ViewCPUTopology, Factory: func(m *MainModel) (SubViewModel, error) {
+		return nil, nil
+	}, BreadcrumbLabel: "Edit CPU Topology", ParentTab: 0, ConfigMenuIndex: 3})
+	reg.Register(&ViewDef{Name: ViewVCPUPinning, Factory: func(m *MainModel) (SubViewModel, error) {
+		return nil, nil
+	}, BreadcrumbLabel: "Edit vCPU Pinning", ParentTab: 0, ConfigMenuIndex: 4})
+	reg.Register(&ViewDef{Name: ViewPCIPassthrough, Factory: func(m *MainModel) (SubViewModel, error) {
+		return nil, nil
+	}, BreadcrumbLabel: "Edit PCI Passthrough", ParentTab: 0, ConfigMenuIndex: 5})
+	reg.Register(&ViewDef{Name: ViewUSBPassthrough, Factory: func(m *MainModel) (SubViewModel, error) {
+		return nil, nil
+	}, BreadcrumbLabel: "Edit USB Passthrough", ParentTab: 0, ConfigMenuIndex: 6})
+	reg.Register(&ViewDef{Name: ViewStartStopScript, Factory: func(m *MainModel) (SubViewModel, error) {
+		return nil, nil
+	}, BreadcrumbLabel: "Edit Start/Stop Script", ParentTab: 0, ConfigMenuIndex: 7})
+	reg.Register(&ViewDef{Name: ViewCPUOptions, Factory: func(m *MainModel) (SubViewModel, error) {
+		return nil, nil
+	}, BreadcrumbLabel: "Edit CPU Options", ParentTab: 0, ConfigMenuIndex: 8})
+	reg.Register(&ViewDef{Name: ViewSSHPassword, Factory: func(m *MainModel) (SubViewModel, error) {
+		return nil, nil
+	}, BreadcrumbLabel: "Set SSH Password", ParentTab: 0, ConfigMenuIndex: 9})
+	reg.Register(&ViewDef{Name: ViewLVCreate, Factory: func(m *MainModel) (SubViewModel, error) {
+		return nil, nil
+	}, BreadcrumbLabel: "Create Logical Volume", ParentTab: 0, ConfigMenuIndex: 10})
+
+	items := buildConfigListAdapter(reg)
+
+	// 9 registered views + 2 inserted (Edit VM, Delete VM) + Save changes = 12
 	if len(items) != 12 {
 		t.Errorf("Expected 12 config items, got %d", len(items))
 	}
 
 	expectedTitles := []string{
-		"Add new VM",
+		"Add VM",
 		"Edit VM",
 		"Delete VM",
 		"Edit CPU Topology",
@@ -338,6 +372,13 @@ func TestBuildMenuListAdapter(t *testing.T) {
 
 func TestIsSubViewActive(t *testing.T) {
 	m := setupTestModel(t)
+	reg := NewViewRegistry()
+	reg.Register(&ViewDef{Name: ViewVMCreate, Factory: nil, BreadcrumbLabel: "Add VM", ParentTab: components.TabConfiguration, ConfigMenuIndex: 0})
+	reg.Register(&ViewDef{Name: ViewVMEdit, Factory: nil, BreadcrumbLabel: "Edit VM", ParentTab: components.TabConfiguration, ConfigMenuIndex: -1})
+	reg.Register(&ViewDef{Name: ViewVMDelete, Factory: nil, BreadcrumbLabel: "Delete VM", ParentTab: components.TabConfiguration, ConfigMenuIndex: -1})
+	reg.Register(&ViewDef{Name: ViewVMSelect, Factory: nil, BreadcrumbLabel: "", ParentTab: components.TabConfiguration, ConfigMenuIndex: -1})
+	reg.Register(&ViewDef{Name: ViewVMRunning, Factory: nil, BreadcrumbLabel: "VM Running", ParentTab: components.TabVMs, ConfigMenuIndex: -1})
+	m.viewRegistry = reg
 
 	// Main menu is not a sub-view
 	m.currentView = ViewMainMenu
@@ -345,13 +386,16 @@ func TestIsSubViewActive(t *testing.T) {
 		t.Error("ViewMainMenu should not be a sub-view")
 	}
 
-	// VM create is a sub-view
+	// VM create is a sub-view (active in registry)
+	reg.SetActiveModel(reg.GetDef(ViewVMCreate), NewVMCreateModel(m.vmManager))
 	m.currentView = ViewVMCreate
 	if !m.isSubViewActive() {
 		t.Error("ViewVMCreate should be a sub-view")
 	}
 
-	// VM edit is a sub-view
+	// VM edit is a sub-view (active in registry)
+	reg.Deactivate()
+	reg.SetActiveModel(reg.GetDef(ViewVMEdit), nil)
 	m.currentView = ViewVMEdit
 	if !m.isSubViewActive() {
 		t.Error("ViewVMEdit should be a sub-view")

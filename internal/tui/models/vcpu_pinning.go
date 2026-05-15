@@ -42,6 +42,12 @@ func (m *VCPUPinningModel) View() string {
 	return m.form.View()
 }
 
+// SetSize forwards window resize to the underlying form.
+func (m *VCPUPinningModel) SetSize(width, height int) { m.form.SetSize(width, height) }
+
+// FileBrowserActive returns false (vCPU pinning has no file browser).
+func (m *VCPUPinningModel) FileBrowserActive() bool { return false }
+
 // Form returns the underlying form model (for testing/internal access).
 func (m *VCPUPinningModel) Form() *VCPUPinningFormModel {
 	return m.form.Model().(*VCPUPinningFormModel)

@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
 	"github.com/glemsom/dkvmmanager/internal/vm"
@@ -86,8 +87,13 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Handle VM stopped messages from running model
 	if vsm, ok := msg.(VMStoppedMsg); ok {
 		m.statusBar.SetMessage(fmt.Sprintf("VM '%s' stopped: %s", vsm.VMName, vsm.Reason))
-		// Clear running VM ID
+		// Clear running VM ID and legacy field
 		m.runningVMID = ""
+		m.vmRunningModel = nil
+		// Deactivate registry entry for VMRunning
+		if m.viewRegistry != nil && m.viewRegistry.ActiveName() == ViewVMRunning {
+			m.viewRegistry.Deactivate()
+		}
 		// Return to main menu when VM stops
 		m.currentView = ViewMainMenu
 		m.rebuildMenuList()
@@ -100,6 +106,10 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statusBar.SetMessage("Error starting VM: " + vse.Err.Error())
 		m.runningVMID = ""
 		m.vmRunningModel = nil
+		// Deactivate registry entry for VMRunning
+		if m.viewRegistry != nil && m.viewRegistry.ActiveName() == ViewVMRunning {
+			m.viewRegistry.Deactivate()
+		}
 		m.currentView = ViewMainMenu
 		m.rebuildMenuList()
 		m.breadcrumbs.Clear()
@@ -141,36 +151,23 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// If we're in VM creation view, delegate to that model
-	if m.currentView == ViewVMCreate && m.vmCreateModel != nil {
-		// All messages (including file browser messages) are handled through
-		// the ScrollableForm's HandleMessage mechanism
-		model, cmd := m.vmCreateModel.Update(msg)
-		// Update the sub-model reference
-		if vcm, ok := model.(*VMCreateModel); ok {
-			m.vmCreateModel = vcm
+	// Registry-based dispatch: forward ALL messages to active registered sub-view.
+	// This ensures async messages (e.g. lvVGsLoadedMsg) reach registered views.
+	if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+		activeModel := m.viewRegistry.ActiveModel()
+		if activeModel != nil {
+			newModel, cmd := activeModel.Update(msg)
+			if svm, ok := newModel.(SubViewModel); ok {
+				m.viewRegistry.Active().Model = svm
+			} else {
+				return newModel, cmd
+			}
+			if cmd != nil {
+				nextMsg := cmd()
+				return m.handleSubViewOutput(nextMsg)
+			}
+			return m, nil
 		}
-		// Execute the command to get any resulting messages
-		if cmd != nil {
-			nextMsg := cmd()
-			return m.handleSubViewOutput(nextMsg)
-		}
-		return m, nil
-	}
-
-	// If we're in VM edit view, delegate to that model
-	if m.currentView == ViewVMEdit && m.vmEditModel != nil {
-		// All messages (including file browser messages) are handled through
-		// the ScrollableForm's HandleMessage mechanism
-		model, cmd := m.vmEditModel.Update(msg)
-		if vem, ok := model.(*VMEditModel); ok {
-			m.vmEditModel = vem
-		}
-		if cmd != nil {
-			nextMsg := cmd()
-			return m.handleSubViewOutput(nextMsg)
-		}
-		return m, nil
 	}
 
 	// If we're in VM running view, delegate to that model
@@ -207,19 +204,6 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// If we're in LV create view, delegate all incoming messages (including async lvVGsLoadedMsg)
-	if m.currentView == ViewLVCreate && m.lvCreateModel != nil {
-		model, cmd := m.lvCreateModel.Update(msg)
-		if lv, ok := model.(*LVCreateModel); ok {
-			m.lvCreateModel = lv
-		}
-		if cmd != nil {
-			nextMsg := cmd()
-			return m.handleSubViewOutput(nextMsg)
-		}
-		return m, nil
-	}
-
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.handleKeyPress(msg)
@@ -237,52 +221,15 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // forwardWindowSizeToSubView sends the window size to the active sub-view
 func (m *MainModel) forwardWindowSizeToSubView(msg tea.WindowSizeMsg) {
-	contentH := m.contentHeight()
-	switch m.currentView {
-	case ViewVMCreate:
-		if m.vmCreateModel != nil {
-			m.vmCreateModel.form.SetSize(msg.Width-4, contentH-2)
-		}
-	case ViewVMEdit:
-		if m.vmEditModel != nil {
-			m.vmEditModel.form.SetSize(msg.Width-4, contentH-2)
-		}
-	case ViewCPUOptions:
-		if m.cpuOptionsModel != nil {
-			m.cpuOptionsModel.form.SetSize(msg.Width-4, contentH-2)
-		}
-	case ViewPCIPassthrough:
-		if m.pciPassthroughModel != nil {
-			m.pciPassthroughModel.form.SetSize(msg.Width-4, contentH-2)
-		}
-	case ViewUSBPassthrough:
-		if m.usbPassthroughModel != nil {
-			m.usbPassthroughModel.form.SetSize(msg.Width-4, contentH-2)
-		}
-	case ViewCPUTopology:
-		if m.cpuTopologyModel != nil {
-			m.cpuTopologyModel.form.SetSize(msg.Width-4, contentH-2)
-		}
-	case ViewVCPUPinning:
-		if m.vcpuPinningModel != nil {
-			m.vcpuPinningModel.form.SetSize(msg.Width-4, contentH-2)
-		}
-	case ViewSSHPassword:
-		if m.sshPasswordModel != nil {
-			m.sshPasswordModel.form.SetSize(msg.Width-4, contentH-2)
-		}
-	case ViewStartStopScript:
-		if m.startStopScriptModel != nil {
-			m.startStopScriptModel.form.SetSize(msg.Width-4, contentH-2)
-		}
-	case ViewLVCreate:
-		if m.lvCreateModel != nil {
-			m.lvCreateModel.form.SetSize(msg.Width-4, contentH-2)
-		}
-	case ViewVMRunning:
-		if m.vmRunningModel != nil {
-			m.vmRunningModel.SetSize(msg.Width-4, contentH-2)
-		}
+	// Registry-based size forwarding
+	if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+		m.viewRegistry.ActiveModel().SetSize(msg.Width-4, m.contentHeight()-2)
+		return
+	}
+
+	// Fallback: resize VMRunning view (registry handles all other views)
+	if m.currentView == ViewVMRunning && m.vmRunningModel != nil {
+		m.vmRunningModel.SetSize(msg.Width-4, m.contentHeight()-2)
 	}
 }
 
@@ -369,111 +316,31 @@ func (m *MainModel) handleConfigMenuSelection() (tea.Model, tea.Cmd) {
 		log.Printf("[DEBUG] handleConfigMenuSelection called, selectedIndex: %d", m.configSelectedIndex)
 	}
 
-	switch m.configSelectedIndex {
-	case 0: // Add new VM
-		m.vmCreateModel = NewVMCreateModel(m.vmManager)
-		m.vmCreateModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
-		m.currentView = ViewVMCreate
-		m.breadcrumbs.Clear()
-		m.breadcrumbs.AddItem("Configuration", "config", 1)
-		m.breadcrumbs.AddItem("Add VM", "vm_create", 1)
-		return m, nil
-	case 1: // Edit VM
-		return m.showVMSelection()
-	case 2: // Delete VM
-		return m.showVMSelectionForDeletion()
-	case 3: // Edit CPU Topology
-		cpuModel, err := NewCPUTopologyModel(m.configRepo)
-		if err != nil {
-			m.statusBar.SetMessage("Error loading CPU topology: " + err.Error())
-			return m, nil
-		}
-		m.cpuTopologyModel = cpuModel
-		m.cpuTopologyModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
-		m.currentView = ViewCPUTopology
-		m.breadcrumbs.Clear()
-		m.breadcrumbs.AddItem("Configuration", "config", 1)
-		m.breadcrumbs.AddItem("CPU Topology", "cpu_topology", 1)
-		return m, nil
-	case 4: // Edit vCPU Pinning
-		vcpuModel, err := NewVCPUPinningModel(m.vmManager, m.configRepo)
-		if err != nil {
-			m.statusBar.SetMessage("Error loading vCPU pinning: " + err.Error())
-			return m, nil
-		}
-		m.vcpuPinningModel = vcpuModel
-		m.vcpuPinningModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
-		m.currentView = ViewVCPUPinning
-		m.breadcrumbs.Clear()
-		m.breadcrumbs.AddItem("Configuration", "config", 1)
-		m.breadcrumbs.AddItem("vCPU Pinning", "vcpu_pinning", 1)
-		return m, nil
-	case 5: // Edit PCI Passthrough
-		pciModel, err := NewPCIPassthroughModel(m.configRepo, m.vmManager, m.hostDiscovery)
-		if err != nil {
-			m.statusBar.SetMessage("Error loading PCI passthrough: " + err.Error())
-			return m, nil
-		}
-		m.pciPassthroughModel = pciModel
-		m.pciPassthroughModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
-		m.currentView = ViewPCIPassthrough
-		m.breadcrumbs.Clear()
-		m.breadcrumbs.AddItem("Configuration", "config", 1)
-		m.breadcrumbs.AddItem("PCI Passthrough", "pci_passthrough", 1)
-		return m, nil
-	case 6: // Edit USB Passthrough
-		usbModel, err := NewUSBPassthroughModel(m.configRepo, m.hostDiscovery)
-		if err != nil {
-			m.statusBar.SetMessage("Error loading USB passthrough: " + err.Error())
-			return m, nil
-		}
-		m.usbPassthroughModel = usbModel
-		m.usbPassthroughModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
-		m.currentView = ViewUSBPassthrough
-		m.breadcrumbs.Clear()
-		m.breadcrumbs.AddItem("Configuration", "config", 1)
-		m.breadcrumbs.AddItem("USB Passthrough", "usb_passthrough", 1)
-		return m, nil
-	case 7: // Edit Start/Stop Script
-		model, err := NewStartStopScriptModel(m.configRepo)
-		if err != nil {
-			m.statusMessage = "Error loading start/stop script form: " + err.Error()
-		} else {
-			m.startStopScriptModel = model
-			m.startStopScriptModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
-			m.currentView = ViewStartStopScript
+	// Try registry-based activation for form views
+	if m.viewRegistry != nil {
+		if sub, err := m.viewRegistry.ActivateByConfigIndex(m.configSelectedIndex, m); err == nil {
+			sub.SetSize(m.windowWidth-4, m.contentHeight()-2)
+			def := m.viewRegistry.ActiveDef()
+			m.currentView = def.Name
 			m.breadcrumbs.Clear()
 			m.breadcrumbs.AddItem("Configuration", "config", 1)
-			m.breadcrumbs.AddItem("Start/Stop Script", "start_stop_script", 1)
+			m.breadcrumbs.AddItem(def.BreadcrumbLabel, def.Name, 1)
+			return m, sub.Init()
 		}
-		return m, nil
-	case 8: // Edit CPU Options
-		m.cpuOptionsModel = NewCPUOptionsModel(m.configRepo)
-		m.cpuOptionsModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
-		m.currentView = ViewCPUOptions
-		m.breadcrumbs.Clear()
-		m.breadcrumbs.AddItem("Configuration", "config", 1)
-		m.breadcrumbs.AddItem("CPU Options", "cpu_options", 1)
-		return m, nil
-	case 9: // Set SSH Password
-		m.sshPasswordModel = NewSSHPasswordModel()
-		m.sshPasswordModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
-		m.currentView = ViewSSHPassword
-		m.breadcrumbs.Clear()
-		m.breadcrumbs.AddItem("Configuration", "config", 1)
-		m.breadcrumbs.AddItem("Set SSH Password", "ssh_password", 1)
-		return m, nil
-	case 10: // Create Logical Volume
-		m.lvCreateModel = NewLVCreateModel()
-		m.lvCreateModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
-		m.currentView = ViewLVCreate
-		m.breadcrumbs.Clear()
-		m.breadcrumbs.AddItem("Configuration", "config", 1)
-		m.breadcrumbs.AddItem("Create Logical Volume", "lv_create", 1)
-		return m, m.lvCreateModel.Init()
-	case 11: // Save changes
+	}
+
+	switch m.configSelectedIndex {
+	case 1: // Edit VM (not in registry — requires VM selection first)
+		return m.showVMSelection()
+	case 2: // Delete VM (not in registry — requires VM selection first)
+		return m.showVMSelectionForDeletion()
+	}
+
+	// "Save changes" is always the last item in the config list
+	if len(m.configList.Items()) > 0 && m.configSelectedIndex == len(m.configList.Items())-1 {
 		return m, runLBUCommit()
 	}
+
 	return m, nil
 }
 
@@ -535,14 +402,20 @@ func (m *MainModel) handleVMSelection() (tea.Model, tea.Cmd) {
 		}
 
 		// Create running model immediately (runner will be set async)
-		m.vmRunningModel = NewVMRunningModel(vmObj, nil) // nil runner
-		m.vmRunningModel.startTime = time.Now()
-		m.vmRunningModel.SetSize(m.windowWidth-4, m.contentHeight()-2)
+		vmRunningModel := NewVMRunningModel(vmObj, nil) // nil runner
+		vmRunningModel.startTime = time.Now()
+		vmRunningModel.SetSize(m.windowWidth-4, m.contentHeight()-2)
+		m.vmRunningModel = vmRunningModel
 		m.currentView = ViewVMRunning
 		m.breadcrumbs.Clear()
 		m.breadcrumbs.AddItem("Start VM", "vms", 1)
 		m.breadcrumbs.AddItem("Start", "vm_start", 1)
 		m.breadcrumbs.AddItem(vmObj.Name, "vm_running", 1)
+
+		// Register as active view in the registry
+		if m.viewRegistry != nil {
+			m.viewRegistry.SetActiveModel(m.viewRegistry.GetDef(ViewVMRunning), vmRunningModel)
+		}
 
 		// Optimistically update status bar
 		m.statusBar.SetStats(len(m.menuItems), 1)
@@ -575,10 +448,13 @@ func (m *MainModel) handlePowerSelection() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// isSubViewActive returns true if a sub-view (create/edit/delete/select/running) is active
+// isSubViewActive returns true if a sub-view is active
 func (m *MainModel) isSubViewActive() bool {
+	if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+		return true
+	}
 	switch m.currentView {
-	case ViewVMCreate, ViewVMEdit, ViewVMDelete, ViewVMSelect, ViewCPUOptions, ViewVMRunning, ViewPCIPassthrough, ViewUSBPassthrough, ViewCPUTopology, ViewVCPUPinning, ViewSSHPassword, ViewStartStopScript, ViewLVCreate, ViewMountPointWarning:
+	case ViewVMDelete, ViewVMSelect, ViewVMRunning:
 		return true
 	}
 	return false
@@ -586,48 +462,43 @@ func (m *MainModel) isSubViewActive() bool {
 
 // isFileBrowserActiveInSubView returns true if a file browser is active within the current sub-view
 func (m *MainModel) isFileBrowserActiveInSubView() bool {
-	switch m.currentView {
-	case ViewVMCreate:
-		if m.vmCreateModel != nil {
-			return m.vmCreateModel.FileBrowserActive()
-		}
-	case ViewVMEdit:
-		if m.vmEditModel != nil {
-			return m.vmEditModel.FileBrowserActive()
-		}
-	case ViewStartStopScript:
-		if m.startStopScriptModel != nil {
-			return m.startStopScriptModel.FileBrowserActive()
-		}
+	if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+		return m.viewRegistry.ActiveModel().FileBrowserActive()
 	}
 	return false
 }
 
 // returnFromSubView handles ESC in a sub-view, returning to the parent tab
 func (m *MainModel) returnFromSubView() (tea.Model, tea.Cmd) {
-	prevView := m.currentView
 	m.currentView = ViewMainMenu
 	m.breadcrumbs.Clear()
 
-	// Determine which tab to return to
-	switch prevView {
-	case ViewVMCreate, ViewVMEdit, ViewVMDelete, ViewVMSelect, ViewCPUOptions, ViewPCIPassthrough, ViewUSBPassthrough, ViewCPUTopology, ViewVCPUPinning, ViewSSHPassword, ViewStartStopScript, ViewLVCreate:
-		m.tabModel.SetActiveTab(components.TabConfiguration)
-	case ViewVMRunning:
-		// When leaving VMRunning view, keep the model if VM is still running 
-		// so we can track the running state, otherwise clear it
-		if m.vmRunningModel != nil && m.vmRunningModel.Runner() != nil && m.vmRunningModel.Runner().IsRunning() {
-			// VM is still running - keep the model and update runningVMID if needed
-			if m.runningVMID == "" {
-				m.runningVMID = m.vmRunningModel.Runner().VM().ID
+	// Registry-based: read parent tab from active view
+	if m.viewRegistry != nil && m.viewRegistry.ActiveDef() != nil {
+		def := m.viewRegistry.ActiveDef()
+		m.tabModel.SetActiveTab(def.ParentTab)
+		// VMRunning is special: keep the model if VM is still running
+		// so status updates continue to arrive. Only deactivate if stopped.
+		if def.Name == ViewVMRunning {
+			if m.vmRunningModel != nil && m.vmRunningModel.Runner() != nil && m.vmRunningModel.Runner().IsRunning() {
+				if m.runningVMID == "" {
+					m.runningVMID = m.vmRunningModel.Runner().VM().ID
+				}
+			} else {
+				m.vmRunningModel = nil
+				m.runningVMID = ""
+				m.viewRegistry.Deactivate()
 			}
 		} else {
-			m.vmRunningModel = nil
-			m.runningVMID = ""
+			m.viewRegistry.Deactivate()
 		}
-		m.tabModel.SetActiveTab(components.TabVMs)
-	default:
-		m.tabModel.SetActiveTab(components.TabVMs)
+	} else {
+		// VMSelect: returns to Configuration tab
+		m.tabModel.SetActiveTab(components.TabConfiguration)
+		// Clear VMSelect state
+		m.vmSelectList = list.Model{}
+		m.vmListForSelection = nil
+		m.selectionMode = ""
 	}
 
 	m.rebuildMenuList()
@@ -657,30 +528,26 @@ func (m *MainModel) onTabChanged() {
 func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
+	// Try registry-based dispatch first
+	if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+		model := m.viewRegistry.ActiveModel()
+		if model != nil {
+			newModel, modelCmd := model.Update(msg)
+			if svm, ok := newModel.(SubViewModel); ok {
+				m.viewRegistry.Active().Model = svm
+			} else {
+				// Sub-model returned a different tea.Model (e.g. during exit)
+				return newModel, modelCmd
+			}
+			if modelCmd != nil {
+				nextMsg := modelCmd()
+				return m.handleSubViewOutput(nextMsg)
+			}
+			return m, nil
+		}
+	}
+
 	switch m.currentView {
-	case ViewVMCreate:
-		if m.vmCreateModel != nil {
-			vmModel, vmCmd := m.vmCreateModel.Update(msg)
-			if vmCreate, ok := vmModel.(*VMCreateModel); ok {
-				m.vmCreateModel = vmCreate
-			}
-			// Execute the command to get any resulting messages
-			if vmCmd != nil {
-				nextMsg := vmCmd()
-				return m.handleSubViewOutput(nextMsg)
-			}
-		}
-	case ViewVMEdit:
-		if m.vmEditModel != nil {
-			vmModel, vmCmd := m.vmEditModel.Update(msg)
-			if vmEdit, ok := vmModel.(*VMEditModel); ok {
-				m.vmEditModel = vmEdit
-			}
-			if vmCmd != nil {
-				nextMsg := vmCmd()
-				return m.handleSubViewOutput(nextMsg)
-			}
-		}
 	case ViewVMDelete:
 		if m.vmDeleteModel != nil {
 			vmModel, vmCmd := m.vmDeleteModel.Update(msg)
@@ -702,14 +569,19 @@ func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.selectionMode == "delete" {
 					if deleteModel, err := NewVMDeleteModel(m.vmManager, selectedVM.ID); err == nil {
 						m.vmDeleteModel = deleteModel
+						if m.viewRegistry != nil && m.viewRegistry.GetDef(ViewVMDelete) != nil {
+							m.viewRegistry.SetActiveModel(m.viewRegistry.GetDef(ViewVMDelete), deleteModel)
+						}
 						m.currentView = ViewVMDelete
 						m.breadcrumbs.AddItem("Delete "+selectedVM.Name, "vm_delete_confirm", 1)
 						return m, nil
 					}
 				} else if m.selectionMode == "edit" {
 					if editModel, err := NewVMEditModel(m.vmManager, selectedVM.ID); err == nil {
-						m.vmEditModel = editModel
-						m.vmEditModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
+						editModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
+						if m.viewRegistry != nil && m.viewRegistry.GetDef(ViewVMEdit) != nil {
+							m.viewRegistry.SetActiveModel(m.viewRegistry.GetDef(ViewVMEdit), editModel)
+						}
 						m.currentView = ViewVMEdit
 						m.breadcrumbs.AddItem("Edit "+selectedVM.Name, "vm_edit", 1)
 						return m, nil
@@ -718,98 +590,6 @@ func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.vmSelectList, cmd = m.vmSelectList.Update(msg)
-	case ViewCPUOptions:
-		if m.cpuOptionsModel != nil {
-			cpuModel, cpuCmd := m.cpuOptionsModel.Update(msg)
-			if cpuOpts, ok := cpuModel.(*CPUOptionsModel); ok {
-				m.cpuOptionsModel = cpuOpts
-			}
-			if cpuCmd != nil {
-				nextMsg := cpuCmd()
-				return m.handleSubViewOutput(nextMsg)
-			}
-		}
-	case ViewPCIPassthrough:
-		if m.pciPassthroughModel != nil {
-			pciModel, pciCmd := m.pciPassthroughModel.Update(msg)
-			if pciPassthrough, ok := pciModel.(*PCIPassthroughModel); ok {
-				m.pciPassthroughModel = pciPassthrough
-			}
-			if pciCmd != nil {
-				nextMsg := pciCmd()
-				return m.handleSubViewOutput(nextMsg)
-			}
-		}
-	case ViewUSBPassthrough:
-		if m.usbPassthroughModel != nil {
-			usbModel, usbCmd := m.usbPassthroughModel.Update(msg)
-			if usbPassthrough, ok := usbModel.(*USBPassthroughModel); ok {
-				m.usbPassthroughModel = usbPassthrough
-			}
-			if usbCmd != nil {
-				nextMsg := usbCmd()
-				return m.handleSubViewOutput(nextMsg)
-			}
-		}
-	case ViewCPUTopology:
-		if m.cpuTopologyModel != nil {
-			cpuModel, cpuCmd := m.cpuTopologyModel.Update(msg)
-			if cpuTopo, ok := cpuModel.(*CPUTopologyModel); ok {
-				m.cpuTopologyModel = cpuTopo
-			}
-			if cpuCmd != nil {
-				nextMsg := cpuCmd()
-				return m.handleSubViewOutput(nextMsg)
-			}
-		}
-	case ViewVCPUPinning:
-		if m.vcpuPinningModel != nil {
-			vcpuModel, vcpuCmd := m.vcpuPinningModel.Update(msg)
-			if vcpuPinning, ok := vcpuModel.(*VCPUPinningModel); ok {
-				m.vcpuPinningModel = vcpuPinning
-			}
-			if vcpuCmd != nil {
-				nextMsg := vcpuCmd()
-				return m.handleSubViewOutput(nextMsg)
-			}
-		}
-	case ViewSSHPassword:
-		if m.sshPasswordModel != nil {
-			sshModel, sshCmd := m.sshPasswordModel.Update(msg)
-			if sshPw, ok := sshModel.(*SSHPasswordModel); ok {
-				m.sshPasswordModel = sshPw
-			}
-			if sshCmd != nil {
-				nextMsg := sshCmd()
-				return m.handleSubViewOutput(nextMsg)
-			}
-		}
-	case ViewStartStopScript:
-		if m.startStopScriptModel != nil {
-			inner, cmd := m.startStopScriptModel.Update(msg)
-			if ssm, ok := inner.(*StartStopScriptModel); ok {
-				m.startStopScriptModel = ssm
-			}
-			if cmd != nil {
-				nextMsg := cmd()
-				return m.handleSubViewOutput(nextMsg)
-			}
-		}
-	case ViewLVCreate:
-		// LV create is handled earlier in MainModel.update() so it can receive
-		// asynchronous non-key messages (e.g., lvVGsLoadedMsg) reliably.
-		return m, nil
-	case ViewMountPointWarning:
-		if m.mountPointWarningModel != nil {
-			model, cmd := m.mountPointWarningModel.Update(msg)
-			if mpw, ok := model.(*MountPointWarningModel); ok {
-				m.mountPointWarningModel = mpw
-			}
-			if cmd != nil {
-				nextMsg := cmd()
-				return m.handleSubViewOutput(nextMsg)
-			}
-		}
 	case ViewVMRunning:
 		if m.vmRunningModel != nil {
 			vrm, vrmCmd := m.vmRunningModel.Update(msg)

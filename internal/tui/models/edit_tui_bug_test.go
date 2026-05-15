@@ -149,11 +149,12 @@ func TestFullEditFlowViaUpdate(t *testing.T) {
 		t.Fatalf("Failed to create edit model: %v", err)
 	}
 
-	m.vmEditModel = editModel
+	// Register as active view via registry
+	m.viewRegistry.SetActiveModel(m.viewRegistry.GetDef(ViewVMEdit), editModel)
 	m.currentView = ViewVMEdit
 
 	// Modify and save directly via form
-	fm := m.vmEditModel.form.Model().(*VMFormModel)
+	fm := editModel.Form()
 	fm.vmName = "edited-via-update"
 	cmd := fm.validateAndSaveCmd()
 	if cmd == nil {

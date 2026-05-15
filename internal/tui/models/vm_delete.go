@@ -30,6 +30,12 @@ type VMDeleteModel struct {
 	debugMode bool
 }
 
+// SetSize is a no-op for the fixed-height delete confirmation dialog.
+func (m *VMDeleteModel) SetSize(width, height int) {}
+
+// FileBrowserActive returns false (no file browser in delete dialog).
+func (m *VMDeleteModel) FileBrowserActive() bool { return false }
+
 // NewVMDeleteModel creates a new VM delete model
 func NewVMDeleteModel(vmManager *vm.Manager, vmID string) (*VMDeleteModel, error) {
 	// Get VM details

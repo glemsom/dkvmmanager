@@ -49,13 +49,16 @@ func setupEditModel(t *testing.T) *MainModel {
 	}
 
 	tabModel := components.NewTabModel()
+	reg := NewViewRegistry()
+	reg.Register(&ViewDef{Name: ViewVMEdit, Factory: nil, BreadcrumbLabel: "Edit VM", ParentTab: components.TabConfiguration, ConfigMenuIndex: 1})
+	reg.SetActiveModel(reg.GetDef(ViewVMEdit), editModel)
 
 	return &MainModel{
 		currentView:   ViewVMEdit,
 		vmManager:     mgr,
 		configRepo:    mgr.Repository(),
 		hostDiscovery: &vm.DefaultHostDiscovery{},
-		vmEditModel:   editModel,
+		viewRegistry:  reg,
 		tabModel:      tabModel,
 		windowWidth:   80,
 		windowHeight:  24,
@@ -64,11 +67,19 @@ func setupEditModel(t *testing.T) *MainModel {
 	}
 }
 
+// getEditForm extracts the inner VMFormModel from the active VMEditModel.
+func getEditForm(m *MainModel) *VMFormModel {
+	if svm, ok := m.viewRegistry.ActiveModel().(*VMEditModel); ok {
+		return svm.Form()
+	}
+	return nil
+}
+
 // TestFilePickerHardDiskEndToEnd tests that DiskAddedMsg is correctly routed
 // through MainModel to update the form's hardDisks field.
 func TestFilePickerHardDiskEndToEnd(t *testing.T) {
 	m := setupEditModel(t)
-	fm := getVMForm(m.vmEditModel.form)
+	fm := getEditForm(m)
 
 	// Setup: form has an empty hard disk slot
 	fm.hardDisks = []string{""}
@@ -81,7 +92,7 @@ func TestFilePickerHardDiskEndToEnd(t *testing.T) {
 	dam := DiskAddedMsg{Path: testFilePath, Canceled: false}
 	m.Update(dam)
 
-	fm = getVMForm(m.vmEditModel.form)
+	fm = getEditForm(m)
 	// Verify the hard disk path was set
 	if len(fm.hardDisks) == 0 {
 		t.Fatal("hardDisks list is empty")
@@ -100,7 +111,7 @@ func TestFilePickerHardDiskEndToEnd(t *testing.T) {
 // through addDiskModel and produces DiskAddedMsg which updates the form.
 func TestFilePickerDirectMsgRouting(t *testing.T) {
 	m := setupEditModel(t)
-	fm := getVMForm(m.vmEditModel.form)
+	fm := getEditForm(m)
 
 	// Set up form with active AddDiskModel (simulating mid-selection state)
 	fm.hardDisks = []string{""}
@@ -114,7 +125,7 @@ func TestFilePickerDirectMsgRouting(t *testing.T) {
 	// Route through MainModel.Update
 	m.Update(dam)
 
-	fm = getVMForm(m.vmEditModel.form)
+	fm = getEditForm(m)
 	// Verify the path was set (via DiskAddedMsg → handleDiskAdded)
 	if fm.hardDisks[0] != testPath {
 		t.Errorf("Expected hardDisks[0]='%s', got '%s'", testPath, fm.hardDisks[0])
@@ -130,7 +141,7 @@ func TestFilePickerDirectMsgRouting(t *testing.T) {
 // addDiskModel is already inactive when MainModel receives FileSelectedMsg.
 func TestFilePickerWithInactiveAddDiskModel(t *testing.T) {
 	m := setupEditModel(t)
-	fm := getVMForm(m.vmEditModel.form)
+	fm := getEditForm(m)
 
 	// Set up form with INACTIVE AddDiskModel (race condition simulation)
 	fm.hardDisks = []string{""}
@@ -145,7 +156,7 @@ func TestFilePickerWithInactiveAddDiskModel(t *testing.T) {
 	// Route through MainModel.Update
 	m.Update(dam)
 
-	fm = getVMForm(m.vmEditModel.form)
+	fm = getEditForm(m)
 	// Even with inactive addDiskModel, the path should be set
 	if fm.hardDisks[0] != testPath {
 		t.Errorf("Expected hardDisks[0]='%s', got '%s'", testPath, fm.hardDisks[0])
@@ -155,7 +166,7 @@ func TestFilePickerWithInactiveAddDiskModel(t *testing.T) {
 // TestCDROMFilePickerFlow tests that CDROM file selection still works correctly.
 func TestCDROMFilePickerFlow(t *testing.T) {
 	m := setupEditModel(t)
-	fm := getVMForm(m.vmEditModel.form)
+	fm := getEditForm(m)
 
 	// Set up form with a CDROM slot
 	fm.cdroms = []string{""}
@@ -172,7 +183,7 @@ func TestCDROMFilePickerFlow(t *testing.T) {
 	// Route through MainModel.Update
 	m.Update(fsm)
 
-	fm = getVMForm(m.vmEditModel.form)
+	fm = getEditForm(m)
 	// Verify CDROM path was set
 	if fm.cdroms[0] != testPath {
 		t.Errorf("Expected cdroms[0]='%s', got '%s'", testPath, fm.cdroms[0])
@@ -188,7 +199,7 @@ func TestCDROMFilePickerFlow(t *testing.T) {
 // preserves the existing disk value and clears the addDiskModel.
 func TestFilePickerCancelViaMainModel(t *testing.T) {
 	m := setupEditModel(t)
-	fm := getVMForm(m.vmEditModel.form)
+	fm := getEditForm(m)
 
 	fm.hardDisks = []string{"/existing.qcow2"}
 	fm.browsingFieldName = "hardDisks"
@@ -199,7 +210,7 @@ func TestFilePickerCancelViaMainModel(t *testing.T) {
 	dam := DiskAddedMsg{Path: "", Canceled: true}
 	m.Update(dam)
 
-	fm = getVMForm(m.vmEditModel.form)
+	fm = getEditForm(m)
 	// Verify hard disk was NOT modified (cancel should preserve existing value)
 	if fm.hardDisks[0] != "/existing.qcow2" {
 		t.Errorf("Expected hardDisks unchanged after cancel, got '%s'", fm.hardDisks[0])

@@ -60,7 +60,7 @@ func TestFullTUIEditFlowReproducingBug(t *testing.T) {
 	}
 
 	// Step 4: Modify the VM name via form and save
-	fm := m.vmEditModel.form.Model().(*VMFormModel)
+	fm := m.viewRegistry.ActiveModel().(*VMEditModel).Form()
 	fm.vmName = "vm-one-edited"
 	cmd := fm.validateAndSaveCmd()
 	if cmd == nil {

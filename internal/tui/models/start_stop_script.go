@@ -7,6 +7,18 @@ import (
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
+// StartStopScriptSavedMsg is sent when start/stop script settings are saved.
+type StartStopScriptSavedMsg struct{}
+
+// IsFormSaved implements form.FormSavedMsg.
+func (StartStopScriptSavedMsg) IsFormSaved() {}
+
+// FormName implements form.FormSavedMsg.
+func (StartStopScriptSavedMsg) FormName() string { return "Start/Stop Script" }
+
+// FormStatus implements form.FormSavedMsg.
+func (StartStopScriptSavedMsg) FormStatus() string { return "" }
+
 // StartStopScriptModel is a thin wrapper around StartStopScriptFormModel using the ScrollableForm framework.
 type StartStopScriptModel struct {
 	form *form.ScrollableForm
@@ -46,6 +58,9 @@ func (m *StartStopScriptModel) View() string {
 func (m *StartStopScriptModel) Form() *StartStopScriptFormModel {
 	return m.form.Model().(*StartStopScriptFormModel)
 }
+
+// SetSize forwards window resize to the underlying form.
+func (m *StartStopScriptModel) SetSize(width, height int) { m.form.SetSize(width, height) }
 
 // FileBrowserActive returns true if the form's file browser is active.
 func (m *StartStopScriptModel) FileBrowserActive() bool {

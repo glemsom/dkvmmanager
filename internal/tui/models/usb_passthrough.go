@@ -54,6 +54,12 @@ func (m *USBPassthroughModel) View() string {
 	return m.form.View()
 }
 
+// SetSize forwards window resize to the underlying form.
+func (m *USBPassthroughModel) SetSize(width, height int) { m.form.SetSize(width, height) }
+
+// FileBrowserActive returns false (USB passthrough has no file browser).
+func (m *USBPassthroughModel) FileBrowserActive() bool { return false }
+
 // Form returns the underlying form model (for testing/internal access).
 func (m *USBPassthroughModel) Form() *USBPassthroughFormModel {
 	return m.form.Model().(*USBPassthroughFormModel)

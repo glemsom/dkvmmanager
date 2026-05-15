@@ -52,6 +52,12 @@ func (m *CPUTopologyModel) View() string {
 	return m.form.View()
 }
 
+// SetSize forwards window resize to the underlying form.
+func (m *CPUTopologyModel) SetSize(width, height int) { m.form.SetSize(width, height) }
+
+// FileBrowserActive returns false (CPU topology has no file browser).
+func (m *CPUTopologyModel) FileBrowserActive() bool { return false }
+
 // Form returns the underlying form model (for testing/internal access).
 func (m *CPUTopologyModel) Form() *CPUTopologyFormModel {
 	return m.form.Model().(*CPUTopologyFormModel)

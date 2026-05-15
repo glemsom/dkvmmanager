@@ -30,13 +30,13 @@ func TestVMSelectFullFlowViaUpdate(t *testing.T) {
 	// Step 3: Press Enter to select first VM - THIS IS THE KEY TEST
 	t.Logf("Before Enter: currentView=%s, vmSelectList items=%d", m.currentView, len(m.vmListForSelection))
 	m = sendKeys(t, m, tea.KeyEnter)
-	t.Logf("After Enter: currentView=%s, vmEditModel=%v", m.currentView, m.vmEditModel != nil)
+	t.Logf("After Enter: currentView=%s, vmEditModel=%v", m.currentView, m.viewRegistry != nil && m.viewRegistry.ActiveName() == ViewVMEdit)
 
 	if m.currentView != ViewVMEdit {
 		t.Errorf("Expected ViewVMEdit after pressing Enter in VMSelect, got %s", m.currentView)
 	}
-	if m.vmEditModel == nil {
-		t.Error("Expected vmEditModel to be initialized")
+	if m.viewRegistry == nil || m.viewRegistry.ActiveName() != ViewVMEdit {
+		t.Error("Expected VMEdit to be active in registry")
 	}
 }
 
@@ -81,8 +81,8 @@ func TestVMSelectArrowNavigationViaUpdate(t *testing.T) {
 	if m.currentView != ViewVMEdit {
 		t.Errorf("Expected ViewVMEdit after selecting second VM, got %s", m.currentView)
 	}
-	if m.vmEditModel == nil {
-		t.Error("Expected vmEditModel to be initialized")
+	if m.viewRegistry == nil || m.viewRegistry.ActiveName() != ViewVMEdit {
+		t.Error("Expected VMEdit to be active in registry")
 	}
 
 	// Verify the correct VM was selected (second VM in the table)
@@ -92,7 +92,7 @@ func TestVMSelectArrowNavigationViaUpdate(t *testing.T) {
 		t.Fatalf("Invalid cursor position: %d (have %d VMs)", cursor, len(tableVMs))
 	}
 	expectedVM := tableVMs[cursor]
-	fm := getVMForm(m.vmEditModel.form)
+	fm := m.viewRegistry.ActiveModel().(*VMEditModel).Form()
 	if fm == nil {
 		t.Fatal("Could not get VMFormModel from edit model")
 	}

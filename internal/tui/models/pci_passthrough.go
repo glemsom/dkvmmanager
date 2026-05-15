@@ -60,6 +60,12 @@ func (m *PCIPassthroughModel) View() string {
 	return m.form.View()
 }
 
+// SetSize forwards window resize to the underlying form.
+func (m *PCIPassthroughModel) SetSize(width, height int) { m.form.SetSize(width, height) }
+
+// FileBrowserActive returns false (PCI passthrough has no file browser).
+func (m *PCIPassthroughModel) FileBrowserActive() bool { return false }
+
 // Form returns the underlying form model (for testing/internal access).
 func (m *PCIPassthroughModel) Form() *PCIPassthroughFormModel {
 	return m.form.Model().(*PCIPassthroughFormModel)

@@ -39,15 +39,17 @@ func NewMainModelWithConfig(cfg *config.Config) (*MainModel, error) {
 		log.Printf("[DEBUG] MainModel created with %d menu items", len(menuItems))
 	}
 
+	// Create view registry and register all views
+	viewReg := NewViewRegistry()
+	registerAllViews(viewReg, vmMgr, repo)
+
 	// Check if /media/dkvmdata is a mount point
 	initialView := ViewMainMenu
-	var mountPointWarningModel *MountPointWarningModel
 	if mounted, err := isMountPoint(dkvmDataMountPath); err == nil && !mounted {
 		if debugMode {
 			log.Printf("[DEBUG] %s is not a mount point, showing warning", dkvmDataMountPath)
 		}
 		initialView = ViewMountPointWarning
-		mountPointWarningModel = NewMountPointWarningModel()
 	} else if err != nil {
 		if debugMode {
 			log.Printf("[DEBUG] Error checking mount point %s: %v", dkvmDataMountPath, err)
@@ -63,8 +65,8 @@ func NewMainModelWithConfig(cfg *config.Config) (*MainModel, error) {
 	menuList.SetFilteringEnabled(false)
 	menuList.SetShowHelp(false)
 
-	// Initialize config list
-	configListAdapter := buildConfigListAdapter()
+	// Initialize config list from view registry
+	configListAdapter := buildConfigListAdapter(viewReg)
 	configDelegate := MenuItemDelegate{}
 	configList := list.New(configListAdapter, configDelegate, 80, 20)
 	configList.SetShowTitle(false)
@@ -92,23 +94,106 @@ func NewMainModelWithConfig(cfg *config.Config) (*MainModel, error) {
 	// Initialize breadcrumbs
 	breadcrumbs := components.NewBreadcrumbs()
 
-	return &MainModel{
-		currentView:            initialView,
-		cfg:                    cfg,
-		vmManager:              vmMgr,
-		configRepo:             repo,
-		hostDiscovery:          &vm.DefaultHostDiscovery{},
-		selectedIndex:          0,
-		menuItems:              menuItems,
-		menuList:               menuList,
-		configList:             configList,
-		powerList:              powerList,
-		debugMode:              debugMode,
-		tabModel:               tabModel,
-		statusBar:              statusBar,
-		breadcrumbs:            breadcrumbs,
-		mountPointWarningModel: mountPointWarningModel,
-	}, nil
+	m := &MainModel{
+		currentView:   initialView,
+		viewRegistry:  viewReg,
+		cfg:           cfg,
+		vmManager:     vmMgr,
+		configRepo:    repo,
+		hostDiscovery: &vm.DefaultHostDiscovery{},
+		selectedIndex: 0,
+		menuItems:     menuItems,
+		menuList:      menuList,
+		configList:    configList,
+		powerList:     powerList,
+		debugMode:     debugMode,
+		tabModel:      tabModel,
+		statusBar:     statusBar,
+		breadcrumbs:   breadcrumbs,
+	}
+
+	// Activate mount point warning through the registry if needed
+	if initialView == ViewMountPointWarning {
+		if _, err := viewReg.Activate(ViewMountPointWarning, m); err != nil {
+			if debugMode {
+				log.Printf("[DEBUG] Failed to activate mount point warning: %v", err)
+			}
+			m.currentView = ViewMainMenu
+		}
+	}
+
+	return m, nil
+}
+
+// registerAllViews registers all config form views and special views in the registry.
+func registerAllViews(reg *ViewRegistry, vmManager *vm.Manager, configRepo *vm.Repository) {
+	// 0: Add new VM
+	reg.Register(&ViewDef{Name: ViewVMCreate, Factory: func(m *MainModel) (SubViewModel, error) {
+		return NewVMCreateModel(m.vmManager), nil
+	}, BreadcrumbLabel: "Add VM", ParentTab: components.TabConfiguration, ConfigMenuIndex: 0})
+
+	// 1: Edit VM — handled specially (needs VM selection first; activated via SetActiveModel)
+	reg.Register(&ViewDef{Name: ViewVMEdit, Factory: nil, BreadcrumbLabel: "Edit VM", ParentTab: components.TabConfiguration, ConfigMenuIndex: -1})
+
+	// 2: Delete VM — factory returns error; activated via SetActiveModel after VM selection
+	reg.Register(&ViewDef{Name: ViewVMDelete, Factory: func(m *MainModel) (SubViewModel, error) {
+		return nil, fmt.Errorf("use SetActiveModel for VMDelete")
+	}, BreadcrumbLabel: "Delete VM", ParentTab: components.TabConfiguration, ConfigMenuIndex: -1})
+
+	// 3: CPU Topology
+	reg.Register(&ViewDef{Name: ViewCPUTopology, Factory: func(m *MainModel) (SubViewModel, error) {
+		return NewCPUTopologyModel(m.configRepo)
+	}, BreadcrumbLabel: "Edit CPU Topology", ParentTab: components.TabConfiguration, ConfigMenuIndex: 3})
+
+	// 4: vCPU Pinning
+	reg.Register(&ViewDef{Name: ViewVCPUPinning, Factory: func(m *MainModel) (SubViewModel, error) {
+		return NewVCPUPinningModel(m.vmManager, m.configRepo)
+	}, BreadcrumbLabel: "Edit vCPU Pinning", ParentTab: components.TabConfiguration, ConfigMenuIndex: 4})
+
+	// 5: PCI Passthrough
+	reg.Register(&ViewDef{Name: ViewPCIPassthrough, Factory: func(m *MainModel) (SubViewModel, error) {
+		return NewPCIPassthroughModel(m.configRepo, m.vmManager, m.hostDiscovery)
+	}, BreadcrumbLabel: "Edit PCI Passthrough", ParentTab: components.TabConfiguration, ConfigMenuIndex: 5})
+
+	// 6: USB Passthrough
+	reg.Register(&ViewDef{Name: ViewUSBPassthrough, Factory: func(m *MainModel) (SubViewModel, error) {
+		return NewUSBPassthroughModel(m.configRepo, m.hostDiscovery)
+	}, BreadcrumbLabel: "Edit USB Passthrough", ParentTab: components.TabConfiguration, ConfigMenuIndex: 6})
+
+	// 7: Start/Stop Script
+	reg.Register(&ViewDef{Name: ViewStartStopScript, Factory: func(m *MainModel) (SubViewModel, error) {
+		return NewStartStopScriptModel(m.configRepo)
+	}, BreadcrumbLabel: "Edit Start/Stop Script", ParentTab: components.TabConfiguration, ConfigMenuIndex: 7})
+
+	// 8: CPU Options
+	reg.Register(&ViewDef{Name: ViewCPUOptions, Factory: func(m *MainModel) (SubViewModel, error) {
+		return NewCPUOptionsModel(m.configRepo), nil
+	}, BreadcrumbLabel: "Edit CPU Options", ParentTab: components.TabConfiguration, ConfigMenuIndex: 8})
+
+	// 9: SSH Password
+	reg.Register(&ViewDef{Name: ViewSSHPassword, Factory: func(m *MainModel) (SubViewModel, error) {
+		return NewSSHPasswordModel(), nil
+	}, BreadcrumbLabel: "Set SSH Password", ParentTab: components.TabConfiguration, ConfigMenuIndex: 9})
+
+	// 10: Create Logical Volume
+	reg.Register(&ViewDef{Name: ViewLVCreate, Factory: func(m *MainModel) (SubViewModel, error) {
+		return NewLVCreateModel(), nil
+	}, BreadcrumbLabel: "Create Logical Volume", ParentTab: components.TabConfiguration, ConfigMenuIndex: 10})
+
+	// Mount point warning (not in config menu)
+	reg.Register(&ViewDef{Name: ViewMountPointWarning, Factory: func(m *MainModel) (SubViewModel, error) {
+		return NewMountPointWarningModel(), nil
+	}, BreadcrumbLabel: "Mount Point Warning", ParentTab: components.TabVMs, ConfigMenuIndex: -1})
+
+	// VMRunning — persistent model; real model is set via SetActiveModel in handleVMSelection
+	reg.Register(&ViewDef{Name: ViewVMRunning, Factory: func(m *MainModel) (SubViewModel, error) {
+		// Factory only used as placeholder; real model created externally with runner info
+		return NewVMRunningModel(nil, nil), nil
+	}, BreadcrumbLabel: "VM Running", ParentTab: components.TabVMs, ConfigMenuIndex: -1})
+
+	// VMSelect — inline state on MainModel, never factory-constructed
+	reg.Register(&ViewDef{Name: ViewVMSelect, Factory: nil,
+		BreadcrumbLabel: "", ParentTab: components.TabConfiguration, ConfigMenuIndex: -1})
 }
 
 // buildMenuListAdapter converts menu items to list.Item slice
@@ -120,26 +205,29 @@ func buildMenuListAdapter(items []MenuItem) []list.Item {
 	return listItems
 }
 
-// buildConfigListAdapter creates the config menu list items
-func buildConfigListAdapter() []list.Item {
-	items := []MenuItem{
-		{Title: "Add new VM", Type: "INT_CONFIG"},
-		{Title: "Edit VM", Type: "INT_CONFIG"},
-		{Title: "Delete VM", Type: "INT_CONFIG"},
-		{Title: "Edit CPU Topology", Type: "INT_CONFIG"},
-		{Title: "Edit vCPU Pinning", Type: "INT_CONFIG"},
-		{Title: "Edit PCI Passthrough", Type: "INT_CONFIG"},
-		{Title: "Edit USB Passthrough", Type: "INT_CONFIG"},
-		{Title: "Edit Start/Stop Script", Type: "INT_CONFIG"},
-		{Title: "Edit CPU Options", Type: "INT_CONFIG"},
-		{Title: "Set SSH Password", Type: "INT_CONFIG"},
-		{Title: "Create Logical Volume", Type: "INT_CONFIG"},
-		{Title: "Save changes", Type: "INT_CONFIG"},
+// buildConfigListAdapter creates the config menu list items from the registry.
+// Edit VM and Delete VM are inserted manually since they require VM selection first.
+func buildConfigListAdapter(reg *ViewRegistry) []list.Item {
+	items := reg.BuildConfigMenuItems()
+	// Insert "Edit VM" and "Delete VM" after "Add VM" (position 1 and 2)
+	// matching the original menu layout. The last item is "Save changes".
+	editVM := MenuItem{Title: "Edit VM", Type: "INT_CONFIG"}
+	deleteVM := MenuItem{Title: "Delete VM", Type: "INT_CONFIG"}
+
+	// Items from registry: [Add VM, CPU Topology, vCPU Pinning, ..., LV Create, Save changes]
+	// We want: [Add VM, Edit VM, Delete VM, CPU Topology, ..., LV Create, Save changes]
+	listItems := make([]list.Item, 0, len(items)+2)
+	// First item is always Add VM
+	listItems = append(listItems, MenuItemAdapter{MenuItem: items[0]})
+	// Insert Edit VM and Delete VM
+	listItems = append(listItems, MenuItemAdapter{MenuItem: editVM})
+	listItems = append(listItems, MenuItemAdapter{MenuItem: deleteVM})
+	// Remaining registry items (excluding Save changes which is last)
+	for i := 1; i < len(items)-1; i++ {
+		listItems = append(listItems, MenuItemAdapter{MenuItem: items[i]})
 	}
-	listItems := make([]list.Item, len(items))
-	for i, item := range items {
-		listItems[i] = MenuItemAdapter{MenuItem: item}
-	}
+	// Save changes at the end
+	listItems = append(listItems, MenuItemAdapter{MenuItem: items[len(items)-1]})
 	return listItems
 }
 

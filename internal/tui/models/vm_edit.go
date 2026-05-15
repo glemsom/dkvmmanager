@@ -64,10 +64,18 @@ func (m *VMEditModel) View() string {
 	return m.form.View()
 }
 
+// SetSize forwards window resize to the underlying form.
+func (m *VMEditModel) SetSize(width, height int) { m.form.SetSize(width, height) }
+
 // FileBrowserActive returns true if the form's file browser is active.
 func (m *VMEditModel) FileBrowserActive() bool {
 	if fm, ok := m.form.Model().(*VMFormModel); ok {
 		return fm.FileBrowserActive()
 	}
 	return false
+}
+
+// Form returns the underlying VMFormModel (for testing/internal access).
+func (m *VMEditModel) Form() *VMFormModel {
+	return m.form.Model().(*VMFormModel)
 }

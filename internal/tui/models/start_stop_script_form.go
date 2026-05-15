@@ -138,8 +138,9 @@ func (m *StartStopScriptFormModel) HandleEnter(pos form.FocusPos) (form.FormResu
 			// Save the configuration
 			if err := m.repo.SaveStartStopScript(m.config); err != nil {
 				m.errors["save"] = err.Error()
+				return form.ResultNone, nil
 			}
-			return form.ResultSave, nil
+			return form.ResultNone, func() tea.Msg { return StartStopScriptSavedMsg{} }
 		}
 		if pos.Key == "cancel" {
 			return form.ResultCancel, nil

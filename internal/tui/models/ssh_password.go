@@ -50,6 +50,12 @@ func (m *SSHPasswordModel) View() string {
 	return m.form.View()
 }
 
+// SetSize forwards window resize to the underlying form.
+func (m *SSHPasswordModel) SetSize(width, height int) { m.form.SetSize(width, height) }
+
+// FileBrowserActive returns false (SSH password has no file browser).
+func (m *SSHPasswordModel) FileBrowserActive() bool { return false }
+
 // Form returns the underlying form model (for testing/internal access).
 func (m *SSHPasswordModel) Form() *SSHPasswordFormModel {
 	return m.form.Model().(*SSHPasswordFormModel)

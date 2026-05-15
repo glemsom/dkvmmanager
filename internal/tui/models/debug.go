@@ -81,13 +81,17 @@ func (m *MainModel) RunTestScenario(scenario string) {
 		}
 
 	case "vm_create":
-		// Navigate to VM creation view
+		// Navigate to VM creation view via registry
 		m.currentView = ViewConfigMenu
 		m.configSelectedIndex = 0 // "Add new VM"
-		// Simulate pressing enter to go to VM create
-		m.vmCreateModel = NewVMCreateModel(m.vmManager)
-		m.vmCreateModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
-		m.currentView = ViewVMCreate
+		// Activate through registry
+		if m.viewRegistry != nil {
+			sub, err := m.viewRegistry.Activate(ViewVMCreate, m)
+			if err == nil {
+				sub.SetSize(m.windowWidth-4, m.contentHeight()-2)
+				m.currentView = ViewVMCreate
+			}
+		}
 		fmt.Println("Test scenario: vm_create")
 		fmt.Printf("Current view: %s\n", m.currentView)
 

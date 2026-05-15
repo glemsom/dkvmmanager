@@ -93,17 +93,13 @@ func (m *MainModel) renderActiveContent() string {
 }
 
 func (m *MainModel) renderActiveContentWithWidth(width int) string {
+	// Registry-based render: delegate to active registered sub-view
+	if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+		return m.viewRegistry.ActiveModel().View()
+	}
+
+	// Fallback: render non-registry sub-views
 	switch m.currentView {
-	case ViewVMCreate:
-		if m.vmCreateModel != nil {
-			return m.vmCreateModel.View()
-		}
-		return "Loading..."
-	case ViewVMEdit:
-		if m.vmEditModel != nil {
-			return m.vmEditModel.View()
-		}
-		return "Loading..."
 	case ViewVMDelete:
 		if m.vmDeleteModel != nil {
 			return m.vmDeleteModel.View()
@@ -111,51 +107,6 @@ func (m *MainModel) renderActiveContentWithWidth(width int) string {
 		return "Loading..."
 	case ViewVMSelect:
 		return m.renderVMSelectView()
-	case ViewCPUOptions:
-		if m.cpuOptionsModel != nil {
-			return m.cpuOptionsModel.View()
-		}
-		return "Loading..."
-	case ViewPCIPassthrough:
-		if m.pciPassthroughModel != nil {
-			return m.pciPassthroughModel.View()
-		}
-		return "Loading..."
-	case ViewUSBPassthrough:
-		if m.usbPassthroughModel != nil {
-			return m.usbPassthroughModel.View()
-		}
-		return "Loading..."
-	case ViewCPUTopology:
-		if m.cpuTopologyModel != nil {
-			return m.cpuTopologyModel.View()
-		}
-		return "Loading..."
-	case ViewVCPUPinning:
-		if m.vcpuPinningModel != nil {
-			return m.vcpuPinningModel.View()
-		}
-		return "Loading..."
-	case ViewSSHPassword:
-		if m.sshPasswordModel != nil {
-			return m.sshPasswordModel.View()
-		}
-		return "Loading..."
-	case ViewStartStopScript:
-		if m.startStopScriptModel != nil {
-			return m.startStopScriptModel.View()
-		}
-		return "Loading..."
-	case ViewLVCreate:
-		if m.lvCreateModel != nil {
-			return m.lvCreateModel.View()
-		}
-		return "Loading..."
-	case ViewMountPointWarning:
-		if m.mountPointWarningModel != nil {
-			return m.mountPointWarningModel.View()
-		}
-		return "Loading..."
 	case ViewVMRunning:
 		if m.vmRunningModel != nil {
 			return m.vmRunningModel.View()

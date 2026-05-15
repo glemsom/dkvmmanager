@@ -175,12 +175,13 @@ func TestEditFormArrowNavigationViaMainModel(t *testing.T) {
 		t.Fatalf("Expected ViewVMEdit, got %s", m.currentView)
 	}
 
-	if m.vmEditModel == nil {
-		t.Fatal("vmEditModel should not be nil")
+	if m.viewRegistry == nil || m.viewRegistry.ActiveName() != ViewVMEdit {
+		t.Fatal("Expected VMEdit to be active in registry")
 	}
 
 	// The form must have focus
-	if !m.vmEditModel.form.Focused() {
+	editModel := m.viewRegistry.ActiveModel().(*VMEditModel)
+	if !editModel.form.Focused() {
 		t.Error("BUG: Edit form should have focused=true when entering edit view")
 	}
 
@@ -191,7 +192,7 @@ func TestEditFormArrowNavigationViaMainModel(t *testing.T) {
 		m = model.(*MainModel)
 	}
 
-	view := m.vmEditModel.View()
+	view := editModel.View()
 	// When a list item is focused, it should show [Del] button
 	if !strings.Contains(view, "[Del]") {
 		t.Error("Focused list item should show [Del] button indicator")
@@ -204,11 +205,11 @@ func TestEditFormArrowNavigationViaMainModel(t *testing.T) {
 	}
 
 	// Focus should have moved to a text field
-	if m.vmEditModel.form.FocusIndex() <= 2 {
-		t.Errorf("Focus index should have moved past list items. Got: %d", m.vmEditModel.form.FocusIndex())
+	if editModel.form.FocusIndex() <= 2 {
+		t.Errorf("Focus index should have moved past list items. Got: %d", editModel.form.FocusIndex())
 	}
 
-	view = m.vmEditModel.View()
+	view = editModel.View()
 	if !strings.Contains(view, "> ") {
 		t.Error("Rendered view should contain '> ' focus indicator on text field")
 	}

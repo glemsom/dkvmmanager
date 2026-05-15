@@ -126,13 +126,14 @@ func TestMainModelConfigListInitialized(t *testing.T) {
 	m := setupTestModel(t)
 
 	items := m.configList.Items()
+	// 9 registered + 2 inserted (Edit VM, Delete VM) + Save changes = 12
 	if len(items) != 12 {
 		t.Errorf("Expected 12 config menu items, got %d", len(items))
 	}
 
 	// Check first item
-	if items[0].FilterValue() != "Add new VM" {
-		t.Errorf("Expected first config item to be 'Add new VM', got '%s'", items[0].FilterValue())
+	if items[0].FilterValue() != "Add VM" {
+		t.Errorf("Expected first config item to be 'Add VM', got '%s'", items[0].FilterValue())
 	}
 }
 

@@ -510,6 +510,9 @@ func (m *VMRunningModel) renderLogContent() string {
 	return output.String()
 }
 
+// FileBrowserActive always returns false; VMRunning has no sub-file-browser.
+func (m *VMRunningModel) FileBrowserActive() bool { return false }
+
 // SetSize updates the model dimensions
 func (m *VMRunningModel) SetSize(w, h int) {
 	m.width = w

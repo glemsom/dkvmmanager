@@ -6,6 +6,7 @@ import (
 	"log"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
 // handleViewChangeMsg handles ViewChangeMsg from sub-models
@@ -102,16 +103,16 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		m.breadcrumbs.Clear()
 		return m, nil
 	}
-	if _, ok := nextMsg.(CPUOptionsUpdatedMsg); ok {
-		m.statusBar.SetMessage("CPU options saved successfully")
+	// Unified handler for all form save messages (implements form.FormSavedMsg)
+	if form.IsFormSavedMsg(nextMsg) {
+		if status := form.FormSavedStatus(nextMsg); status != "" {
+			m.statusBar.SetMessage(status)
+		}
 		m.currentView = ViewConfigMenu
 		m.breadcrumbs.Clear()
-		return m, nil
-	}
-	if _, ok := nextMsg.(PCIPassthroughUpdatedMsg); ok {
-		m.statusBar.SetMessage("PCI passthrough saved successfully")
-		m.currentView = ViewConfigMenu
-		m.breadcrumbs.Clear()
+		if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+			m.viewRegistry.Deactivate()
+		}
 		return m, nil
 	}
 	if kam, ok := nextMsg.(PCIVFIOKernelAppliedMsg); ok {
@@ -120,24 +121,6 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.statusBar.SetMessage("Apply to kernel failed: " + kam.Error)
 		}
-		m.currentView = ViewConfigMenu
-		m.breadcrumbs.Clear()
-		return m, nil
-	}
-	if _, ok := nextMsg.(USBPassthroughUpdatedMsg); ok {
-		m.statusBar.SetMessage("USB passthrough saved successfully")
-		m.currentView = ViewConfigMenu
-		m.breadcrumbs.Clear()
-		return m, nil
-	}
-	if _, ok := nextMsg.(CPUTopologyUpdatedMsg); ok {
-		m.statusBar.SetMessage("CPU topology saved successfully")
-		m.currentView = ViewConfigMenu
-		m.breadcrumbs.Clear()
-		return m, nil
-	}
-	if _, ok := nextMsg.(VCPUPinningUpdatedMsg); ok {
-		m.statusBar.SetMessage("CPU topology and vCPU pinning saved successfully")
 		m.currentView = ViewConfigMenu
 		m.breadcrumbs.Clear()
 		return m, nil
@@ -152,30 +135,27 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		m.breadcrumbs.Clear()
 		return m, nil
 	}
-	if _, ok := nextMsg.(SSHPasswordUpdatedMsg); ok {
-		m.statusBar.SetMessage("Password changed successfully")
-		m.sshPasswordModel = nil
-		m.currentView = ViewConfigMenu
-		m.breadcrumbs.Clear()
-		return m, nil
-	}
 	if _, ok := nextMsg.(lvVGsLoadedMsg); ok {
 		// lvVGsLoadedMsg is handled directly by LVCreateFormModel.Update()
 		// when the view is active - no need to forward here
 		return m, nil
 	}
 	if _, ok := nextMsg.(LVCreateUpdatedMsg); ok {
-		if m.lvCreateModel != nil {
-			fm := m.lvCreateModel.Form().Model().(*LVCreateFormModel)
-			if fm.Preview() != "" {
-				m.statusBar.SetMessage(fm.Preview())
+		// Get status from the active registry model
+		if m.viewRegistry != nil && m.viewRegistry.ActiveName() == ViewLVCreate {
+			if svm, ok := m.viewRegistry.ActiveModel().(*LVCreateModel); ok {
+				fm := svm.Form().Model().(*LVCreateFormModel)
+				if fm.Preview() != "" {
+					m.statusBar.SetMessage(fm.Preview())
+				} else {
+					m.statusBar.SetMessage("Logical volume created successfully")
+				}
 			} else {
 				m.statusBar.SetMessage("Logical volume created successfully")
 			}
 		} else {
 			m.statusBar.SetMessage("Logical volume created successfully")
 		}
-		m.lvCreateModel = nil
 		m.currentView = ViewConfigMenu
 		m.breadcrumbs.Clear()
 		return m, nil

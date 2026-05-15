@@ -44,6 +44,9 @@ func (m *VMCreateModel) View() string {
 	return m.form.View()
 }
 
+// SetSize forwards window resize to the underlying form.
+func (m *VMCreateModel) SetSize(width, height int) { m.form.SetSize(width, height) }
+
 // FileBrowserActive returns true if the form's file browser is active.
 func (m *VMCreateModel) FileBrowserActive() bool {
 	if fm, ok := m.form.Model().(*VMFormModel); ok {

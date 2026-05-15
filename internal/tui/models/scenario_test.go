@@ -98,8 +98,8 @@ func TestScenarioNavigateToVMCreate(t *testing.T) {
 	if m.currentView != ViewVMCreate {
 		t.Errorf("Expected ViewVMCreate, got %s", m.currentView)
 	}
-	if m.vmCreateModel == nil {
-		t.Error("Expected vmCreateModel to be initialized")
+	if m.viewRegistry == nil || m.viewRegistry.ActiveName() != ViewVMCreate {
+		t.Error("Expected VMCreate to be active in registry")
 	}
 }
 
@@ -140,7 +140,10 @@ func TestScenarioESCFromVMEdit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create edit model: %v", err)
 	}
-	m.vmEditModel = editModel
+	reg := NewViewRegistry()
+	reg.Register(&ViewDef{Name: ViewVMEdit, Factory: nil, BreadcrumbLabel: "Edit VM", ParentTab: components.TabConfiguration, ConfigMenuIndex: 1})
+	reg.SetActiveModel(reg.GetDef(ViewVMEdit), editModel)
+	m.viewRegistry = reg
 	m.currentView = ViewVMEdit
 
 	m = sendKeys(t, m, tea.KeyEsc)
@@ -306,8 +309,8 @@ func TestScenarioConfigTabMenuItems(t *testing.T) {
 	if m.currentView != ViewCPUOptions {
 		t.Errorf("Expected ViewCPUOptions, got %s", m.currentView)
 	}
-	if m.cpuOptionsModel == nil {
-		t.Error("Expected cpuOptionsModel to be initialized")
+	if m.viewRegistry == nil || m.viewRegistry.ActiveName() != ViewCPUOptions {
+		t.Error("Expected CPUOptions to be active in registry")
 	}
 }
 
@@ -315,8 +318,11 @@ func TestScenarioConfigTabMenuItems(t *testing.T) {
 func TestScenarioESCFromCPUOptions(t *testing.T) {
 	m := setupTestModelForScenarios(t)
 
+	reg := NewViewRegistry()
+	reg.Register(&ViewDef{Name: ViewCPUOptions, Factory: nil, BreadcrumbLabel: "Edit CPU Options", ParentTab: components.TabConfiguration, ConfigMenuIndex: 8})
+	reg.SetActiveModel(reg.GetDef(ViewCPUOptions), NewCPUOptionsModel(m.configRepo))
+	m.viewRegistry = reg
 	m.currentView = ViewCPUOptions
-	m.cpuOptionsModel = NewCPUOptionsModel(m.configRepo)
 
 	m = sendKeys(t, m, tea.KeyEsc)
 
@@ -388,11 +394,14 @@ func TestScenarioFullEditFlowViaUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create edit model: %v", err)
 	}
-	m.vmEditModel = editModel
+	reg := NewViewRegistry()
+	reg.Register(&ViewDef{Name: ViewVMEdit, Factory: nil, BreadcrumbLabel: "Edit VM", ParentTab: components.TabConfiguration, ConfigMenuIndex: 1})
+	reg.SetActiveModel(reg.GetDef(ViewVMEdit), editModel)
+	m.viewRegistry = reg
 	m.currentView = ViewVMEdit
 
 	// Modify and save
-	fm := m.vmEditModel.form.Model().(*VMFormModel)
+	fm := editModel.Form()
 	fm.vmName = "edited-via-scenario"
 	cmd := fm.validateAndSaveCmd()
 	if cmd == nil {

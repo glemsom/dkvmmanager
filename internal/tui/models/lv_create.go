@@ -36,6 +36,12 @@ func (m *LVCreateModel) View() string {
 	return m.form.View()
 }
 
+// SetSize forwards window resize to the underlying form.
+func (m *LVCreateModel) SetSize(width, height int) { m.form.SetSize(width, height) }
+
+// FileBrowserActive returns false (LV create has no file browser).
+func (m *LVCreateModel) FileBrowserActive() bool { return false }
+
 // Form returns the underlying ScrollableForm.
 func (m *LVCreateModel) Form() *form.ScrollableForm {
 	return m.form
