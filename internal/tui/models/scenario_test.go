@@ -187,8 +187,8 @@ func TestScenarioVMCreatedMsg(t *testing.T) {
 	model, _ := m.Update(VMCreatedMsg{VMName: "brand-new-vm"})
 	m = model.(*MainModel)
 
-	if !strings.Contains(m.statusMessage, "brand-new-vm") {
-		t.Errorf("Expected status message to contain VM name, got '%s'", m.statusMessage)
+	if !strings.Contains(m.statusBar.GetMessage(), "brand-new-vm") {
+		t.Errorf("Expected status message to contain VM name, got '%s'", m.statusBar.GetMessage())
 	}
 	if m.currentView != ViewConfigMenu {
 		t.Errorf("Expected ViewConfigMenu after VMCreatedMsg, got %s", m.currentView)
@@ -203,8 +203,8 @@ func TestScenarioVMUpdatedMsg(t *testing.T) {
 	model, _ := m.Update(VMUpdatedMsg{VMName: "edited-vm"})
 	m = model.(*MainModel)
 
-	if !strings.Contains(m.statusMessage, "edited-vm") {
-		t.Errorf("Expected status message to contain VM name, got '%s'", m.statusMessage)
+	if !strings.Contains(m.statusBar.GetMessage(), "edited-vm") {
+		t.Errorf("Expected status message to contain VM name, got '%s'", m.statusBar.GetMessage())
 	}
 	if m.currentView != ViewConfigMenu {
 		t.Errorf("Expected ViewConfigMenu after VMUpdatedMsg, got %s", m.currentView)
@@ -218,8 +218,8 @@ func TestScenarioVMDeletedMsg(t *testing.T) {
 	model, _ := m.Update(VMDeletedMsg{VMName: "old-vm", VMID: "99"})
 	m = model.(*MainModel)
 
-	if !strings.Contains(m.statusMessage, "old-vm") {
-		t.Errorf("Expected status message to contain VM name, got '%s'", m.statusMessage)
+	if !strings.Contains(m.statusBar.GetMessage(), "old-vm") {
+		t.Errorf("Expected status message to contain VM name, got '%s'", m.statusBar.GetMessage())
 	}
 	if m.currentView != ViewConfigMenu {
 		t.Errorf("Expected ViewConfigMenu after VMDeletedMsg, got %s", m.currentView)

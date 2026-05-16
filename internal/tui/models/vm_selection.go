@@ -23,7 +23,7 @@ func (m *MainModel) showVMSelectionForDeletion() (tea.Model, tea.Cmd) {
 func (m *MainModel) showVMSelectionWithMode(mode string, emptyMessage string) (tea.Model, tea.Cmd) {
 	vms, err := m.vmManager.ListVMs()
 	if err != nil || len(vms) == 0 {
-		m.statusMessage = emptyMessage
+		m.statusBar.SetMessage(emptyMessage)
 		return m, nil
 	}
 

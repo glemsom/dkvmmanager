@@ -63,31 +63,8 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Handle VM created messages from sub-models
-	if vcm, ok := msg.(VMCreatedMsg); ok {
-		m.statusMessage = fmt.Sprintf("VM '%s' created successfully", vcm.VMName)
-		m.currentView = ViewConfigMenu
-		m.rebuildMenuList()
-		m.breadcrumbs.Clear()
-		return m, nil
-	}
-
-	// Handle VM updated messages from sub-models
-	if vcm, ok := msg.(VMUpdatedMsg); ok {
-		m.statusMessage = fmt.Sprintf("VM '%s' updated successfully", vcm.VMName)
-		m.currentView = ViewConfigMenu
-		m.rebuildMenuList()
-		m.breadcrumbs.Clear()
-		return m, nil
-	}
-
-	// Handle VM deleted messages from sub-models
-	if vdm, ok := msg.(VMDeletedMsg); ok {
-		m.statusMessage = fmt.Sprintf("VM '%s' deleted successfully", vdm.VMName)
-		m.currentView = ViewConfigMenu
-		m.rebuildMenuList()
-		return m, nil
-	}
+	// Handle VM created messages from sub-models (delegated to handleSubViewMsg)
+	// Note: VMCreatedMsg is handled by handleSubViewMsg through the registry
 
 	// Handle VM stopped messages from running model
 	if vsm, ok := msg.(VMStoppedMsg); ok {
@@ -142,37 +119,30 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.returnFromSubView()
 	}
 
-	// Handle LBU commit completion
-	if lcm, ok := msg.(LBUCommitMsg); ok {
-		if lcm.Success {
-			m.statusBar.SetMessage("LBU commit: " + lcm.Output)
-		} else {
-			m.statusBar.SetMessage("LBU commit failed: " + lcm.Output)
-		}
-		return m, nil
+	// Handle sub-view completion messages directly (before registry dispatch)
+	// so they always route to the main model regardless of active view.
+	switch msg := msg.(type) {
+	case VMCreatedMsg:
+		return HandleVMCreatedMsg(m, msg)
+	case VMUpdatedMsg:
+		return HandleVMUpdatedMsg(m, msg)
+	case VMDeletedMsg:
+		return HandleVMDeletedMsg(m, msg)
+	case LBUCommitMsg:
+		return HandleLBUCommitMsg(m, msg)
+	case RebootMsg:
+		return HandleRebootMsg(m, msg)
+	case PowerOffMsg:
+		return HandlePowerOffMsg(m, msg)
+	case PCIVFIOKernelAppliedMsg:
+		return HandlePCIVFIOKernelAppliedMsg(m, msg)
+	case VCPUCPUKernelAppliedMsg:
+		return HandleVCPUCPUKernelAppliedMsg(m, msg)
+	case LVCreateUpdatedMsg:
+		return HandleLVCreateUpdatedMsg(m, msg)
 	}
 
-	// Handle reboot completion
-	if rm, ok := msg.(RebootMsg); ok {
-		if rm.Success {
-			m.statusBar.SetMessage("Reboot: " + rm.Output)
-		} else {
-			m.statusBar.SetMessage("Reboot failed: " + rm.Output)
-		}
-		return m, nil
-	}
-
-	// Handle power off completion
-	if pom, ok := msg.(PowerOffMsg); ok {
-		if pom.Success {
-			m.statusBar.SetMessage("Power off: " + pom.Output)
-		} else {
-			m.statusBar.SetMessage("Power off failed: " + pom.Output)
-		}
-		return m, nil
-	}
-
-	// Registry-based dispatch: forward ALL messages to active registered sub-view.
+	// Registry-based dispatch
 	// This ensures async messages (e.g. lvVGsLoadedMsg) reach registered views.
 	if m.viewRegistry != nil && m.viewRegistry.IsActive() {
 		activeModel := m.viewRegistry.ActiveModel()
@@ -215,11 +185,9 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			}
-			if vdm, ok := nextMsg.(VMDeletedMsg); ok {
-				m.statusMessage = fmt.Sprintf("VM '%s' deleted successfully", vdm.VMName)
-				m.currentView = ViewConfigMenu
-				m.rebuildMenuList()
-				return m, nil
+			if _, ok := nextMsg.(VMDeletedMsg); ok {
+				// Delegate to handleSubViewMsg for consistent handling
+				return m.handleSubViewMsg(nextMsg)
 			}
 		}
 		return m, nil

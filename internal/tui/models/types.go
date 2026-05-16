@@ -108,9 +108,6 @@ type MainModel struct {
 	powerList list.Model
 	powerListView     string
 
-	// Status message
-	statusMessage string
-
 	// Quitting flag
 	quitting bool
 

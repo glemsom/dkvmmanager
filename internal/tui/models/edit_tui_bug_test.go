@@ -94,7 +94,7 @@ func TestEditVMPreservesAllVMsInMenu(t *testing.T) {
 	}
 
 	// Simulate MainModel handling the update message
-	m.statusMessage = "VM '" + updatedMsg.VMName + "' updated successfully"
+	m.statusBar.SetMessage("VM '" + updatedMsg.VMName + "' updated successfully")
 	m.currentView = ViewConfigMenu
 	m.rebuildMenuList()
 

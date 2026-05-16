@@ -106,7 +106,7 @@ func TestDoubleVMCreatedMsg(t *testing.T) {
 
 	// Simulate the double-processing scenario:
 	// 1. handleSubViewMsg processes VMCreatedMsg (calls rebuildMenuList)
-	m.statusMessage = "VM 'test-vm-1' created successfully"
+	m.statusBar.SetMessage("VM 'test-vm-1' created successfully")
 	m.currentView = ViewConfigMenu
 	m.rebuildMenuList()
 

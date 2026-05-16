@@ -91,8 +91,8 @@ func TestShowVMSelectionWithModeEmpty(t *testing.T) {
 	if m.currentView == ViewVMSelect {
 		t.Error("Should not switch to VM select view when no VMs exist")
 	}
-	if !strings.Contains(m.statusMessage, "No VMs available") {
-		t.Errorf("Expected status message about no VMs, got '%s'", m.statusMessage)
+	if !strings.Contains(m.statusBar.GetMessage(), "No VMs available") {
+		t.Errorf("Expected status message about no VMs, got '%s'", m.statusBar.GetMessage())
 	}
 }
 
