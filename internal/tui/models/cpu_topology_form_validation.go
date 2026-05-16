@@ -34,9 +34,8 @@ func (m *CPUTopologyFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd) {
 	}
 
 	topo := models.CPUTopology{
-		Enabled:         true,
-		SelectedCPUs:    selectedCPUs,
-		UseHostTopology: m.useHostTopology,
+		Enabled:      true,
+		SelectedCPUs: selectedCPUs,
 	}
 
 	if err := m.repo.SaveCPUTopology(topo); err != nil {

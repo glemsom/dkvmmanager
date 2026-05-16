@@ -34,7 +34,22 @@ func GetTerminalSize() (width, height int) {
 		}
 		return width, height
 	}
-	return int(ws.Col), int(ws.Row)
+	width = int(ws.Col)
+	height = int(ws.Row)
+	// Validate the values - IoctlGetWinsize can return garbage in some environments
+	// Typical terminal sizes are between 10x10 and 1000x1000, but we should be lenient
+	// A value like 200x56 without reasonable bounds is suspicious
+	if width < 10 || width > 1000 || height < 10 || height > 1000 {
+		// Values seem unreasonable, try environment variables instead
+		envWidth := getEnvInt("COLUMNS", 0)
+		envHeight := getEnvInt("LINES", 0)
+		if envWidth > 0 && envHeight > 0 && envWidth < 1000 && envHeight < 1000 {
+			return envWidth, envHeight
+		}
+		// Return 0 to indicate failure, let caller use defaults
+		return 0, 0
+	}
+	return width, height
 }
 
 // GetTerminalSizeWithFallback returns terminal size with fallback defaults

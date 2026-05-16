@@ -4,15 +4,17 @@ package models
 import (
 	"fmt"
 	"log"
+	"os"
 	"sort"
+	"strconv"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/glemsom/dkvmmanager/internal/config"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
 	"github.com/glemsom/dkvmmanager/internal/vm"
-)
 
-// NewMainModel creates a new main model
+	"golang.org/x/sys/unix"
+)
 func NewMainModel() (*MainModel, error) {
 	return NewMainModelWithConfig(config.Load())
 }
@@ -119,6 +121,11 @@ func NewMainModelWithConfig(cfg *config.Config) (*MainModel, error) {
 				log.Printf("[DEBUG] Failed to activate mount point warning: %v", err)
 			}
 			m.currentView = ViewMainMenu
+		} else {
+			// Set initial size using fallback terminal size since WindowSizeMsg
+			// hasn't been received yet
+			width, height := getInitialTerminalSize()
+			m.viewRegistry.ActiveModel().SetSize(width-4, height-2)
 		}
 	}
 
@@ -303,4 +310,36 @@ func (m *MainModel) rebuildMenuList() {
 		runningCount = 1
 	}
 	m.statusBar.SetStats(len(m.menuItems), runningCount)
+}
+
+// getInitialTerminalSize gets terminal size with fallback defaults for initial view sizing.
+// This avoids circular imports by duplicating terminal size logic here.
+func getInitialTerminalSize() (width, height int) {
+	ws, err := unix.IoctlGetWinsize(int(os.Stdout.Fd()), unix.TIOCGWINSZ)
+	if err != nil {
+		// Try environment variables
+		width = getEnvInt("COLUMNS", 80)
+		height = getEnvInt("LINES", 25)
+		if width == 0 {
+			width = 80
+		}
+		if height == 0 {
+			height = 25
+		}
+		return width, height
+	}
+	return int(ws.Col), int(ws.Row)
+}
+
+// getEnvInt retrieves an integer from an environment variable
+func getEnvInt(name string, defaultValue int) int {
+	value := os.Getenv(name)
+	if value == "" {
+		return defaultValue
+	}
+	intVal, err := strconv.Atoi(value)
+	if err != nil {
+		return defaultValue
+	}
+	return intVal
 }

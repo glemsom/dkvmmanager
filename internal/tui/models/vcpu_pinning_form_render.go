@@ -183,6 +183,9 @@ func (m *VCPUPinningFormModel) RenderFooter() string {
 func (m *VCPUPinningFormModel) RenderPosition(pos form.FocusPos, focused bool, cursorOffset int) string {
 	switch pos.Kind {
 	case form.FocusToggle:
+		if pos.Key == "use_host_topology" {
+			return m.renderUseHostTopologyToggle(focused)
+		}
 		toggleLabel := "[ ] Disabled"
 		if m.pinning.Enabled {
 			toggleLabel = "[x] Enabled"
@@ -285,6 +288,26 @@ func (m *VCPUPinningFormModel) findHostTopologyInfo(hostCPU int) (int, []int) {
 	return 0, nil
 }
 
+// renderUseHostTopologyToggle renders the "Use Host Topology" toggle line
+func (m *VCPUPinningFormModel) renderUseHostTopologyToggle(focused bool) string {
+	prefix := "  "
+	if focused {
+		prefix = vcpuPinningFocusStyle.Render("> ")
+	}
+
+	var togglePart string
+	if m.useHostTopology {
+		togglePart = vcpuPinningEnabledStyle.Render("[ ON ]")
+	} else {
+		togglePart = styles.WarningTextStyle().Render("[OFF]")
+	}
+
+	label := vcpuPinningLabelStyle.Render("Use Host Topology")
+	desc := vcpuPinningMutedStyle.Render("Preserve die/socket layout in guest VM")
+
+	return prefix + togglePart + " " + label + "  " + desc
+}
+
 // formatInts formats a slice of ints as comma-separated string
 func formatInts(nums []int) string {
 	if len(nums) == 0 {
@@ -318,7 +341,7 @@ func (m *VCPUPinningFormModel) focusedLineIndex() int {
 	line := 0
 
 	// Header: title + blank + host info + blank + allocation title + allocation content + blank
-	line += 2  // title + blank
+	line += 2 // title + blank
 	if m.scanErr != nil {
 		line += 3 // error + warning + blank
 	} else {
@@ -326,14 +349,20 @@ func (m *VCPUPinningFormModel) focusedLineIndex() int {
 	}
 	line += 3 // allocation title + content + blank
 
-	// Now at the toggle position
+	// Now at the pinning enabled toggle position
 	if m.focusIndex == 0 {
-		return line // toggle
+		return line
 	}
 	line += 2 // config header + toggle
 
-	// Now at the Save button
+	// Use Host Topology toggle
 	if m.focusIndex == 1 {
+		return line
+	}
+	line += 2 // toggle line + blank
+
+	// Now at the Save button
+	if m.focusIndex == 2 {
 		return line // save
 	}
 	line += 2 // blank + save button

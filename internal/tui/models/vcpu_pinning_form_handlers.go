@@ -10,6 +10,10 @@ import (
 func (m *VCPUPinningFormModel) HandleEnter(pos form.FocusPos) (form.FormResult, tea.Cmd) {
 	switch pos.Kind {
 	case form.FocusToggle:
+		if pos.Key == "use_host_topology" {
+			m.useHostTopology = !m.useHostTopology
+			return form.ResultNone, nil
+		}
 		m.pinning.Enabled = !m.pinning.Enabled
 		return form.ResultNone, nil
 

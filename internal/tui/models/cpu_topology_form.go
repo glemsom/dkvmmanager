@@ -34,9 +34,6 @@ type CPUTopologyFormModel struct {
 	// Quick lookup: coreKey (dieID:coreID) -> selected for VM
 	coreSelected map[string]bool
 
-	// Use host topology toggle state
-	useHostTopology bool
-
 	// Focus state
 	positions  []form.FocusPos
 	focusIndex int
@@ -114,13 +111,12 @@ func NewCPUTopologyFormModel(repo *vm.Repository) (*CPUTopologyFormModel, error)
 	}
 
 	m := &CPUTopologyFormModel{
-		repo:            repo,
-		hostTopo:        hostTopo,
-		topology:        topology,
-		coreSelected:    coreSelected,
-		useHostTopology: topology.UseHostTopology,
-		errors:          make(map[string]string),
-		scanErr:         scanErr,
+		repo:         repo,
+		hostTopo:     hostTopo,
+		topology:     topology,
+		coreSelected: coreSelected,
+		errors:       make(map[string]string),
+		scanErr:      scanErr,
 	}
 
 	m.positions = m.BuildPositions()
@@ -150,10 +146,6 @@ func (m *CPUTopologyFormModel) currentPos() cpuTopoPos {
 		return cpuTopoPos{kind: cpuTopoSave}
 	}
 	p := m.positions[m.focusIndex]
-	// Handle positions without Data payload (e.g., use_host_topology toggle)
-	if p.Data == nil {
-		return cpuTopoPos{kind: cpuTopoToggle}
-	}
 	d := p.Data.(cpuTopoFocusData)
 	return cpuTopoPos{
 		kind:     int(p.Kind),
@@ -178,13 +170,7 @@ func (m *CPUTopologyFormModel) BuildPositions() []form.FocusPos {
 		return positions
 	}
 
-	// Use Host Topology toggle (first position)
-	positions = append(positions, form.FocusPos{
-		Kind:  form.FocusToggle,
-		Label: "Use Host Topology",
-		Key:   "use_host_topology",
-	})
-
+	// Core toggles
 	for _, die := range m.hostTopo.Dies {
 		dieLabel := fmt.Sprintf("Die %d", die.ID)
 		if die.L3CacheKB > 0 {
@@ -256,9 +242,6 @@ func (m *CPUTopologyFormModel) RenderFooter() string {
 func (m *CPUTopologyFormModel) RenderPosition(pos form.FocusPos, focused bool, cursorOffset int) string {
 	switch pos.Kind {
 	case form.FocusToggle:
-		if pos.Key == "use_host_topology" {
-			return m.renderUseHostTopologyToggle(focused)
-		}
 		d := pos.Data.(cpuTopoFocusData)
 		key := coreKey(d.dieID, d.coreID)
 		selected := m.coreSelected[key]
@@ -269,7 +252,7 @@ func (m *CPUTopologyFormModel) RenderPosition(pos form.FocusPos, focused bool, c
 			// Summary + save button
 			allocatedCores := 0
 			for _, p := range m.positions {
-				if p.Kind == form.FocusToggle && p.Key != "use_host_topology" {
+				if p.Kind == form.FocusToggle {
 					d := p.Data.(cpuTopoFocusData)
 					key := coreKey(d.dieID, d.coreID)
 					if m.coreSelected[key] {
@@ -303,10 +286,6 @@ func (m *CPUTopologyFormModel) RenderPosition(pos form.FocusPos, focused bool, c
 func (m *CPUTopologyFormModel) HandleEnter(pos form.FocusPos) (form.FormResult, tea.Cmd) {
 	switch pos.Kind {
 	case form.FocusToggle:
-		if pos.Key == "use_host_topology" {
-			m.useHostTopology = !m.useHostTopology
-			return form.ResultNone, nil
-		}
 		d := pos.Data.(cpuTopoFocusData)
 		m.toggleCore(d.dieID, d.coreID)
 		return form.ResultNone, nil
@@ -423,14 +402,6 @@ func (m *CPUTopologyFormModel) handleEnterKey() (tea.Model, tea.Cmd) {
 	pos := m.currentPos()
 	switch pos.kind {
 	case cpuTopoToggle:
-		// Check if this is the use_host_topology toggle
-		if m.focusIndex >= 0 && m.focusIndex < len(m.positions) {
-			fp := m.positions[m.focusIndex]
-			if fp.Key == "use_host_topology" {
-				m.useHostTopology = !m.useHostTopology
-				return m, nil
-			}
-		}
 		m.toggleCore(pos.dieID, pos.coreID)
 		return m, nil
 	case cpuTopoSave:
@@ -446,14 +417,6 @@ func (m *CPUTopologyFormModel) handleEnterKey() (tea.Model, tea.Cmd) {
 func (m *CPUTopologyFormModel) handleSpace() (tea.Model, tea.Cmd) {
 	pos := m.currentPos()
 	if pos.kind == cpuTopoToggle {
-		// Check if this is the use_host_topology toggle
-		if m.focusIndex >= 0 && m.focusIndex < len(m.positions) {
-			fp := m.positions[m.focusIndex]
-			if fp.Key == "use_host_topology" {
-				m.useHostTopology = !m.useHostTopology
-				return m, nil
-			}
-		}
 		m.toggleCore(pos.dieID, pos.coreID)
 	}
 	return m, nil

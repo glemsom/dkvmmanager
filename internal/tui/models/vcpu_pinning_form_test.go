@@ -18,11 +18,11 @@ func TestVCPUPinningBuildPositions(t *testing.T) {
 	m := newTestVCPUPinningFormModel(t)
 
 	positions := m.BuildPositions()
-	if len(positions) != 3 {
-		t.Fatalf("expected 3 positions, got %d", len(positions))
+	if len(positions) != 4 {
+		t.Fatalf("expected 4 positions, got %d", len(positions))
 	}
 
-	// Position 0: Toggle
+	// Position 0: Pinning Enabled toggle
 	if positions[0].Kind != form.FocusToggle {
 		t.Errorf("position 0: expected FocusToggle, got %v", positions[0].Kind)
 	}
@@ -30,20 +30,28 @@ func TestVCPUPinningBuildPositions(t *testing.T) {
 		t.Errorf("position 0: expected key 'enabled', got '%s'", positions[0].Key)
 	}
 
-	// Position 1: Save button
-	if positions[1].Kind != form.FocusButton {
-		t.Errorf("position 1: expected FocusButton, got %v", positions[1].Kind)
+	// Position 1: Use Host Topology toggle
+	if positions[1].Kind != form.FocusToggle {
+		t.Errorf("position 1: expected FocusToggle, got %v", positions[1].Kind)
 	}
-	if positions[1].Key != "save" {
-		t.Errorf("position 1: expected key 'save', got '%s'", positions[1].Key)
+	if positions[1].Key != "use_host_topology" {
+		t.Errorf("position 1: expected key 'use_host_topology', got '%s'", positions[1].Key)
 	}
 
-	// Position 2: Apply to Kernel button
+	// Position 2: Save button
 	if positions[2].Kind != form.FocusButton {
 		t.Errorf("position 2: expected FocusButton, got %v", positions[2].Kind)
 	}
-	if positions[2].Key != "apply_kernel" {
-		t.Errorf("position 2: expected key 'apply_kernel', got '%s'", positions[2].Key)
+	if positions[2].Key != "save" {
+		t.Errorf("position 2: expected key 'save', got '%s'", positions[2].Key)
+	}
+
+	// Position 3: Apply to Kernel button
+	if positions[3].Kind != form.FocusButton {
+		t.Errorf("position 3: expected FocusButton, got %v", positions[3].Kind)
+	}
+	if positions[3].Key != "apply_kernel" {
+		t.Errorf("position 3: expected key 'apply_kernel', got '%s'", positions[3].Key)
 	}
 }
 
@@ -56,34 +64,46 @@ func TestVCPUPinningNavigation(t *testing.T) {
 		t.Fatalf("expected initial focusIndex 0, got %d", m.CurrentIndex())
 	}
 
-	// Tab → position 1 (save)
+	// Tab → position 1 (use_host_topology)
 	m.moveFocus(1)
 	if m.CurrentIndex() != 1 {
 		t.Errorf("after tab: expected focusIndex 1, got %d", m.CurrentIndex())
 	}
 
-	// Tab → position 2 (apply_kernel)
+	// Tab → position 2 (save)
 	m.moveFocus(1)
 	if m.CurrentIndex() != 2 {
 		t.Errorf("after 2nd tab: expected focusIndex 2, got %d", m.CurrentIndex())
 	}
 
-	// Tab at end → stays at 2 (clamp)
+	// Tab → position 3 (apply_kernel)
 	m.moveFocus(1)
+	if m.CurrentIndex() != 3 {
+		t.Errorf("after 3rd tab: expected focusIndex 3, got %d", m.CurrentIndex())
+	}
+
+	// Tab at end → stays at 3 (clamp)
+	m.moveFocus(1)
+	if m.CurrentIndex() != 3 {
+		t.Errorf("tab at end: expected focusIndex 3, got %d", m.CurrentIndex())
+	}
+
+	// Shift+Tab → position 2
+	m.moveFocus(-1)
 	if m.CurrentIndex() != 2 {
-		t.Errorf("tab at end: expected focusIndex 2, got %d", m.CurrentIndex())
+		t.Errorf("after shift+tab: expected focusIndex 2, got %d", m.CurrentIndex())
 	}
 
 	// Shift+Tab → position 1
 	m.moveFocus(-1)
 	if m.CurrentIndex() != 1 {
-		t.Errorf("after shift+tab: expected focusIndex 1, got %d", m.CurrentIndex())
+		t.Errorf("after 2nd shift+tab: expected focusIndex 1, got %d", m.CurrentIndex())
 	}
 
 	// Shift+Tab → position 0
 	m.moveFocus(-1)
 	if m.CurrentIndex() != 0 {
-		t.Errorf("after 2nd shift+tab: expected focusIndex 0, got %d", m.CurrentIndex())
+		t.Errorf("after 3rd shift+tab: expected focusIndex 0, got %d", m.CurrentIndex())
 	}
 
 	// Shift+Tab at start → stays at 0 (clamp)

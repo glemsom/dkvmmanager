@@ -23,6 +23,13 @@ func (m *VCPUPinningFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd) {
 		m.pinning.Mappings = computed.Mappings
 	}
 
+	// Save UseHostTopology to CPU topology config
+	m.topology.UseHostTopology = m.useHostTopology
+	if err := m.repo.SaveCPUTopology(m.topology); err != nil {
+		m.errors["save"] = fmt.Sprintf("failed to save topology: %v", err)
+		return form.ResultNone, nil
+	}
+
 	// Save the pinning configuration
 	if err := m.repo.SaveVCPUPinningGlobal(m.pinning); err != nil {
 		m.errors["save"] = fmt.Sprintf("failed to save: %v", err)
@@ -47,6 +54,14 @@ func (m *VCPUPinningFormModel) handleApplyKernelCmd() tea.Cmd {
 			return nil
 		}
 		m.pinning.Mappings = computed.Mappings
+	}
+
+	// Save UseHostTopology to CPU topology config first
+	m.topology.UseHostTopology = m.useHostTopology
+	if err := m.repo.SaveCPUTopology(m.topology); err != nil {
+		m.kernelMsg = fmt.Sprintf("Failed to save topology: %v", err)
+		m.kernelMsgErr = true
+		return nil
 	}
 
 	// Save config to disk first

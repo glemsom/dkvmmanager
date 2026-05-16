@@ -32,6 +32,9 @@ type VCPUPinningFormModel struct {
 	// Global configuration
 	pinning models.VCPUPinningGlobal
 
+	// Use host topology toggle (stored in CPU topology config)
+	useHostTopology bool
+
 	// Focus state
 	positions  []form.FocusPos
 	focusIndex int
@@ -84,13 +87,14 @@ func NewVCPUPinningFormModel(vmManager *vm.Manager, repo *vm.Repository) (*VCPUP
 	}
 
 	m := &VCPUPinningFormModel{
-		vmManager: vmManager,
-		repo:      repo,
-		hostTopo:  hostTopo,
-		topology:  topology,
-		pinning:   pinning,
-		errors:    make(map[string]string),
-		scanErr:   scanErr,
+		vmManager:       vmManager,
+		repo:            repo,
+		hostTopo:        hostTopo,
+		topology:        topology,
+		pinning:         pinning,
+		useHostTopology: topology.UseHostTopology,
+		errors:          make(map[string]string),
+		scanErr:         scanErr,
 	}
 
 	m.positions = m.BuildPositions()
@@ -103,6 +107,7 @@ func NewVCPUPinningFormModel(vmManager *vm.Manager, repo *vm.Repository) (*VCPUP
 func (m *VCPUPinningFormModel) BuildPositions() []form.FocusPos {
 	return []form.FocusPos{
 		{Kind: form.FocusToggle, Label: "Pinning Enabled", Key: "enabled"},
+		{Kind: form.FocusToggle, Label: "Use Host Topology", Key: "use_host_topology"},
 		{Kind: form.FocusButton, Label: "Save", Key: "save"},
 		{Kind: form.FocusButton, Label: "Apply to Kernel", Key: "apply_kernel"},
 	}
@@ -217,7 +222,11 @@ func (m *VCPUPinningFormModel) handleEnterOrApply() (tea.Model, tea.Cmd) {
 	pos := m.positions[m.focusIndex]
 	switch pos.Kind {
 	case form.FocusToggle:
-		m.pinning.Enabled = !m.pinning.Enabled
+		if pos.Key == "use_host_topology" {
+			m.useHostTopology = !m.useHostTopology
+		} else {
+			m.pinning.Enabled = !m.pinning.Enabled
+		}
 		m.syncViewport()
 		return m, nil
 	case form.FocusButton:
