@@ -61,8 +61,12 @@ func Run(debug bool, dryRun bool, testRun string, skipMountCheck bool) {
 	// 2. Log output (redirected to file) doesn't go to the alternate buffer
 	// 3. This would cause debug messages to appear on the main terminal anyway
 	// By disabling AltScreen in debug mode, the TUI and log output share the same terminal.
+	// We also need to redirect TUI output to stderr so that log output (going to the file)
+	// doesn't interfere with the TUI display.
 	var opts []tea.ProgramOption
-	if !debug {
+	if debug {
+		opts = append(opts, tea.WithOutput(os.Stderr))
+	} else {
 		opts = append(opts, tea.WithAltScreen())
 	}
 
