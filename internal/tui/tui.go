@@ -15,7 +15,8 @@ import (
 //   - debug: enable debug mode with verbose logging
 //   - dryRun: show QEMU command without launching
 //   - testRun: run a test scenario and exit (main_menu, vm_create)
-func Run(debug bool, dryRun bool, testRun string) {
+//   - skipMountCheck: skip mount point check for testing
+func Run(debug bool, dryRun bool, testRun string, skipMountCheck bool) {
 	// Validate terminal size before starting
 	if !validateAndLogTerminalSize(debug) {
 		fmt.Println("Warning: Terminal size below minimum 80x25. UI may not render correctly.")
@@ -26,13 +27,19 @@ func Run(debug bool, dryRun bool, testRun string) {
 	// Set debug mode in models package
 	if debug {
 		models.SetDebugMode(true)
-		log.Printf("[DEBUG] Starting TUI with debug=%v, dryRun=%v, testRun=%q", debug, dryRun, testRun)
+		log.Printf("[DEBUG] Starting TUI with debug=%v, dryRun=%v, testRun=%q, skipMountCheck=%v", debug, dryRun, testRun, skipMountCheck)
 	}
 
 	// Set dry-run mode in models package
 	if dryRun {
 		models.SetDryRunMode(true)
 		log.Printf("[DRY-RUN] Dry-run mode enabled")
+	}
+
+	// Set skip mount point check mode
+	if skipMountCheck {
+		models.SetSkipMountPointCheck(true)
+		log.Printf("[TEST] Mount point check skipped")
 	}
 
 	// Create the initial model
@@ -44,7 +51,7 @@ func Run(debug bool, dryRun bool, testRun string) {
 
 	// If test run is specified, run in test mode
 	if testRun != "" {
-		runTestMode(m, testRun, debug)
+		runTestMode(m, testRun, debug, skipMountCheck)
 		return
 	}
 
@@ -61,7 +68,7 @@ func Run(debug bool, dryRun bool, testRun string) {
 }
 
 // runTestMode runs the application in non-interactive test mode
-func runTestMode(m *models.MainModel, scenario string, debug bool) {
+func runTestMode(m *models.MainModel, scenario string, debug bool, skipMountCheck bool) {
 	if debug {
 		log.Printf("[DEBUG] Running test scenario: %s", scenario)
 	}

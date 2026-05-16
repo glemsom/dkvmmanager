@@ -12,6 +12,9 @@ import (
 func setupTestModelWithTwoVMs(t *testing.T) *MainModel {
 	t.Helper()
 
+	// Skip mount point check for testing
+	SetSkipMountPointCheck(true)
+
 	tmpDir := t.TempDir()
 
 	if err := os.MkdirAll(filepath.Join(tmpDir, "dkvmmanager"), 0755); err != nil {

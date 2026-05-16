@@ -47,14 +47,16 @@ func NewMainModelWithConfig(cfg *config.Config) (*MainModel, error) {
 
 	// Check if /media/dkvmdata is a mount point
 	initialView := ViewMainMenu
-	if mounted, err := isMountPoint(dkvmDataMountPath); err == nil && !mounted {
-		if debugMode {
-			log.Printf("[DEBUG] %s is not a mount point, showing warning", dkvmDataMountPath)
-		}
-		initialView = ViewMountPointWarning
-	} else if err != nil {
-		if debugMode {
-			log.Printf("[DEBUG] Error checking mount point %s: %v", dkvmDataMountPath, err)
+	if !skipMountPointCheck {
+		if mounted, err := isMountPoint(dkvmDataMountPath); err == nil && !mounted {
+			if debugMode {
+				log.Printf("[DEBUG] %s is not a mount point, showing warning", dkvmDataMountPath)
+			}
+			initialView = ViewMountPointWarning
+		} else if err != nil {
+			if debugMode {
+				log.Printf("[DEBUG] Error checking mount point %s: %v", dkvmDataMountPath, err)
+			}
 		}
 	}
 
@@ -266,6 +268,15 @@ func SetDryRunMode(enabled bool) {
 	vm.SetDryRunMode(enabled)
 	if dryRunMode {
 		log.Println("[DRY-RUN] Dry-run mode enabled for models package")
+	}
+}
+
+// SetSkipMountPointCheck enables or disables the mount point check
+// When enabled, the mount point warning is bypassed (useful for testing)
+func SetSkipMountPointCheck(enabled bool) {
+	skipMountPointCheck = enabled
+	if skipMountPointCheck {
+		log.Println("[TEST] Mount point check skipped for testing")
 	}
 }
 

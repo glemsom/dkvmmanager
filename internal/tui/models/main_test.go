@@ -13,6 +13,9 @@ import (
 func setupTestModel(t *testing.T) *MainModel {
 	t.Helper()
 
+	// Skip mount point check for testing
+	SetSkipMountPointCheck(true)
+
 	tmpDir := t.TempDir()
 
 	// Create required subdirectories
@@ -36,6 +39,9 @@ func setupTestModel(t *testing.T) *MainModel {
 // setupTestModelWithVMs creates a MainModel with pre-existing VMs
 func setupTestModelWithVMs(t *testing.T) *MainModel {
 	t.Helper()
+
+	// Skip mount point check for testing
+	SetSkipMountPointCheck(true)
 
 	tmpDir := t.TempDir()
 
@@ -150,6 +156,12 @@ func TestSetDebugMode(t *testing.T) {
 	// Just verify it doesn't panic
 	SetDebugMode(true)
 	SetDebugMode(false)
+}
+
+func TestSetSkipMountPointCheck(t *testing.T) {
+	// Just verify it doesn't panic
+	SetSkipMountPointCheck(true)
+	SetSkipMountPointCheck(false)
 }
 
 func TestMenuItemStruct(t *testing.T) {

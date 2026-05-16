@@ -39,6 +39,9 @@ var debugMode bool
 // Package-level dry-run mode flag
 var dryRunMode bool
 
+// Package-level skip mount point check flag (for testing)
+var skipMountPointCheck bool
+
 // ViewChangeMsg is sent by sub-models to request a view transition
 type ViewChangeMsg struct {
 	View string

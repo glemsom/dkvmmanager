@@ -13,6 +13,9 @@ import (
 // Configuration Tab -> Edit VM -> Select VM -> Save changes
 // Then verify VMs tab shows both VMs
 func TestFullTUIEditFlowReproducingBug(t *testing.T) {
+	// Skip mount point check for testing
+	SetSkipMountPointCheck(true)
+
 	tmpDir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(tmpDir, "dkvmmanager"), 0755); err != nil {
 		t.Fatal(err)

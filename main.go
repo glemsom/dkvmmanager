@@ -11,9 +11,10 @@ import (
 )
 
 var (
-	debug   = flag.Bool("debug", false, "Enable debug mode with verbose logging to debug.log")
-	dryRun  = flag.Bool("dry-run", false, "Dry-run mode: show QEMU command without launching")
-	testRun = flag.String("test", "", "Run test scenario and exit (main_menu, vm_create)")
+	debug          = flag.Bool("debug", false, "Enable debug mode with verbose logging to debug.log")
+	dryRun         = flag.Bool("dry-run", false, "Dry-run mode: show QEMU command without launching")
+	testRun        = flag.String("test", "", "Run test scenario and exit (main_menu, vm_create)")
+	skipMountCheck = flag.Bool("skip-mount-check", false, "Skip mount point check (for testing without actual mount)")
 )
 
 func main() {
@@ -32,6 +33,6 @@ func main() {
 	}
 
 	// Run the TUI application with debug options
-	tui.Run(*debug, *dryRun, *testRun)
+	tui.Run(*debug, *dryRun, *testRun, *skipMountCheck)
 	os.Exit(0)
 }
