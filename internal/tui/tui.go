@@ -28,7 +28,6 @@ func Run(debug bool, dryRun bool, testRun string, skipMountCheck bool) {
 	if debug {
 		models.SetDebugMode(true)
 		log.Printf("[DEBUG] Starting TUI with debug=%v, dryRun=%v, testRun=%q, skipMountCheck=%v", debug, dryRun, testRun, skipMountCheck)
-		log.Sync() // Ensure log is flushed to file before TUI starts
 	}
 
 	// Set dry-run mode in models package
