@@ -76,6 +76,10 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if vcm, ok := nextMsg.(ViewChangeMsg); ok {
 		m.currentView = vcm.View
+		// Deactivate the registry when leaving a sub-view
+		if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+			m.viewRegistry.Deactivate()
+		}
 		if vcm.View == ViewMainMenu {
 			m.rebuildMenuList()
 			m.breadcrumbs.Clear()
@@ -87,6 +91,9 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		m.currentView = ViewConfigMenu
 		m.rebuildMenuList()
 		m.breadcrumbs.Clear()
+		if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+			m.viewRegistry.Deactivate()
+		}
 		return m, nil
 	}
 	if vcm, ok := nextMsg.(VMUpdatedMsg); ok {
@@ -94,6 +101,9 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		m.currentView = ViewConfigMenu
 		m.rebuildMenuList()
 		m.breadcrumbs.Clear()
+		if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+			m.viewRegistry.Deactivate()
+		}
 		return m, nil
 	}
 	if vdm, ok := nextMsg.(VMDeletedMsg); ok {
@@ -101,6 +111,9 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		m.currentView = ViewConfigMenu
 		m.rebuildMenuList()
 		m.breadcrumbs.Clear()
+		if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+			m.viewRegistry.Deactivate()
+		}
 		return m, nil
 	}
 	// Unified handler for all form save messages (implements form.FormSavedMsg)
@@ -123,6 +136,9 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.currentView = ViewConfigMenu
 		m.breadcrumbs.Clear()
+		if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+			m.viewRegistry.Deactivate()
+		}
 		return m, nil
 	}
 	if kam, ok := nextMsg.(VCPUCPUKernelAppliedMsg); ok {
@@ -133,6 +149,9 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.currentView = ViewConfigMenu
 		m.breadcrumbs.Clear()
+		if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+			m.viewRegistry.Deactivate()
+		}
 		return m, nil
 	}
 	if _, ok := nextMsg.(lvVGsLoadedMsg); ok {
@@ -158,6 +177,9 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.currentView = ViewConfigMenu
 		m.breadcrumbs.Clear()
+		if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+			m.viewRegistry.Deactivate()
+		}
 		return m, nil
 	}
 	if em, ok := nextMsg.(lvCreateErrorMsg); ok {

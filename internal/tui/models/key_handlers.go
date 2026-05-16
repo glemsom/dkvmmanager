@@ -51,6 +51,10 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			log.Printf("[DEBUG] View change: %s -> %s", m.currentView, vcm.View)
 		}
 		m.currentView = vcm.View
+		// Deactivate the registry when leaving a sub-view
+		if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+			m.viewRegistry.Deactivate()
+		}
 		if vcm.View == ViewMainMenu {
 			// Refresh menu items when returning from VM creation
 			m.rebuildMenuList()
