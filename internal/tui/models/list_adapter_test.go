@@ -121,9 +121,9 @@ func TestMenuItemDelegateRenderSelected(t *testing.T) {
 		t.Fatal("Render() produced empty output for selected item")
 	}
 
-	// Selected item should contain ">  " prefix (2 spaces for alignment with unselected items)
-	if !bytes.Contains(buf.Bytes(), []byte(">  Test VM")) {
-		t.Errorf("Render() selected item should contain '>  Test VM', got %q", output)
+	// Selected item should contain "> " prefix (2 chars total, same width as unselected "  " prefix)
+	if !bytes.Contains(buf.Bytes(), []byte("> Test VM")) {
+		t.Errorf("Render() selected item should contain '> Test VM', got %q", output)
 	}
 }
 
@@ -326,8 +326,8 @@ func TestVMListItemDelegateRenderSelected(t *testing.T) {
 		t.Fatal("Render() produced empty output for selected item")
 	}
 
-	if !bytes.Contains(buf.Bytes(), []byte(">  Test VM")) {
-		t.Errorf("Render() selected item should contain '>  Test VM', got %q", output)
+	if !bytes.Contains(buf.Bytes(), []byte("> Test VM")) {
+		t.Errorf("Render() selected item should contain '> Test VM', got %q", output)
 	}
 }
 
