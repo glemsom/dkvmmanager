@@ -113,7 +113,14 @@ func (v *VMTable) View() string {
 			copied[i] = make(table.Row, len(row))
 			copy(copied[i], row)
 		}
-		copied[cursor][0] = "> " + copied[cursor][0]
+		// Apply "> " gutter to selected row, "  " gutter to all others
+		for i, row := range copied {
+			if i == cursor {
+				copied[i][0] = "> " + row[0]
+			} else {
+				copied[i][0] = "  " + row[0]
+			}
+		}
 		v.table.SetRows(copied)
 		defer v.table.SetRows(rows) // restore original after render
 	}

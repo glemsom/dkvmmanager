@@ -63,16 +63,16 @@ func (d MenuItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 			PaddingLeft(0).
 			Background(styles.Colors.Background)
 	} else if index == m.Index() {
-		// Use ">  " prefix for visual indentation; override PaddingLeft to 0
+		// Selected: "> " prefix (2 chars total, same as unselected "  " prefix)
 		style = styles.ListItemSelectedStyle().
 			PaddingLeft(0)
-		str = ">  " + item.MenuItem.Title
+		str = "> " + item.MenuItem.Title
 	} else {
-		// Use muted color for non-selected items to create visual hierarchy
+		// Unselected: "  " prefix (2 chars total), no additional padding
 		style = lipgloss.NewStyle().
 			Foreground(styles.Colors.Muted).
 			Background(styles.Colors.Background).
-			PaddingLeft(2)
+			PaddingLeft(0)
 	}
 
 	fmt.Fprint(w, style.Render(str))
@@ -107,16 +107,16 @@ func (d VMListItemDelegate) Render(w io.Writer, m list.Model, index int, listIte
 	var style lipgloss.Style
 
 	if index == m.Index() {
-		// Use ">  " prefix for visual indentation; override PaddingLeft to 0
+		// Selected: "> " prefix (2 chars total, same as unselected "  " prefix)
 		style = styles.ListItemSelectedStyle().
 			PaddingLeft(0)
-		str = ">  " + item.VM.Name
+		str = "> " + item.VM.Name
 	} else {
-		// Use muted color for non-selected items to create visual hierarchy
+		// Unselected: "  " prefix (2 chars total), no additional padding
 		style = lipgloss.NewStyle().
 			Foreground(styles.Colors.Muted).
 			Background(styles.Colors.Background).
-			PaddingLeft(2)
+			PaddingLeft(0)
 		str = "  " + item.VM.Name
 	}
 
