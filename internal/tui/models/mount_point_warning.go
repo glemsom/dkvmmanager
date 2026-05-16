@@ -35,6 +35,10 @@ func isMountPoint(path string) (bool, error) {
 type MountPointWarningModel struct {
 	// Selected option (0 = OK)
 	selectedIndex int
+
+	// Terminal dimensions for proper modal sizing
+	width  int
+	height int
 }
 
 // NewMountPointWarningModel creates a new mount point warning model.
@@ -72,8 +76,11 @@ func (m *MountPointWarningModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.
 	return m, nil
 }
 
-// SetSize is a no-op for the fixed-height warning dialog.
-func (m *MountPointWarningModel) SetSize(width, height int) {}
+// SetSize stores the terminal dimensions for proper modal sizing.
+func (m *MountPointWarningModel) SetSize(width, height int) {
+	m.width = width
+	m.height = height
+}
 
 // FileBrowserActive returns false (no file browser in warning dialog).
 func (m *MountPointWarningModel) FileBrowserActive() bool { return false }
@@ -114,5 +121,19 @@ func (m *MountPointWarningModel) View() string {
 	output += "  " + buttonSelected + "\n\n"
 	output += noteStyle.Render("Press Enter, Space, or ESC to dismiss")
 
-	return styles.ModalStyle().Render(output)
+	// Render modal content with proper width constraint
+	modalContent := styles.ModalStyle().Render(output)
+
+	// Center the modal in the terminal if dimensions are available
+	if m.width > 0 && m.height > 0 {
+		return lipgloss.Place(
+			m.width,
+			m.height,
+			lipgloss.Center,
+			lipgloss.Center,
+			modalContent,
+		)
+	}
+
+	return modalContent
 }

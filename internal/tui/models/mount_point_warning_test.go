@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -91,4 +92,48 @@ func TestMountPointWarningModelKeyStringWithRunes(t *testing.T) {
 
 	keyMsg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'\r'}}
 	t.Logf("KeyRunes with \\r: String() = %q", keyMsg.String())
+}
+
+func TestMountPointWarningModelView(t *testing.T) {
+	m := NewMountPointWarningModel()
+
+	// Test View without SetSize - should still render
+	view := m.View()
+	if view == "" {
+		t.Error("View() returned empty string")
+	}
+	if len(view) < 10 {
+		t.Error("View() returned unexpectedly short string")
+	}
+}
+
+func TestMountPointWarningModelSetSize(t *testing.T) {
+	m := NewMountPointWarningModel()
+
+	// Test SetSize stores dimensions
+	m.SetSize(100, 30)
+
+	// View should still render
+	view := m.View()
+	if view == "" {
+		t.Error("View() returned empty string after SetSize")
+	}
+}
+
+func TestMountPointWarningModelViewWithSize(t *testing.T) {
+	m := NewMountPointWarningModel()
+	m.SetSize(80, 24)
+
+	view := m.View()
+	if view == "" {
+		t.Error("View() returned empty string after SetSize")
+	}
+
+	// The view should contain the warning text
+	if !strings.Contains(view, "Mount Point Warning") {
+		t.Error("View() missing 'Mount Point Warning' title")
+	}
+	if !strings.Contains(view, "dkvmdata") {
+		t.Error("View() missing 'dkvmdata' text")
+	}
 }
