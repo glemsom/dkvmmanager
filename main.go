@@ -29,6 +29,8 @@ func main() {
 			log.SetOutput(f)
 			log.SetFlags(log.LstdFlags | log.Lshortfile)
 			log.Println("[DEBUG] Debug mode enabled")
+			// Ensure log output is flushed before TUI starts
+			log.Sync()
 		}
 	}
 

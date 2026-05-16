@@ -28,6 +28,7 @@ func Run(debug bool, dryRun bool, testRun string, skipMountCheck bool) {
 	if debug {
 		models.SetDebugMode(true)
 		log.Printf("[DEBUG] Starting TUI with debug=%v, dryRun=%v, testRun=%q, skipMountCheck=%v", debug, dryRun, testRun, skipMountCheck)
+		log.Sync() // Ensure log is flushed to file before TUI starts
 	}
 
 	// Set dry-run mode in models package
@@ -56,9 +57,19 @@ func Run(debug bool, dryRun bool, testRun string, skipMountCheck bool) {
 	}
 
 	// Create the program
+	// When debug mode is enabled, we don't use AltScreen because:
+	// 1. AltScreen creates a separate buffer for the TUI
+	// 2. Log output (redirected to file) doesn't go to the alternate buffer
+	// 3. This would cause debug messages to appear on the main terminal anyway
+	// By disabling AltScreen in debug mode, the TUI and log output share the same terminal.
+	var opts []tea.ProgramOption
+	if !debug {
+		opts = append(opts, tea.WithAltScreen())
+	}
+
 	p := tea.NewProgram(
 		m,
-		tea.WithAltScreen(), // Use alternate screen buffer
+		opts...,
 	)
 
 	// Run the program
