@@ -1,3 +1,4 @@
+// Package vm provides virtual machine management functionality
 package vm
 
 import (
@@ -24,9 +25,9 @@ func TestUSBPassthroughConfigPersistence(t *testing.T) {
 	}
 
 	// Initially, config should be empty
-	loadedCfg, err := mgr.Repository().GetUSBPassthroughConfig()
-	if err != nil {
-		t.Fatalf("GetUSBPassthroughConfig error: %v", err)
+	var loadedCfg models.USBPassthroughConfig
+	if err := mgr.Repository().GetConfig("usb_passthrough", &loadedCfg); err != nil {
+		t.Fatalf("GetConfig error: %v", err)
 	}
 	if len(loadedCfg.Devices) != 0 {
 		t.Errorf("Expected 0 devices initially, got %d", len(loadedCfg.Devices))
@@ -44,15 +45,13 @@ func TestUSBPassthroughConfigPersistence(t *testing.T) {
 		},
 	}
 
-	err = mgr.Repository().SaveUSBPassthroughConfig(saveCfg)
-	if err != nil {
-		t.Fatalf("SaveUSBPassthroughConfig error: %v", err)
+	if err := mgr.Repository().SaveConfig("usb_passthrough", saveCfg); err != nil {
+		t.Fatalf("SaveConfig error: %v", err)
 	}
 
 	// Load and verify
-	loadedCfg, err = mgr.Repository().GetUSBPassthroughConfig()
-	if err != nil {
-		t.Fatalf("GetUSBPassthroughConfig error: %v", err)
+	if err := mgr.Repository().GetConfig("usb_passthrough", &loadedCfg); err != nil {
+		t.Fatalf("GetConfig error: %v", err)
 	}
 
 	if len(loadedCfg.Devices) != 1 {
@@ -105,14 +104,13 @@ func TestUSBPassthroughConfigMultipleDevices(t *testing.T) {
 		},
 	}
 
-	err = mgr.Repository().SaveUSBPassthroughConfig(saveCfg)
-	if err != nil {
-		t.Fatalf("SaveUSBPassthroughConfig error: %v", err)
+	if err := mgr.Repository().SaveConfig("usb_passthrough", saveCfg); err != nil {
+		t.Fatalf("SaveConfig error: %v", err)
 	}
 
-	loadedCfg, err := mgr.Repository().GetUSBPassthroughConfig()
-	if err != nil {
-		t.Fatalf("GetUSBPassthroughConfig error: %v", err)
+	var loadedCfg models.USBPassthroughConfig
+	if err := mgr.Repository().GetConfig("usb_passthrough", &loadedCfg); err != nil {
+		t.Fatalf("GetConfig error: %v", err)
 	}
 
 	if len(loadedCfg.Devices) != 2 {
@@ -148,8 +146,8 @@ func TestUSBPassthroughConfigOverwrite(t *testing.T) {
 			{Vendor: "046d", Product: "c52b", Name: "Logitech", BusID: "1-1"},
 		},
 	}
-	if err := mgr.Repository().SaveUSBPassthroughConfig(saveCfg); err != nil {
-		t.Fatalf("SaveUSBPassthroughConfig error: %v", err)
+	if err := mgr.Repository().SaveConfig("usb_passthrough", saveCfg); err != nil {
+		t.Fatalf("SaveConfig error: %v", err)
 	}
 
 	// Overwrite with different config
@@ -158,13 +156,13 @@ func TestUSBPassthroughConfigOverwrite(t *testing.T) {
 			{Vendor: "045e", Product: "028e", Name: "Xbox Controller", BusID: "3-2"},
 		},
 	}
-	if err := mgr.Repository().SaveUSBPassthroughConfig(newCfg); err != nil {
-		t.Fatalf("SaveUSBPassthroughConfig error: %v", err)
+	if err := mgr.Repository().SaveConfig("usb_passthrough", newCfg); err != nil {
+		t.Fatalf("SaveConfig error: %v", err)
 	}
 
-	loadedCfg, err := mgr.Repository().GetUSBPassthroughConfig()
-	if err != nil {
-		t.Fatalf("GetUSBPassthroughConfig error: %v", err)
+	var loadedCfg models.USBPassthroughConfig
+	if err := mgr.Repository().GetConfig("usb_passthrough", &loadedCfg); err != nil {
+		t.Fatalf("GetConfig error: %v", err)
 	}
 
 	if len(loadedCfg.Devices) != 1 {

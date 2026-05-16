@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -393,29 +394,29 @@ func (m *MainModel) handleVMSelection() (tea.Model, tea.Cmd) {
 		// Create runner
 		runner := vm.NewVMRunner(vmObj, m.cfg)
 		// Load and inject PCI passthrough config
-		if pciCfg, err := m.configRepo.GetPCIPassthroughConfig(); err == nil {
-			runner.SetPCIPassthroughConfig(pciCfg)
-		}
+		var pciCfg models.PCIPassthroughConfig
+		m.configRepo.GetConfig("pci_passthrough", &pciCfg)
+		runner.SetPCIPassthroughConfig(pciCfg)
 		// Load and inject USB passthrough config
-		if usbCfg, err := m.configRepo.GetUSBPassthroughConfig(); err == nil {
-			runner.SetUSBPassthroughConfig(usbCfg)
-		}
+		var usbCfg models.USBPassthroughConfig
+		m.configRepo.GetConfig("usb_passthrough", &usbCfg)
+		runner.SetUSBPassthroughConfig(usbCfg)
 		// Load and inject CPU options for feature flags
-		if cpuOpts, err := m.configRepo.GetCPUOptions(); err == nil {
-			runner.SetCPUOptions(cpuOpts)
-		}
+		var cpuOpts models.CPUOptions
+		m.configRepo.GetConfig("cpu_options", &cpuOpts)
+		runner.SetCPUOptions(cpuOpts)
 		// Load and inject start/stop script config
-		if scriptCfg, err := m.configRepo.GetStartStopScript(); err == nil {
-			runner.SetStartStopScript(scriptCfg)
-		}
+		var scriptCfg models.StartStopScript
+		m.configRepo.GetConfig("custom_script", &scriptCfg)
+		runner.SetStartStopScript(scriptCfg)
 		// Load and inject vCPU pinning config
-		if vcpuPinning, err := m.configRepo.GetVCPUPinningGlobal(); err == nil {
-			runner.SetVCPUPinning(vcpuPinning)
-		}
+		var vcpuPinning models.VCPUPinningGlobal
+		m.configRepo.GetConfig("vcpu_pinning", &vcpuPinning)
+		runner.SetVCPUPinning(vcpuPinning)
 		// Load and inject CPU topology config
-		if cpuTopo, err := m.configRepo.GetCPUTopology(); err == nil {
-			runner.SetCPUTopology(cpuTopo)
-		}
+		var cpuTopo models.CPUTopology
+		m.configRepo.GetConfig("cpu_topology", &cpuTopo)
+		runner.SetCPUTopology(cpuTopo)
 		// Load host CPU topology for topology-aware allocation
 		if hostTopo, err := m.hostDiscovery.ScanCPUTopology(); err == nil {
 			runner.SetHostCPUTopology(hostTopo)

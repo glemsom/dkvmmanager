@@ -38,7 +38,7 @@ func (m *CPUTopologyFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd) {
 		SelectedCPUs: selectedCPUs,
 	}
 
-	if err := m.repo.SaveCPUTopology(topo); err != nil {
+	if err := m.repo.SaveConfig("cpu_topology", topo); err != nil {
 		m.errors["save"] = fmt.Sprintf("Failed to save: %v", err)
 		return form.ResultNone, nil
 	}

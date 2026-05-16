@@ -137,10 +137,8 @@ func TestCPUTopologyFormSave(t *testing.T) {
 	}
 
 	// Verify saved config
-	savedTopo, err := vmManager.Repository().GetCPUTopology()
-	if err != nil {
-		t.Fatalf("Failed to load CPU topology: %v", err)
-	}
+	var savedTopo models.CPUTopology
+	vmManager.Repository().GetConfig("cpu_topology", &savedTopo)
 	if !savedTopo.Enabled {
 		t.Errorf("Saved CPUTopology.Enabled = false, want true")
 	}

@@ -196,7 +196,8 @@ func TestCPUOptionsFormSave(t *testing.T) {
 	}
 
 	// Verify saved options
-	saved, _ := vmManager.Repository().GetCPUOptions()
+	var saved models.CPUOptions
+	vmManager.Repository().GetConfig("cpu_options", &saved)
 	if !saved.HideKVM {
 		t.Errorf("Saved HideKVM = false, want true")
 	}

@@ -66,7 +66,8 @@ func NewCPUTopologyFormModel(repo *vm.Repository) (*CPUTopologyFormModel, error)
 	hostTopo, scanErr := scanner.ScanTopology()
 
 	// Load global CPU topology config
-	topology, err := repo.GetCPUTopology()
+	var topology models.CPUTopology
+	err := repo.GetConfig("cpu_topology", &topology)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load CPU topology: %w", err)
 	}

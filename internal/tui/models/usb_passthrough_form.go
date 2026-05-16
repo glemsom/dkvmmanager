@@ -56,7 +56,8 @@ func NewUSBPassthroughFormModel(repo *vm.Repository, hostDiscovery vm.HostDiscov
 	allDevices, scanErr := hostDiscovery.ScanUSBDevices()
 
 	// Load existing config
-	cfg, _ := repo.GetUSBPassthroughConfig()
+	var cfg models.USBPassthroughConfig
+	repo.GetConfig("usb_passthrough", &cfg)
 
 	// Build lookup map
 	selected := make(map[string]bool)

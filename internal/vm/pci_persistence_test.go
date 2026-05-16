@@ -1,3 +1,4 @@
+// Package vm provides virtual machine management functionality
 package vm
 
 import (
@@ -24,9 +25,9 @@ func TestPCIPassthroughConfigPersistence(t *testing.T) {
 	}
 
 	// Initially, config should be empty
-	loadedCfg, err := mgr.Repository().GetPCIPassthroughConfig()
-	if err != nil {
-		t.Fatalf("GetPCIPassthroughConfig error: %v", err)
+	var loadedCfg models.PCIPassthroughConfig
+	if err := mgr.Repository().GetConfig("pci_passthrough", &loadedCfg); err != nil {
+		t.Fatalf("GetConfig error: %v", err)
 	}
 	if len(loadedCfg.Devices) != 0 {
 		t.Errorf("Expected 0 devices initially, got %d", len(loadedCfg.Devices))
@@ -46,15 +47,13 @@ func TestPCIPassthroughConfigPersistence(t *testing.T) {
 		},
 	}
 
-	err = mgr.Repository().SavePCIPassthroughConfig(saveCfg)
-	if err != nil {
-		t.Fatalf("SavePCIPassthroughConfig error: %v", err)
+	if err := mgr.Repository().SaveConfig("pci_passthrough", saveCfg); err != nil {
+		t.Fatalf("SaveConfig error: %v", err)
 	}
 
 	// Load it back
-	loadedCfg, err = mgr.Repository().GetPCIPassthroughConfig()
-	if err != nil {
-		t.Fatalf("GetPCIPassthroughConfig after save error: %v", err)
+	if err := mgr.Repository().GetConfig("pci_passthrough", &loadedCfg); err != nil {
+		t.Fatalf("GetConfig after save error: %v", err)
 	}
 
 	if len(loadedCfg.Devices) != 1 {
@@ -117,14 +116,13 @@ func TestPCIPassthroughConfigMultipleDevices(t *testing.T) {
 		},
 	}
 
-	err = mgr.Repository().SavePCIPassthroughConfig(saveCfg)
-	if err != nil {
-		t.Fatalf("SavePCIPassthroughConfig error: %v", err)
+	if err := mgr.Repository().SaveConfig("pci_passthrough", saveCfg); err != nil {
+		t.Fatalf("SaveConfig error: %v", err)
 	}
 
-	loadedCfg, err := mgr.Repository().GetPCIPassthroughConfig()
-	if err != nil {
-		t.Fatalf("GetPCIPassthroughConfig error: %v", err)
+	var loadedCfg models.PCIPassthroughConfig
+	if err := mgr.Repository().GetConfig("pci_passthrough", &loadedCfg); err != nil {
+		t.Fatalf("GetConfig error: %v", err)
 	}
 
 	if len(loadedCfg.Devices) != 2 {
@@ -168,7 +166,7 @@ func TestPCIPassthroughConfigOverwrite(t *testing.T) {
 			{Address: "0000:01:00.0", Vendor: "10de", Device: "1b80", Name: "GPU 1", ClassCode: "0300"},
 		},
 	}
-	if err := mgr.Repository().SavePCIPassthroughConfig(cfg1); err != nil {
+	if err := mgr.Repository().SaveConfig("pci_passthrough", cfg1); err != nil {
 		t.Fatalf("First save error: %v", err)
 	}
 
@@ -178,14 +176,14 @@ func TestPCIPassthroughConfigOverwrite(t *testing.T) {
 			{Address: "0000:02:00.0", Vendor: "1002", Device: "67df", Name: "GPU 2", ClassCode: "0300"},
 		},
 	}
-	if err := mgr.Repository().SavePCIPassthroughConfig(cfg2); err != nil {
+	if err := mgr.Repository().SaveConfig("pci_passthrough", cfg2); err != nil {
 		t.Fatalf("Second save error: %v", err)
 	}
 
 	// Should have the second config, not the first
-	loadedCfg, err := mgr.Repository().GetPCIPassthroughConfig()
-	if err != nil {
-		t.Fatalf("GetPCIPassthroughConfig error: %v", err)
+	var loadedCfg models.PCIPassthroughConfig
+	if err := mgr.Repository().GetConfig("pci_passthrough", &loadedCfg); err != nil {
+		t.Fatalf("GetConfig error: %v", err)
 	}
 
 	if len(loadedCfg.Devices) != 1 {
@@ -217,19 +215,19 @@ func TestPCIPassthroughConfigEmptySave(t *testing.T) {
 			{Address: "0000:01:00.0", Vendor: "10de", Device: "1b80", Name: "GPU", ClassCode: "0300"},
 		},
 	}
-	if err := mgr.Repository().SavePCIPassthroughConfig(saveCfg); err != nil {
+	if err := mgr.Repository().SaveConfig("pci_passthrough", saveCfg); err != nil {
 		t.Fatalf("Save error: %v", err)
 	}
 
 	// Now save empty config
 	emptyCfg := models.PCIPassthroughConfig{Devices: []models.PCIPassthroughDevice{}}
-	if err := mgr.Repository().SavePCIPassthroughConfig(emptyCfg); err != nil {
+	if err := mgr.Repository().SaveConfig("pci_passthrough", emptyCfg); err != nil {
 		t.Fatalf("Empty save error: %v", err)
 	}
 
-	loadedCfg, err := mgr.Repository().GetPCIPassthroughConfig()
-	if err != nil {
-		t.Fatalf("GetPCIPassthroughConfig error: %v", err)
+	var loadedCfg models.PCIPassthroughConfig
+	if err := mgr.Repository().GetConfig("pci_passthrough", &loadedCfg); err != nil {
+		t.Fatalf("GetConfig error: %v", err)
 	}
 
 	if len(loadedCfg.Devices) != 0 {

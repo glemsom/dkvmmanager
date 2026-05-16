@@ -498,8 +498,8 @@ func TestPCIFORMSavePreservesSelectedDevices(t *testing.T) {
 	}
 
 	// Verify saved config
-	saved, err := m.repo.GetPCIPassthroughConfig()
-	if err != nil {
+	var saved models.PCIPassthroughConfig
+	if err := m.repo.GetConfig("pci_passthrough", &saved); err != nil {
 		t.Fatalf("Failed to load saved PCI config: %v", err)
 	}
 
@@ -532,8 +532,8 @@ func TestPCIFORMNoROMInSavedConfig(t *testing.T) {
 	}
 	cmd()
 
-	saved, err := m.repo.GetPCIPassthroughConfig()
-	if err != nil {
+	var saved models.PCIPassthroughConfig
+	if err := m.repo.GetConfig("pci_passthrough", &saved); err != nil {
 		t.Fatalf("Failed to load saved PCI config: %v", err)
 	}
 
@@ -889,8 +889,8 @@ func TestPCIFORMSelectMultipleGroups(t *testing.T) {
 	}
 	cmd()
 
-	saved, err := m.repo.GetPCIPassthroughConfig()
-	if err != nil {
+	var saved models.PCIPassthroughConfig
+	if err := m.repo.GetConfig("pci_passthrough", &saved); err != nil {
 		t.Fatalf("Failed to load saved PCI config: %v", err)
 	}
 

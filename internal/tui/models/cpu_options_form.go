@@ -47,7 +47,8 @@ type CPUOptionsFormModel struct {
 
 // NewCPUOptionsFormModel creates a new CPU options form model
 func NewCPUOptionsFormModel(repo *vm.Repository) *CPUOptionsFormModel {
-	opts, _ := repo.GetCPUOptions()
+	var opts models.CPUOptions
+	repo.GetConfig("cpu_options", &opts)
 	m := &CPUOptionsFormModel{
 		repo:          repo,
 		options:       &opts,

@@ -167,8 +167,8 @@ func (m *Manager) ApplyVFIOIDsToKernel() error {
 	}
 
 	// Get current PCI passthrough config
-	pciCfg, err := m.repository.GetPCIPassthroughConfig()
-	if err != nil {
+	var pciCfg models.PCIPassthroughConfig
+	if err := m.repository.GetConfig("pci_passthrough", &pciCfg); err != nil {
 		if debugMode {
 			log.Printf("[DEBUG] ApplyVFIOIDsToKernel: failed to get PCI config: %v", err)
 		}
@@ -237,8 +237,8 @@ func (m *Manager) ApplyCPUParamsToKernel() error {
 	}
 
 	// Get current vCPU pinning config
-	pinning, err := m.repository.GetVCPUPinningGlobal()
-	if err != nil {
+	var pinning models.VCPUPinningGlobal
+	if err := m.repository.GetConfig("vcpu_pinning", &pinning); err != nil {
 		if debugMode {
 			log.Printf("[DEBUG] ApplyCPUParamsToKernel: failed to get vCPU pinning config: %v", err)
 		}

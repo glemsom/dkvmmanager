@@ -278,7 +278,7 @@ func createTestVMManagerForScript(t *testing.T) *vm.Manager {
 			{Address: "0000:01:00.0", Name: "NVIDIA GPU"},
 		},
 	}
-	if err := mgr.Repository().SavePCIPassthroughConfig(pciCfg); err != nil {
+	if err := mgr.Repository().SaveConfig("pci_passthrough", pciCfg); err != nil {
 		t.Logf("Warning: could not save PCI config: %v", err)
 	}
 

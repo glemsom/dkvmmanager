@@ -71,7 +71,8 @@ func NewPCIPassthroughFormModel(repo *vm.Repository, vmManager *vm.Manager, host
 	allDevices, scanErr := hostDiscovery.ScanPCIDevices()
 
 	// Load existing config
-	cfg, _ := repo.GetPCIPassthroughConfig()
+	var cfg models.PCIPassthroughConfig
+	repo.GetConfig("pci_passthrough", &cfg)
 
 	// Build lookup maps
 	selected := make(map[string]bool)

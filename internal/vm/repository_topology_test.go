@@ -1,3 +1,4 @@
+// Package vm provides virtual machine management functionality
 package vm
 
 import (
@@ -38,14 +39,14 @@ func TestGetCPUTopology(t *testing.T) {
 
 	// Set CPU topology config directly using viper
 	repo.vip.Set("cpu_topology", map[string]interface{}{
-		"enabled":          true,
-		"selected_cpus":   []interface{}{4, 5, 6, 7},
+		"enabled":           true,
+		"selected_cpus":     []interface{}{4, 5, 6, 7},
 		"use_host_topology": true,
 	})
 
-	topo, err := repo.GetCPUTopology()
-	if err != nil {
-		t.Fatalf("GetCPUTopology() returned error: %v", err)
+	var topo models.CPUTopology
+	if err := repo.GetConfig("cpu_topology", &topo); err != nil {
+		t.Fatalf("GetConfig error: %v", err)
 	}
 
 	if !topo.Enabled {
@@ -72,8 +73,8 @@ func TestSaveCPUTopology(t *testing.T) {
 		UseHostTopology: true,
 	}
 
-	if err := repo.SaveCPUTopology(topo); err != nil {
-		t.Fatalf("SaveCPUTopology() returned error: %v", err)
+	if err := repo.SaveConfig("cpu_topology", topo); err != nil {
+		t.Fatalf("SaveConfig error: %v", err)
 	}
 
 	// Reload config to verify persistence
@@ -81,9 +82,9 @@ func TestSaveCPUTopology(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	loaded, err := repo.GetCPUTopology()
-	if err != nil {
-		t.Fatalf("GetCPUTopology() returned error after reload: %v", err)
+	var loaded models.CPUTopology
+	if err := repo.GetConfig("cpu_topology", &loaded); err != nil {
+		t.Fatalf("GetConfig error after reload: %v", err)
 	}
 
 	if !loaded.Enabled {
@@ -110,13 +111,13 @@ func TestSaveCPUTopologyUseHostTopologyFalse(t *testing.T) {
 		UseHostTopology: false,
 	}
 
-	if err := repo.SaveCPUTopology(topo); err != nil {
-		t.Fatalf("SaveCPUTopology() returned error: %v", err)
+	if err := repo.SaveConfig("cpu_topology", topo); err != nil {
+		t.Fatalf("SaveConfig error: %v", err)
 	}
 
-	loaded, err := repo.GetCPUTopology()
-	if err != nil {
-		t.Fatalf("GetCPUTopology() returned error: %v", err)
+	var loaded models.CPUTopology
+	if err := repo.GetConfig("cpu_topology", &loaded); err != nil {
+		t.Fatalf("GetConfig error: %v", err)
 	}
 
 	if loaded.UseHostTopology {
@@ -136,13 +137,13 @@ func TestSaveCPUTopologyRoundTripMultiple(t *testing.T) {
 	}
 
 	for i, topo := range testCases {
-		if err := repo.SaveCPUTopology(topo); err != nil {
-			t.Fatalf("SaveCPUTopology() test case %d returned error: %v", i, err)
+		if err := repo.SaveConfig("cpu_topology", topo); err != nil {
+			t.Fatalf("SaveConfig test case %d error: %v", i, err)
 		}
 
-		loaded, err := repo.GetCPUTopology()
-		if err != nil {
-			t.Fatalf("GetCPUTopology() test case %d returned error: %v", i, err)
+		var loaded models.CPUTopology
+		if err := repo.GetConfig("cpu_topology", &loaded); err != nil {
+			t.Fatalf("GetConfig test case %d error: %v", i, err)
 		}
 
 		if loaded.Enabled != topo.Enabled {

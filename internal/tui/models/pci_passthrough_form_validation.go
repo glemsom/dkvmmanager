@@ -43,7 +43,7 @@ func (m *PCIPassthroughFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd
 		Devices: devices,
 	}
 
-	if err := m.repo.SavePCIPassthroughConfig(cfg); err != nil {
+	if err := m.repo.SaveConfig("pci_passthrough", cfg); err != nil {
 		m.errors["save"] = fmt.Sprintf("Failed to save: %v", err)
 		return form.ResultNone, nil
 	}
@@ -90,7 +90,7 @@ func (m *PCIPassthroughFormModel) handleApplyKernelCmd() tea.Cmd {
 	cfg := models.PCIPassthroughConfig{
 		Devices: devices,
 	}
-	if err := m.repo.SavePCIPassthroughConfig(cfg); err != nil {
+	if err := m.repo.SaveConfig("pci_passthrough", cfg); err != nil {
 		m.kernelMsg = fmt.Sprintf("Failed to save config: %v", err)
 		m.kernelMsgErr = true
 		return nil

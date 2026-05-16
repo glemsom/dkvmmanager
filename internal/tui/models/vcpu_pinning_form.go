@@ -66,13 +66,15 @@ func NewVCPUPinningFormModel(vmManager *vm.Manager, repo *vm.Repository) (*VCPUP
 	hostTopo, scanErr := scanner.ScanTopology()
 
 	// Load global CPU topology config (needed to compute pinning)
-	topology, err := repo.GetCPUTopology()
+	var topology models.CPUTopology
+	err := repo.GetConfig("cpu_topology", &topology)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load CPU topology: %w", err)
 	}
 
 	// Load global vCPU pinning config
-	pinning, err := repo.GetVCPUPinningGlobal()
+	var pinning models.VCPUPinningGlobal
+	err = repo.GetConfig("vcpu_pinning", &pinning)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load vcpu pinning: %w", err)
 	}
@@ -82,7 +84,7 @@ func NewVCPUPinningFormModel(vmManager *vm.Manager, repo *vm.Repository) (*VCPUP
 		pinning, err = vm.ComputePinningFromTopology(topology, hostTopo)
 		if err != nil {
 			// Fall back to saved config, will show warning
-			pinning, _ = repo.GetVCPUPinningGlobal()
+			repo.GetConfig("vcpu_pinning", &pinning)
 		}
 	}
 

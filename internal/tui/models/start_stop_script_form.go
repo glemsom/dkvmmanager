@@ -41,8 +41,10 @@ type StartStopScriptFormModel struct {
 
 // NewStartStopScriptFormModel creates a new StartStopScript form model
 func NewStartStopScriptFormModel(repo *vm.Repository) (*StartStopScriptFormModel, error) {
-	cfg, _ := repo.GetStartStopScript()
-	pciCfg, _ := repo.GetPCIPassthroughConfig()
+	var cfg models.StartStopScript
+	repo.GetConfig("custom_script", &cfg)
+	var pciCfg models.PCIPassthroughConfig
+	repo.GetConfig("pci_passthrough", &pciCfg)
 
 	m := &StartStopScriptFormModel{
 		repo:          repo,
@@ -136,7 +138,7 @@ func (m *StartStopScriptFormModel) HandleEnter(pos form.FocusPos) (form.FormResu
 		}
 		if pos.Key == "save" {
 			// Save the configuration
-			if err := m.repo.SaveStartStopScript(m.config); err != nil {
+			if err := m.repo.SaveConfig("custom_script", m.config); err != nil {
 				m.errors["save"] = err.Error()
 				return form.ResultNone, nil
 			}

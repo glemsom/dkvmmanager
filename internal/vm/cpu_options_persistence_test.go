@@ -1,3 +1,4 @@
+// Package vm provides virtual machine management functionality
 package vm
 
 import (
@@ -19,9 +20,9 @@ func TestGetCPUOptionsDefaults(t *testing.T) {
 		t.Fatalf("NewRepository error: %v", err)
 	}
 
-	opts, err := repo.GetCPUOptions()
-	if err != nil {
-		t.Fatalf("GetCPUOptions error: %v", err)
+	var opts models.CPUOptions
+	if err := repo.GetConfig("cpu_options", &opts); err != nil {
+		t.Fatalf("GetConfig error: %v", err)
 	}
 
 	// All defaults should be false/empty
@@ -57,15 +58,14 @@ func TestSaveAndLoadCPUOptions(t *testing.T) {
 		X2APIC:      true,
 	}
 
-	err = repo.SaveCPUOptions(opts)
-	if err != nil {
-		t.Fatalf("SaveCPUOptions error: %v", err)
+	if err := repo.SaveConfig("cpu_options", opts); err != nil {
+		t.Fatalf("SaveConfig error: %v", err)
 	}
 
 	// Load CPU options
-	loaded, err := repo.GetCPUOptions()
-	if err != nil {
-		t.Fatalf("GetCPUOptions error: %v", err)
+	var loaded models.CPUOptions
+	if err := repo.GetConfig("cpu_options", &loaded); err != nil {
+		t.Fatalf("GetConfig error: %v", err)
 	}
 
 	if loaded.HideKVM != true {
@@ -126,16 +126,15 @@ func TestCPUOptionsRoundTrip(t *testing.T) {
 		InvTSC:                 true,
 	}
 
-	err := repo1.SaveCPUOptions(opts)
-	if err != nil {
-		t.Fatalf("SaveCPUOptions error: %v", err)
+	if err := repo1.SaveConfig("cpu_options", opts); err != nil {
+		t.Fatalf("SaveConfig error: %v", err)
 	}
 
 	// Fresh repository (simulates app restart)
 	repo2, _ := NewRepository(configFile)
-	loaded, err := repo2.GetCPUOptions()
-	if err != nil {
-		t.Fatalf("GetCPUOptions error: %v", err)
+	var loaded models.CPUOptions
+	if err := repo2.GetConfig("cpu_options", &loaded); err != nil {
+		t.Fatalf("GetConfig error: %v", err)
 	}
 
 	if loaded.VendorID != "GenuineIntel" {
@@ -168,7 +167,7 @@ func TestCPUOptionsCoexistsWithVMs(t *testing.T) {
 
 	// Save CPU options
 	opts := models.CPUOptions{HideKVM: true, HVRelaxed: true}
-	repo.SaveCPUOptions(opts)
+	repo.SaveConfig("cpu_options", opts)
 
 	// Verify both exist
 	vms, _ := repo.ListVMs()
@@ -176,7 +175,8 @@ func TestCPUOptionsCoexistsWithVMs(t *testing.T) {
 		t.Errorf("Expected 1 VM, got %d", len(vms))
 	}
 
-	loaded, _ := repo.GetCPUOptions()
+	var loaded models.CPUOptions
+	repo.GetConfig("cpu_options", &loaded)
 	if !loaded.HideKVM {
 		t.Errorf("CPU options not preserved after saving VM")
 	}
@@ -192,7 +192,7 @@ func TestCPUOptionsCoexistsWithVMs(t *testing.T) {
 		t.Errorf("Expected 2 VMs, got %d", len(vms))
 	}
 
-	loaded, _ = repo.GetCPUOptions()
+	repo.GetConfig("cpu_options", &loaded)
 	if !loaded.HideKVM {
 		t.Errorf("CPU options lost after saving second VM")
 	}
