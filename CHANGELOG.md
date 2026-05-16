@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.1.16] - 2026-05-16
+
+### Added
+- **Centered modal sizing for mount point warning**: The mount point warning dialog is now centered in the terminal window using `lipgloss.Place`, with terminal dimensions stored via `SetSize` and environment variable fallback (`COLUMNS`/`LINES`). Includes comprehensive tests for View() and SetSize (`internal/tui/models/mount_point_warning.go`, `internal/tui/models/mount_point_warning_test.go`)
+- **Terminal size validation with fallback**: Added `getInitialTerminalSize()` that queries terminal via `IoctlGetWinsize` with fallback to `COLUMNS`/`LINES` env vars, avoiding circular imports (`internal/tui/models/init.go`)
+- **View registry deactivation**: The view registry is now properly deactivated when navigating between views to prevent stale state in sub-views (`internal/tui/models/key_handlers.go`, `internal/tui/models/message_handlers.go`)
+
+### Changed
+- **"Use Host Topology" toggle moved**: Removed from CPU topology form and relocated to the vCPU pinning form. The toggle is now saved to CPU topology config from the vCPU pinning form. Positions updated (toggle → use_host_topology → save → apply_kernel) (`internal/tui/models/cpu_topology_form.go`, `internal/tui/models/vcpu_pinning_form.go`, `internal/tui/models/vcpu_pinning_form_render.go`)
+- **Pinning enabled toggle extracted**: Inline toggle rendering extracted into dedicated `renderPinningEnabledToggle()` method with ON/OFF style (`internal/tui/models/vcpu_pinning_form_render.go`)
+
+### Fixed
+- **Visual alignment of list item selection indicators**: Applied consistent `"> "` / `"  "` gutter to all rows in VMTable and list adapters instead of only the selected row, ensuring proper column alignment and visual hierarchy (`internal/tui/components/vm_table.go`, `internal/tui/models/list_adapter.go`)
+
+## [0.1.15] - 2026-05-16
+
+### Fixed
+- **Start script output race**: Added channel synchronization in `executeStartScript()` to ensure script output goroutines finish before the function returns, preventing lost log output during start script execution (`internal/vm/vm_runner.go`)
+- **VM status stuck on STARTING**: Added polling timeout fallback with 10s timeout in `pollStatus()` to handle VMs where QMP socket never appears, fixing permanently stuck "STARTING" status (`internal/vm/vm_runner.go`)
+
 ## [0.1.14] - 2026-05-15
 
 ### Fixed
@@ -170,7 +190,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.14...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.16...HEAD
+[0.1.16]: https://github.com/glemsom/dkvmmanager/compare/v0.1.15...v0.1.16
+[0.1.15]: https://github.com/glemsom/dkvmmanager/compare/v0.1.14...v0.1.15
 [0.1.14]: https://github.com/glemsom/dkvmmanager/compare/v0.1.13...v0.1.14
 [0.1.13]: https://github.com/glemsom/dkvmmanager/compare/v0.1.12...v0.1.13
 [0.1.12]: https://github.com/glemsom/dkvmmanager/compare/v0.1.11...v0.1.12
