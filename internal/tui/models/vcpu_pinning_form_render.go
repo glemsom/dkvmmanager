@@ -186,17 +186,7 @@ func (m *VCPUPinningFormModel) RenderPosition(pos form.FocusPos, focused bool, c
 		if pos.Key == "use_host_topology" {
 			return m.renderUseHostTopologyToggle(focused)
 		}
-		toggleLabel := "[ ] Disabled"
-		if m.pinning.Enabled {
-			toggleLabel = "[x] Enabled"
-		}
-
-		if focused {
-			toggleLabel = vcpuPinningFocusStyle.Render(toggleLabel)
-		} else if m.pinning.Enabled {
-			toggleLabel = vcpuPinningEnabledStyle.Render(toggleLabel)
-		}
-		return vcpuPinningHeaderStyle.Render("vCPU Pinning Configuration") + "\n  " + toggleLabel
+		return vcpuPinningHeaderStyle.Render("vCPU Pinning Configuration") + "\n" + m.renderPinningEnabledToggle(focused)
 
 	case form.FocusButton:
 		if pos.Key == "save" {
@@ -288,6 +278,33 @@ func (m *VCPUPinningFormModel) findHostTopologyInfo(hostCPU int) (int, []int) {
 	return 0, nil
 }
 
+// renderPinningEnabledToggle renders the vCPU Pinning enabled toggle in ON/OFF style
+func (m *VCPUPinningFormModel) renderPinningEnabledToggle(focused bool) string {
+	prefix := "  "
+	if focused {
+		prefix = vcpuPinningFocusStyle.Render("> ")
+	}
+
+	var togglePart string
+	if m.pinning.Enabled {
+		if focused {
+			togglePart = vcpuPinningFocusStyle.Render("[ ON ]")
+		} else {
+			togglePart = vcpuPinningEnabledStyle.Render("[ ON ]")
+		}
+	} else {
+		if focused {
+			togglePart = vcpuPinningFocusStyle.Render("[OFF]")
+		} else {
+			togglePart = vcpuPinningMutedStyle.Render("[OFF]")
+		}
+	}
+
+	label := vcpuPinningLabelStyle.Render("vCPU Auto Pinning")
+
+	return prefix + togglePart + " " + label
+}
+
 // renderUseHostTopologyToggle renders the "Use Host Topology" toggle line
 func (m *VCPUPinningFormModel) renderUseHostTopologyToggle(focused bool) string {
 	prefix := "  "
@@ -303,9 +320,8 @@ func (m *VCPUPinningFormModel) renderUseHostTopologyToggle(focused bool) string 
 	}
 
 	label := vcpuPinningLabelStyle.Render("Use Host Topology")
-	desc := vcpuPinningMutedStyle.Render("Preserve die/socket layout in guest VM")
 
-	return prefix + togglePart + " " + label + "  " + desc
+	return prefix + togglePart + " " + label
 }
 
 // formatInts formats a slice of ints as comma-separated string
