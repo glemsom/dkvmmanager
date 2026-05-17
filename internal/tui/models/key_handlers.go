@@ -392,7 +392,6 @@ func (m *MainModel) handleVMSelection() (tea.Model, tea.Cmd) {
 
 		// Create running model immediately (runner will be set async)
 		vmRunningModel := NewVMRunningModel(vmObj, nil) // nil runner
-		vmRunningModel.startTime = time.Now()
 		vmRunningModel.SetSize(m.windowWidth-4, m.contentHeight()-2)
 		m.vmRunningModel = vmRunningModel
 		m.currentView = ViewVMRunning

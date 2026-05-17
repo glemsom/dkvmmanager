@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -223,10 +222,13 @@ func TestVMRunningModelViewContentStatus(t *testing.T) {
 		expect string
 	}{
 		{"running", "running", "[RUNNING]"},
+		{"paused", "paused", "[RUNNING]"},
+		{"postmigrate", "postmigrate", "[RUNNING]"},
 		{"stopped", "stopped", "[STOPPED]"},
 		{"stopping", "stopping", "[STOPPING]"},
 		{"starting", "starting", "[STARTING]"},
 		{"exited", "exited", "[STOPPED]"},
+		{"finish", "finish", "[STOPPING]"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -361,7 +363,6 @@ func TestVMRunningModelStatusUpdateNoThreads(t *testing.T) {
 
 func TestVMRunningModelStartTimeZero(t *testing.T) {
 	m := setupRunningModel(t, "running")
-	m.startTime = time.Time{}
 	m.updateViewport()
 	view := m.View()
 	if !strings.Contains(view, "[RUNNING]") {

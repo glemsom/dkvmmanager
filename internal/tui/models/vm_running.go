@@ -60,9 +60,8 @@ type VMRunningModel struct {
 	maxLogLines int
 
 	// Status
-	status    string
-	threads   []int
-	startTime time.Time
+	status  string
+	threads []int
 
 	// Status polling tracking
 	pollingSince time.Time
@@ -381,11 +380,11 @@ func (m *VMRunningModel) renderInfoPanel() string {
 	// Status
 	var statusStr string
 	switch m.status {
-	case "running":
+	case "running", "paused", "postmigrate":
 		statusStr = statusRunning.Render("[RUNNING]")
 	case "stopped", "exited":
 		statusStr = statusStopped.Render("[STOPPED]")
-	case "stopping":
+	case "stopping", "finish":
 		statusStr = statusStarting.Render("[STOPPING]")
 	default:
 		statusStr = statusStarting.Render("[STARTING]")
@@ -394,8 +393,8 @@ func (m *VMRunningModel) renderInfoPanel() string {
 	b.WriteString(statusStr)
 
 	// Uptime
-	if !m.startTime.IsZero() && m.runner != nil && m.runner.IsRunning() {
-		uptime := time.Since(m.startTime).Truncate(time.Second)
+	if m.runner != nil && m.runner.IsRunning() {
+		uptime := time.Since(m.runner.StartTime()).Truncate(time.Second)
 		b.WriteString("  ")
 		b.WriteString(labelStyle.Render("Uptime: "))
 		b.WriteString(valueStyle.Render(uptime.String()))

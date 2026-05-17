@@ -8,8 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.17] - 2026-05-17
+
+### Added
+- **Section headers in CPU topology form**: Core toggles are now grouped by die with section headers showing die label and L3 cache info for better visual organization (`internal/tui/models/cpu_topology_form.go`, `internal/tui/models/form/form.go`, `internal/tui/models/form/types.go`)
+- **`--skip-mount-check` CLI flag**: New flag to bypass mount point warning for testing purposes (`main.go`, `internal/tui/tui.go`, `internal/tui/models/init.go`)
+
 ### Changed
+- **Status message handling refactored**: Replaced statusMessage field with `statusBar.SetMessage()` calls for consistent status message management across the application (`internal/tui/models/key_handlers.go`, `internal/tui/models/message_handlers.go`, `internal/tui/models/types.go`)
+- **StatusBar component integration**: Message handlers now use the statusBar component for unified status display
+
+### Fixed
 - **Debug log output isolation**: Debug log output is now properly isolated from the TUI display using `tea.LogToFile` and `tea.WithOutput(os.Stderr)` in debug mode, preventing log output from corrupting the TUI (`internal/tui/tui.go`, `main.go`)
+- **Debug log flushing and AltScreen handling**: Fixed debug log flushing to ensure logs are written before TUI exit (`internal/tui/tui.go`)
+- **Removed unnecessary log.Sync() calls**: Eliminated redundant log synchronization before TUI starts for cleaner startup
+- **List adapter test spacing**: Fixed test assertions to match single-space `'> '` prefix instead of `'>  '` for selected item styling
+
+### Removed
+- **`plan.md`**: Completed work documentation file removed
 
 ## [0.1.16] - 2026-05-16
 
@@ -195,7 +211,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.16...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.17...HEAD
+[0.1.17]: https://github.com/glemsom/dkvmmanager/compare/v0.1.16...v0.1.17
 [0.1.16]: https://github.com/glemsom/dkvmmanager/compare/v0.1.15...v0.1.16
 [0.1.15]: https://github.com/glemsom/dkvmmanager/compare/v0.1.14...v0.1.15
 [0.1.14]: https://github.com/glemsom/dkvmmanager/compare/v0.1.13...v0.1.14
@@ -205,7 +222,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.10]: https://github.com/glemsom/dkvmmanager/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/glemsom/dkvmmanager/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/glemsom/dkvmmanager/compare/v0.1.7...v0.1.8
-[0.1.7]: https://github.com/glemsom/dkvmanager/compare/v0.1.5...v0.1.7
+[0.1.7]: https://github.com/glemsom/dkvmmanager/compare/v0.1.5...v0.1.7
 [0.1.5]: https://github.com/glemsom/dkvmmanager/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/glemsom/dkvmmanager/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/glemsom/dkvmmanager/compare/v0.1.2...v0.1.3
