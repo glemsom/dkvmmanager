@@ -35,6 +35,9 @@ type FocusPos struct {
 	Key string
 	// Data is form-specific context (e.g., list index, field metadata).
 	Data any
+	// SectionHeader, if non-empty, is rendered before this position as a section header.
+	// This is used for grouping related positions (e.g., "Die 0 — L3 Cache: 96M").
+	SectionHeader string
 }
 
 // FormResult indicates what action the form wants to take after user interaction.

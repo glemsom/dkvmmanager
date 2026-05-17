@@ -172,6 +172,7 @@ func (m *CPUTopologyFormModel) BuildPositions() []form.FocusPos {
 	}
 
 	// Core toggles
+	var lastDieID = -1
 	for _, die := range m.hostTopo.Dies {
 		dieLabel := fmt.Sprintf("Die %d", die.ID)
 		if die.L3CacheKB > 0 {
@@ -179,16 +180,22 @@ func (m *CPUTopologyFormModel) BuildPositions() []form.FocusPos {
 		}
 
 		for _, core := range die.CoreDetails {
+			sectionHeader := ""
+			if die.ID != lastDieID {
+				sectionHeader = cpuTopoDieStyle.Render(dieLabel)
+				lastDieID = die.ID
+			}
 			positions = append(positions, form.FocusPos{
-				Kind:  form.FocusToggle,
-				Label: fmt.Sprintf("Core %d", core.ID),
-				Key:   coreKey(die.ID, core.ID),
-				Data: cpuTopoFocusData{
+				Kind:          form.FocusToggle,
+				Label:         fmt.Sprintf("Core %d", core.ID),
+				Key:           coreKey(die.ID, core.ID),
+				Data:          cpuTopoFocusData{
 					dieID:    die.ID,
 					coreID:   core.ID,
 					dieLabel: dieLabel,
 					coreInfo: &core,
 				},
+				SectionHeader: sectionHeader,
 			})
 		}
 	}

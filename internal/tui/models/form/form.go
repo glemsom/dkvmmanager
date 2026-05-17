@@ -310,6 +310,10 @@ func (sf *ScrollableForm) syncViewport() {
 		focused := i == sf.focusIndex
 		cursorOff := sf.cursorOffset(pos.Key)
 		rendered := sf.model.RenderPosition(pos, focused, cursorOff)
+		// Prepend section header if present (only for first item in section)
+		if pos.SectionHeader != "" {
+			rendered = pos.SectionHeader + "\n" + rendered
+		}
 		content.WriteString(rendered)
 		content.WriteString("\n")
 		var n int
