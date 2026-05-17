@@ -224,6 +224,8 @@ func TestVMRunningModelViewContentStatus(t *testing.T) {
 		{"running", "running", "[RUNNING]"},
 		{"paused", "paused", "[RUNNING]"},
 		{"postmigrate", "postmigrate", "[RUNNING]"},
+		{"prelaunch", "prelaunch", "[RUNNING]"},
+		{"unknown", "unknown", "[STARTING]"},
 		{"stopped", "stopped", "[STOPPED]"},
 		{"stopping", "stopping", "[STOPPING]"},
 		{"starting", "starting", "[STARTING]"},

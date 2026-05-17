@@ -380,7 +380,7 @@ func (m *VMRunningModel) renderInfoPanel() string {
 	// Status
 	var statusStr string
 	switch m.status {
-	case "running", "paused", "postmigrate":
+	case "running", "paused", "postmigrate", "prelaunch":
 		statusStr = statusRunning.Render("[RUNNING]")
 	case "stopped", "exited":
 		statusStr = statusStopped.Render("[STOPPED]")
