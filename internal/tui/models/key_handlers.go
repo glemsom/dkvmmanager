@@ -142,6 +142,21 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return HandleLVCreateUpdatedMsg(m, msg)
 	}
 
+	// VMRunning-specific messages (polling/log) must bypass the registry dispatch
+	// because the registry calls cmd() synchronously and feeds the result through
+	// handleSubViewMsg, which breaks the command chain for Tick-based polling and
+	// blocking channel reads. Route them directly to the fallback path instead.
+	if m.currentView == ViewVMRunning && m.vmRunningModel != nil {
+		switch msg.(type) {
+		case VMStatusUpdateMsg, VMLogMsg:
+			model, cmd := m.vmRunningModel.Update(msg)
+			if vrm, ok := model.(*VMRunningModel); ok {
+				m.vmRunningModel = vrm
+			}
+			return m, cmd
+		}
+	}
+
 	// Registry-based dispatch
 	// This ensures async messages (e.g. lvVGsLoadedMsg) reach registered views.
 	if m.viewRegistry != nil && m.viewRegistry.IsActive() {

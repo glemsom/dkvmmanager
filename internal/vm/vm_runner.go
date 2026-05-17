@@ -863,9 +863,9 @@ func filterPassthroughArgs(args []string) []string {
 
 // executeStartScript executes the start script before QEMU launches
 func (r *VMRunner) executeStartScript() error {
-	// Skip if no custom script config
-	if r.startStopScript.StartScript == "" && r.startStopScript.UseBuiltin {
-		// Use builtin but no PCI devices configured - that's ok
+	// Skip if neither builtin nor custom script is configured
+	if !r.startStopScript.UseBuiltin && r.startStopScript.StartScript == "" {
+		// No script to execute
 		return nil
 	}
 
