@@ -492,7 +492,7 @@ func TestStartVMCommandSuccess(t *testing.T) {
 }
 
 func TestNilRunnerWaitForLogReturnsNil(t *testing.T) {
-	// When runner is nil, waitForLog should return nil (no-op),
+	// When runner is nil, waitForLog should return a command that returns nil (no-op),
 	// not an empty VMLogMsg.
 	m := setupRunningModel(t, "starting")
 	// Ensure runner is nil

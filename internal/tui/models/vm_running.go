@@ -167,10 +167,14 @@ func (m *VMRunningModel) pollStatus() tea.Cmd {
 
 		client := m.runner.QMPClient()
 		if client == nil {
-			// QMP not connected yet - if process has been running long enough,
-			// assume VM is running (QMP socket may never appear in some configs)
-			if !m.pollingSince.IsZero() && time.Since(m.pollingSince) > 10*time.Second {
-				if m.runner.IsRunning() {
+			// QMP not connected yet - use fallback logic:
+			// If the VM process is running and has been for a while, assume running.
+			// This handles cases where QMP socket may not be available or QEMU
+			// is taking longer than expected to create it.
+			if m.runner.IsRunning() {
+				// If pollingSince is set and we've been trying for a while,
+				// assume the VM is running even without QMP
+				if !m.pollingSince.IsZero() && time.Since(m.pollingSince) > 5*time.Second {
 					return VMStatusUpdateMsg{Status: "running"}
 				}
 			}

@@ -456,6 +456,7 @@ func (r *VMRunner) Start() error {
 
 	// Execute start script (blocking - must complete before QEMU starts
 	// so that PCI devices are bound to vfio-pci and /dev/vfio/* are available)
+	// Note: Script output is captured and sent to logChan for the UI
 	if err := r.executeStartScript(); err != nil {
 		return fmt.Errorf("start script failed: %w", err)
 	}
