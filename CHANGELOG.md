@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.18] - 2026-05-18
+
+### Fixed
+- **VM running status detection and states**: Added `prelaunch`, `paused`, and `postmigrate` to the set of statuses displayed as `[RUNNING]`, and `finish` as `[STOPPING]`. Uptime now reads from the runner's `StartTime()` instead of a redundant local field. Tightened QMP fallback timeout from 10s to 5s for faster status detection (`internal/tui/models/vm_running.go`, `internal/tui/models/vm_running_test.go`)
+- **Registry dispatch deadlock with VMRunning polling**: VMRunning polling and log messages now bypass the view registry dispatch to avoid a deadlock where `cmd()` chaining broke Tick-based polling and blocking channel reads (`internal/tui/models/key_handlers.go`)
+- **Start script skip condition**: Fixed `executeStartScript()` to correctly skip when neither builtin nor custom script is configured (`internal/vm/vm_runner.go`)
+- **Redundant startTime field removed**: Removed unused `startTime` field initialization from `handleVMSelection()` and cleaned up stale imports (`internal/tui/models/key_handlers.go`, `internal/tui/models/vm_running_test.go`)
+
 ## [0.1.17] - 2026-05-17
 
 ### Added
@@ -211,7 +219,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.17...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.18...HEAD
+[0.1.18]: https://github.com/glemsom/dkvmmanager/compare/v0.1.17...v0.1.18
 [0.1.17]: https://github.com/glemsom/dkvmmanager/compare/v0.1.16...v0.1.17
 [0.1.16]: https://github.com/glemsom/dkvmmanager/compare/v0.1.15...v0.1.16
 [0.1.15]: https://github.com/glemsom/dkvmmanager/compare/v0.1.14...v0.1.15
