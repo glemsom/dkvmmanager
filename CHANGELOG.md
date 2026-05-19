@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.19] - 2026-05-19
+
+### Changed
+- **MessageHandler interface extracted**: Moved the `handleMessage` interface from `form/form.go` to `form/types.go` as a public `MessageHandler` interface, with standardized godoc comments on all implementing form models (`internal/tui/models/form/form.go`, `internal/tui/models/form/types.go`, `internal/tui/models/cpu_options_form_handlers.go`, `internal/tui/models/lv_create_form.go`, `internal/tui/models/message_handlers.go`, `internal/tui/models/pci_passthrough_form_handlers.go`, `internal/tui/models/ssh_password_form.go`, `internal/tui/models/vcpu_pinning_form_handlers.go`, `internal/tui/models/vm_form.go`)
+
 ## [0.1.18] - 2026-05-18
 
 ### Fixed
@@ -219,7 +224,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.18...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.19...HEAD
+[0.1.19]: https://github.com/glemsom/dkvmmanager/compare/v0.1.18...v0.1.19
 [0.1.18]: https://github.com/glemsom/dkvmmanager/compare/v0.1.17...v0.1.18
 [0.1.17]: https://github.com/glemsom/dkvmmanager/compare/v0.1.16...v0.1.17
 [0.1.16]: https://github.com/glemsom/dkvmmanager/compare/v0.1.15...v0.1.16
