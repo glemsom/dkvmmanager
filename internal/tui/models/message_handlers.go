@@ -177,9 +177,9 @@ func HandlePowerOffMsg(m *MainModel, msg tea.Msg) (tea.Model, tea.Cmd) {
 // handleSubViewMsg processes messages from sub-view command execution.
 // It dispatches to registered handlers first, then handles special cases.
 func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
-	// Note: FileSelectedMsg and DiskAddedMsg are handled by the VMFormModel's
-	// HandleMessage method, which is delegated to by ScrollableForm.Update.
-	// No manual routing needed here.
+	// FileSelectedMsg and DiskAddedMsg are handled by the VMFormModel's
+	// HandleMessage method via the MessageHandler interface.
+	// See form/types.go for the interface definition.
 
 	// Handle ViewChangeMsg specially (not in registry)
 	if vcm, ok := nextMsg.(ViewChangeMsg); ok {

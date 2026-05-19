@@ -232,7 +232,7 @@ func (m *SSHPasswordFormModel) SetSize(w, h int) {
 // SetFocused sets whether the form has keyboard focus.
 func (m *SSHPasswordFormModel) SetFocused(bool) {}
 
-// HandleMessage handles custom messages (e.g., async command results).
+// HandleMessage implements form.MessageHandler for SSH password messages.
 func (m *SSHPasswordFormModel) HandleMessage(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case sshPasswordErrorMsg:

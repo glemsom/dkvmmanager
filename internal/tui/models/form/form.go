@@ -109,13 +109,6 @@ func (sf *ScrollableForm) SetSize(w, h int) {
 	sf.syncViewport()
 }
 
-// handleMessage is an optional interface for forms that need to handle
-// custom messages (e.g., async command results). If a FormModel implements
-// this, ScrollableForm will delegate unknown messages to it.
-type handleMessage interface {
-	HandleMessage(msg tea.Msg) tea.Cmd
-}
-
 // arrowKeyHandler is an optional interface for forms that need left/right
 // arrow key handling (e.g., dropdown navigation, unit cycling).
 type arrowKeyHandler interface {
@@ -157,7 +150,7 @@ func (sf *ScrollableForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	default:
 		// Delegate custom messages (e.g., async results) to the form
-		if hm, ok := sf.model.(handleMessage); ok {
+		if hm, ok := sf.model.(MessageHandler); ok {
 			if cmd := hm.HandleMessage(msg); cmd != nil {
 				return sf, cmd
 			}

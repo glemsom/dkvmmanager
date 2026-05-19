@@ -184,7 +184,7 @@ func (m *CPUOptionsFormModel) HandleDelete(pos form.FocusPos) {
 	}
 }
 
-// HandleMessage handles custom messages (e.g., async command results).
+// HandleMessage implements form.MessageHandler for CPU options messages.
 func (m *CPUOptionsFormModel) HandleMessage(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case cpuOptionsErrorMsg:

@@ -114,3 +114,13 @@ type FormModel interface {
 	// SetFocused sets whether the form has keyboard focus.
 	SetFocused(bool)
 }
+
+// MessageHandler is an optional interface for forms that process
+// custom messages (e.g., async command results).
+//
+// Forms implementing this interface should handle all messages
+// for their domain. The framework will route unknown messages here
+// before discarding them.
+type MessageHandler interface {
+	HandleMessage(msg tea.Msg) tea.Cmd
+}

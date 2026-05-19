@@ -54,7 +54,7 @@ func (m *PCIPassthroughFormModel) HandleBackspace(pos form.FocusPos) {}
 // HandleDelete is a no-op (no text fields in PCI passthrough form).
 func (m *PCIPassthroughFormModel) HandleDelete(pos form.FocusPos) {}
 
-// HandleMessage handles async messages (e.g., kernel apply results).
+// HandleMessage implements form.MessageHandler for PCIe kernel apply results.
 func (m *PCIPassthroughFormModel) HandleMessage(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case PCIVFIOKernelAppliedMsg:

@@ -393,6 +393,7 @@ func (m *LVCreateFormModel) HandleSpace(pos form.FocusPos) {
 
 // --- handleMessage interface for async VG loading ---
 
+// HandleMessage implements form.MessageHandler for LV volume group loading.
 func (m *LVCreateFormModel) HandleMessage(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case lvVGsLoadedMsg:

@@ -49,7 +49,7 @@ func (m *VCPUPinningFormModel) HandleBackspace(pos form.FocusPos) {}
 // HandleDelete is a no-op (no text fields in vCPU pinning form).
 func (m *VCPUPinningFormModel) HandleDelete(pos form.FocusPos) {}
 
-// HandleMessage handles async messages (e.g., kernel apply results).
+// HandleMessage implements form.MessageHandler for vCPU pinning kernel apply results.
 func (m *VCPUPinningFormModel) HandleMessage(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case VCPUCPUKernelAppliedMsg:
