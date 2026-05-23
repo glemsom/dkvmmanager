@@ -539,8 +539,9 @@ func TestBuildCPUOptsStringWithCPUPM(t *testing.T) {
 	}
 
 	result := runner.buildCPUOptsString()
-	if !containsString(result, "cpu-pm=on") {
-		t.Error("Expected cpu-pm=on flag when CPUPM is enabled")
+	// cpu-pm=on should NOT be in CPU flags - it belongs in -overcommit only
+	if containsString(result, "cpu-pm=on") {
+		t.Error("cpu-pm=on should not be in CPU flags when CPUPM is enabled")
 	}
 }
 
@@ -576,9 +577,9 @@ func TestBuildQEMUArgsWithCPUPM(t *testing.T) {
 	if !containsString(argStr, "cpu-pm=on") {
 		t.Error("Expected cpu-pm=on in -overcommit arg when CPUPM is enabled")
 	}
-	// Should have cpu-pm=on in -cpu flags
-	if !containsString(argStr, "-cpu host,cpu-pm=on") {
-		t.Error("Expected cpu-pm=on in -cpu args when CPUPM is enabled")
+	// Should NOT have cpu-pm=on in -cpu flags (it belongs in -overcommit only)
+	if containsString(argStr, "-cpu host,cpu-pm=on") {
+		t.Error("cpu-pm=on should not be in -cpu args when CPUPM is enabled")
 	}
 }
 
