@@ -23,11 +23,9 @@ func (m *VMFormModel) HandleEnter(pos form.FocusPos) (form.FormResult, tea.Cmd) 
 	default:
 		// For list items, open file picker
 		if len(pos.Key) > 9 && (pos.Key[:9] == "hardDisks" || pos.Key[:6] == "cdroms") {
-			// Check if this is a list item (not a label or add button)
-			if pos.Kind == form.FocusList {
-				return form.ResultNone, m.openFilePickerCmd(pos)
-			}
+			return form.ResultNone, m.openFilePickerCmd(pos)
 		}
+
 		// On a text field: move to next editable position
 		m.moveFocusNextEditable()
 		return form.ResultNone, nil

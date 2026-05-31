@@ -32,6 +32,51 @@ func (m *VMCreateModel) Init() tea.Cmd {
 
 // Update handles incoming messages.
 func (m *VMCreateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if fm, ok := m.form.Model().(*VMFormModel); ok {
+		if fm.FileBrowserActive() {
+			if fm.addDiskModel != nil {
+				inner, cmd := fm.addDiskModel.Update(msg)
+				if ad, ok := inner.(*AddDiskModel); ok {
+					fm.addDiskModel = ad
+				}
+				if cmd != nil {
+					nextMsg := cmd()
+					// Feed the result back through AddDiskModel so it can convert
+					// FileSelectedMsg into DiskAddedMsg before reaching the form.
+					inner2, cmd2 := fm.addDiskModel.Update(nextMsg)
+					if ad, ok := inner2.(*AddDiskModel); ok {
+						fm.addDiskModel = ad
+					}
+					if cmd2 != nil {
+						return m.forwardToForm(cmd2())
+					}
+					return m, nil
+				}
+				return m, nil
+			}
+			if fm.fileBrowser != nil {
+				inner, cmd := fm.fileBrowser.Update(msg)
+				if fb, ok := inner.(*FileBrowserModel); ok {
+					fm.fileBrowser = fb
+				}
+				if cmd != nil {
+					return m.forwardToForm(cmd())
+				}
+				return m, nil
+			}
+		}
+	}
+
+	inner, cmd := m.form.Update(msg)
+	if sf, ok := inner.(*form.ScrollableForm); ok {
+		m.form = sf
+	}
+	return m, cmd
+}
+
+// forwardToForm passes a message into the wrapped ScrollableForm so the
+// VMFormModel can handle it through HandleMessage.
+func (m *VMCreateModel) forwardToForm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	inner, cmd := m.form.Update(msg)
 	if sf, ok := inner.(*form.ScrollableForm); ok {
 		m.form = sf
@@ -41,6 +86,14 @@ func (m *VMCreateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View returns the view for the model.
 func (m *VMCreateModel) View() string {
+	if fm, ok := m.form.Model().(*VMFormModel); ok {
+		if fm.addDiskModel != nil && fm.addDiskModel.active {
+			return fm.addDiskModel.View()
+		}
+		if fm.fileBrowser != nil && fm.fileBrowser.active {
+			return fm.fileBrowser.View()
+		}
+	}
 	return m.form.View()
 }
 
