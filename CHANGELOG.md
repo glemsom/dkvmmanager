@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.21] - 2026-05-31
+
 ## [0.1.19] - 2026-05-19
 
 ### Changed
@@ -224,7 +226,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.19...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.21...HEAD
+[0.1.21]: https://github.com/glemsom/dkvmmanager/compare/v0.1.19...v0.1.21
 [0.1.19]: https://github.com/glemsom/dkvmmanager/compare/v0.1.18...v0.1.19
 [0.1.18]: https://github.com/glemsom/dkvmmanager/compare/v0.1.17...v0.1.18
 [0.1.17]: https://github.com/glemsom/dkvmmanager/compare/v0.1.16...v0.1.17
