@@ -3,6 +3,8 @@ package models
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
@@ -187,6 +189,17 @@ func (m *VMFormModel) posKey(pos form.FocusPos) string {
 	return pos.Key
 }
 
+// listIndex parses the trailing numeric index from a key like "hardDisks_1" or "cdroms_2".
+// Returns the index and true on success, or 0 and false on failure.
+func listIndex(key string) (int, bool) {
+	lastUnderscore := strings.LastIndex(key, "_")
+	if lastUnderscore < 0 || lastUnderscore+1 >= len(key) {
+		return 0, false
+	}
+	idx, err := strconv.Atoi(key[lastUnderscore+1:])
+	return idx, err == nil
+}
+
 // getValue returns the text value at a focus position
 func (m *VMFormModel) getValue(pos form.FocusPos) string {
 	switch pos.Key {
@@ -205,9 +218,7 @@ func (m *VMFormModel) getValue(pos form.FocusPos) string {
 			disks = &m.cdroms
 		}
 		if disks != nil {
-			var idx int
-			_, _ = fmt.Sscanf(pos.Key, "%*[^0]%d", &idx)
-			if idx < len(*disks) {
+			if idx, ok := listIndex(pos.Key); ok && idx < len(*disks) {
 				return (*disks)[idx]
 			}
 		}
@@ -233,9 +244,7 @@ func (m *VMFormModel) setValue(pos form.FocusPos, val string) {
 			disks = &m.cdroms
 		}
 		if disks != nil {
-			var idx int
-			_, _ = fmt.Sscanf(pos.Key, "%*[^0]%d", &idx)
-			if idx < len(*disks) {
+			if idx, ok := listIndex(pos.Key); ok && idx < len(*disks) {
 				(*disks)[idx] = val
 			}
 		}
