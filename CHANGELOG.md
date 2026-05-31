@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.22] - 2026-05-31
+
+### Fixed
+- **File browser message routing**: DiskAddedMsg and FileSelectedMsg are now properly routed to active forms (VMCreateModel, VMEditModel) when the file browser returns control, ensuring disk selection and file browsing work correctly in the VM creation and edit flows
+
 ## [0.1.21] - 2026-05-31
 
 ## [0.1.19] - 2026-05-19
@@ -226,7 +231,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.21...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.22...HEAD
+[0.1.22]: https://github.com/glemsom/dkvmmanager/compare/v0.1.21...v0.1.22
 [0.1.21]: https://github.com/glemsom/dkvmmanager/compare/v0.1.19...v0.1.21
 [0.1.19]: https://github.com/glemsom/dkvmmanager/compare/v0.1.18...v0.1.19
 [0.1.18]: https://github.com/glemsom/dkvmmanager/compare/v0.1.17...v0.1.18
