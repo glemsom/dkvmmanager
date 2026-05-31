@@ -356,7 +356,7 @@ func (r *VMRunner) buildCPUOptsString() string {
 		flags = append(flags, "kvm=off")
 	}
 	if opts.VendorID != "" {
-		flags = append(flags, fmt.Sprintf("-hypervisor,vendor_id=%s", opts.VendorID))
+		flags = append(flags, fmt.Sprintf("hv-vendor-id=%s", opts.VendorID))
 	}
 	if opts.HVFrequency {
 		flags = append(flags, "+hv-frequencies")

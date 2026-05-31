@@ -719,6 +719,29 @@ func TestBuildCPUOptsString(t *testing.T) {
 	}
 }
 
+func TestBuildCPUOptsStringWithHVVendorID(t *testing.T) {
+	runner := &VMRunner{
+		vm: &models.VM{Name: "test"},
+		cpuOptions: models.CPUOptions{
+			HideKVM:  true,
+			VendorID: "AuthenticAMD",
+		},
+	}
+
+	result := runner.buildCPUOptsString()
+
+	if !containsString(result, "kvm=off") {
+		t.Error("Expected kvm=off flag")
+	}
+	if !containsString(result, "hv-vendor-id=AuthenticAMD") {
+		t.Errorf("Expected hv-vendor-id=AuthenticAMD flag, got: %s", result)
+	}
+	// Should NOT contain the old incorrect format
+	if containsString(result, "-hypervisor,vendor_id=") {
+		t.Error("Should not contain old incorrect -hypervisor,vendor_id= format")
+	}
+}
+
 func TestBuildCPUOptsStringEmpty(t *testing.T) {
 	runner := &VMRunner{
 		vm:         &models.VM{Name: "test"},
