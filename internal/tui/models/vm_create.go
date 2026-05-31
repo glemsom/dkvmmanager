@@ -34,6 +34,16 @@ func (m *VMCreateModel) Init() tea.Cmd {
 func (m *VMCreateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if fm, ok := m.form.Model().(*VMFormModel); ok {
 		if fm.FileBrowserActive() {
+			// Handle DiskAddedMsg - forward it to the form for processing
+			if dam, ok := msg.(DiskAddedMsg); ok {
+				_ = fm.HandleMessage(dam)
+				return m, nil
+			}
+			// Handle FileSelectedMsg - forward it to the form for processing
+			if fsm, ok := msg.(FileSelectedMsg); ok {
+				_ = fm.HandleMessage(fsm)
+				return m, nil
+			}
 			if fm.addDiskModel != nil {
 				inner, cmd := fm.addDiskModel.Update(msg)
 				if ad, ok := inner.(*AddDiskModel); ok {

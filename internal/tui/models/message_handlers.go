@@ -206,6 +206,44 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Route DiskAddedMsg to the active form via HandleMessage
+	if dam, ok := nextMsg.(DiskAddedMsg); ok {
+		if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+			// Try direct HandleMessage on the active model
+			if hm, ok := m.viewRegistry.ActiveModel().(interface{ HandleMessage(tea.Msg) tea.Cmd }); ok {
+				_ = hm.HandleMessage(dam)
+				return m, nil
+			}
+			// VMEditModel/VMCreateModel wrap ScrollableForm which wraps VMFormModel
+			// ScrollableForm.Model() returns VMFormModel which implements HandleMessage
+			if getter, ok := m.viewRegistry.ActiveModel().(interface{ Model() form.FormModel }); ok {
+				if hm, ok := getter.Model().(interface{ HandleMessage(tea.Msg) tea.Cmd }); ok {
+					_ = hm.HandleMessage(dam)
+				}
+			}
+		}
+		return m, nil
+	}
+
+	// Route FileSelectedMsg to the active form via HandleMessage
+	if fsm, ok := nextMsg.(FileSelectedMsg); ok {
+		if m.viewRegistry != nil && m.viewRegistry.IsActive() {
+			// Try direct HandleMessage on the active model
+			if hm, ok := m.viewRegistry.ActiveModel().(interface{ HandleMessage(tea.Msg) tea.Cmd }); ok {
+				_ = hm.HandleMessage(fsm)
+				return m, nil
+			}
+			// VMEditModel/VMCreateModel wrap ScrollableForm which wraps VMFormModel
+			// ScrollableForm.Model() returns VMFormModel which implements HandleMessage
+			if getter, ok := m.viewRegistry.ActiveModel().(interface{ Model() form.FormModel }); ok {
+				if hm, ok := getter.Model().(interface{ HandleMessage(tea.Msg) tea.Cmd }); ok {
+					_ = hm.HandleMessage(fsm)
+				}
+			}
+		}
+		return m, nil
+	}
+
 	// Check registry for dynamic handler using type name
 	// Handle both pointer and non-pointer message types
 	msgType := reflect.TypeOf(nextMsg)
