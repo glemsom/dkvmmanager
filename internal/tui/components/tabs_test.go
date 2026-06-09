@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func TestNewTabModel(t *testing.T) {
@@ -631,19 +632,21 @@ func TestRenderTabsCentered(t *testing.T) {
 			}
 
 			// Content should start with leading spaces (centered)
-			leadingSpaces := len(contentLine) - len(strings.TrimLeft(contentLine, " "))
+			// Strip ANSI codes first since Lip Gloss v2 wraps styled text
+			clean := ansi.Strip(contentLine)
+			leadingSpaces := len(clean) - len(strings.TrimLeft(clean, " "))
 			if leadingSpaces == 0 {
 				t.Error("Expected leading spaces for centered layout, got none")
 			}
 
 			// Tab names should still be present
-			if !strings.Contains(contentLine, "Start VM") {
+			if !strings.Contains(clean, "Start VM") {
 				t.Error("Centered content missing 'Start VM'")
 			}
-			if !strings.Contains(contentLine, "Configuration") {
+			if !strings.Contains(clean, "Configuration") {
 				t.Error("Centered content missing 'Configuration'")
 			}
-			if !strings.Contains(contentLine, "Power") {
+			if !strings.Contains(clean, "Power") {
 				t.Error("Centered content missing 'Power'")
 			}
 		})
@@ -682,8 +685,11 @@ func TestRenderTabsUnderlineCentered(t *testing.T) {
 			// The underline bar should appear at the same horizontal offset as the
 			// active tab name in the content line. Find where "─" starts in the
 			// underline and where "VMs" (the default active tab) starts in content.
-			ulIdx := strings.Index(underlineLine, "─")
-			tabIdx := strings.Index(contentLine, "Start VM")
+			// Strip ANSI codes first since Lip Gloss v2 wraps styled text.
+			cleanContent := ansi.Strip(contentLine)
+			cleanUnderline := ansi.Strip(underlineLine)
+			ulIdx := strings.Index(cleanUnderline, "─")
+			tabIdx := strings.Index(cleanContent, "Start VM")
 			if ulIdx == -1 {
 				t.Fatal("Underline line has no '─' character")
 			}

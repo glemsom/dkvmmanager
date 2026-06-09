@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
@@ -148,7 +149,7 @@ func TestRenderModeIndicator(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			sb.SetMode(tt.mode)
 			result := sb.renderModeIndicator()
-			if result != tt.expected {
+			if ansi.Strip(result) != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}
 		})
@@ -207,7 +208,7 @@ func TestRenderRightSection(t *testing.T) {
 			sb.SetStats(tt.vmCount, tt.running)
 			sb.SetHelp(tt.help)
 			result := sb.renderRightSection()
-			if result != tt.expected {
+			if ansi.Strip(result) != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}
 		})
