@@ -11,26 +11,6 @@ import (
 	"github.com/glemsom/dkvmmanager/internal/models"
 )
 
-// SetPCIPassthroughConfig sets the PCI passthrough configuration for this VM
-func (r *VMRunner) SetPCIPassthroughConfig(cfg models.PCIPassthroughConfig) {
-	r.pciPassthroughConfig = cfg
-}
-
-// SetUSBPassthroughConfig sets the USB passthrough configuration for this VM
-func (r *VMRunner) SetUSBPassthroughConfig(cfg models.USBPassthroughConfig) {
-	r.usbPassthroughConfig = cfg
-}
-
-// SetCPUOptions sets the CPU feature options for this VM
-func (r *VMRunner) SetCPUOptions(opts models.CPUOptions) {
-	r.cpuOptions = opts
-}
-
-// SetCPUTopology sets the global CPU topology for this VM
-func (r *VMRunner) SetCPUTopology(topo models.CPUTopology) {
-	r.cpuTopology = topo
-}
-
 // buildQEMUArgs constructs the QEMU command line arguments from VM config
 func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 	var args []string
@@ -56,13 +36,13 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 
 	// Memory and clock
 	rtcBase := "localtime"
-	if r.cpuOptions.RTCUTC {
+	if r.runCfg.CPUOptions.RTCUTC {
 		rtcBase = "utc"
 	}
 
 	// Build overcommit args based on CPUPM setting
 	overcommitArg := "mem-lock=on"
-	if r.cpuOptions.CPUPM {
+	if r.runCfg.CPUOptions.CPUPM {
 		overcommitArg = "mem-lock=on,cpu-pm=on"
 	}
 
@@ -154,12 +134,12 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 	}
 
 	// CPU topology - use global CPUTopology if enabled
-	if r.cpuTopology.Enabled && len(r.cpuTopology.SelectedCPUs) > 0 {
-		numCPUs := len(r.cpuTopology.SelectedCPUs)
-		hostTopo := r.hostCPUTopology
+	if r.runCfg.CPUTopology.Enabled && len(r.runCfg.CPUTopology.SelectedCPUs) > 0 {
+		numCPUs := len(r.runCfg.CPUTopology.SelectedCPUs)
+		hostTopo := r.runCfg.HostCPUTopology
 
 		// Check if we should use host topology with explicit CPU devices
-		if r.cpuTopology.UseHostTopology && len(hostTopo.Dies) > 0 && hostTopo.TotalCPUs > 0 {
+		if r.runCfg.CPUTopology.UseHostTopology && len(hostTopo.Dies) > 0 && hostTopo.TotalCPUs > 0 {
 			// Approach: Use maxcpus with explicit -device host-x86_64-cpu
 			// This allows guest OS to see full topology and enables proper vCPU pinning
 			maxCPUs := hostTopo.TotalCPUs
@@ -197,7 +177,7 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 			// Skip the first CPU (i=0): QEMU auto-creates the CPU at
 			// socket=0,die=0,core=0,thread=0 (APIC ID 0) via -smp and will
 			// reject an explicit -device declaration as a duplicate.
-			for i, cpuID := range r.cpuTopology.SelectedCPUs {
+			for i, cpuID := range r.runCfg.CPUTopology.SelectedCPUs {
 				if i == 0 {
 					continue
 				}
@@ -256,7 +236,7 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 	}
 
 	// PCI Passthrough
-	pciDevices := r.pciPassthroughConfig.Devices
+	pciDevices := r.runCfg.PCIPassthroughConfig.Devices
 	// Backward compatibility: if no PCI config but GPUROM is set, use legacy passthrough
 	if len(pciDevices) == 0 && r.vm.GPUROM != "" {
 		pciDevices = []models.PCIPassthroughDevice{
@@ -329,7 +309,7 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 	// USB Passthrough - one xHCI controller per device
 	// Note: Each USB device needs its own xHCI controller (no id specified),
 	// and usb-host must NOT specify bus= (QEMU auto-attaches to the previous xHCI)
-	for _, dev := range r.usbPassthroughConfig.Devices {
+	for _, dev := range r.runCfg.USBPassthroughConfig.Devices {
 		args = append(args, "-device", "qemu-xhci")
 		devArgs := fmt.Sprintf("usb-host,vendorid=0x%s,productid=0x%s", dev.Vendor, dev.Product)
 		args = append(args, "-device", devArgs)
@@ -351,7 +331,7 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 func (r *VMRunner) buildCPUOptsString() string {
 	var flags []string
 
-	opts := r.cpuOptions
+	opts := r.runCfg.CPUOptions
 	if opts.HideKVM {
 		flags = append(flags, "kvm=off")
 	}

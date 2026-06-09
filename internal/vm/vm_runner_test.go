@@ -30,7 +30,7 @@ func TestValidateOVMFFiles(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg)
+	runner := NewVMRunner(vm, cfg, RunConfig{})
 
 	// Should fail - no OVMF files
 	if err := runner.ValidateOVMFFiles(); err == nil {
@@ -81,10 +81,11 @@ func TestBuildQEMUArgs(t *testing.T) {
 		VNCListen:   "",
 	}
 
-	runner := NewVMRunner(vm, cfg)
-	runner.SetCPUTopology(models.CPUTopology{
-		Enabled:      true,
-		SelectedCPUs: []int{4, 5, 6, 7},
+	runner := NewVMRunner(vm, cfg, RunConfig{
+		CPUTopology: models.CPUTopology{
+			Enabled:      true,
+			SelectedCPUs: []int{4, 5, 6, 7},
+		},
 	})
 	args := runner.buildQEMUArgs(vmDir)
 
@@ -146,7 +147,7 @@ func TestBuildQEMUArgsWithNAT(t *testing.T) {
 		NetworkMode: "nat",
 	}
 
-	runner := NewVMRunner(vm, cfg)
+	runner := NewVMRunner(vm, cfg, RunConfig{})
 	args := runner.buildQEMUArgs(vmDir)
 
 	argStr := string(joinArgs(args))
@@ -192,7 +193,7 @@ func TestBuildQEMUArgsWithNATDefault(t *testing.T) {
 		MAC:  "de:ad:be:ef:00:01",
 	}
 
-	runner := NewVMRunner(vm, cfg)
+	runner := NewVMRunner(vm, cfg, RunConfig{})
 	args := runner.buildQEMUArgs(vmDir)
 
 	argStr := string(joinArgs(args))
@@ -231,7 +232,7 @@ func TestBuildQEMUArgsBridgeFallbackToNAT(t *testing.T) {
 		NetworkMode: "bridge",
 	}
 
-	runner := NewVMRunner(vm, cfg)
+	runner := NewVMRunner(vm, cfg, RunConfig{})
 	args := runner.buildQEMUArgs(vmDir)
 
 	argStr := string(joinArgs(args))
@@ -269,7 +270,7 @@ func TestBuildQEMUArgsUnknownModeDefaultsToNAT(t *testing.T) {
 		NetworkMode: "invalid",
 	}
 
-	runner := NewVMRunner(vm, cfg)
+	runner := NewVMRunner(vm, cfg, RunConfig{})
 	args := runner.buildQEMUArgs(vmDir)
 
 	argStr := string(joinArgs(args))
@@ -298,7 +299,7 @@ func TestBuildQEMUArgsWithVNC(t *testing.T) {
 		VNCListen: "0.0.0.0:0",
 	}
 
-	runner := NewVMRunner(vm, cfg)
+	runner := NewVMRunner(vm, cfg, RunConfig{})
 	args := runner.buildQEMUArgs(vmDir)
 
 	argStr := string(joinArgs(args))
@@ -322,13 +323,81 @@ func TestNewVMRunner(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg)
+	runner := NewVMRunner(vm, cfg, RunConfig{})
 
 	if runner.VM() != vm {
 		t.Error("VM() should return the original VM")
 	}
 	if runner.IsRunning() {
 		t.Error("Should not be running initially")
+	}
+}
+
+func TestNewVMRunnerWithRunConfig(t *testing.T) {
+	cfg := &config.Config{
+		DataFolder: "/tmp/test",
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+
+	vm := &models.VM{
+		ID:   "1",
+		Name: "test-vm",
+	}
+
+	runCfg := RunConfig{
+		DryRun: true,
+		CPUOptions: models.CPUOptions{
+			HideKVM: true,
+			VendorID: "GenuineIntel",
+		},
+		CPUTopology: models.CPUTopology{
+			Enabled:      true,
+			SelectedCPUs: []int{0, 1, 2, 3},
+		},
+		VCPUPinning: models.VCPUPinningGlobal{
+			Enabled: true,
+			Mappings: []models.VCPUToHostMapping{
+				{VCPUID: 0, HostCPUID: 4},
+			},
+		},
+		PCIPassthroughConfig: models.PCIPassthroughConfig{
+			Devices: []models.PCIPassthroughDevice{
+				{Address: "0000:01:00.0", Name: "GPU"},
+			},
+		},
+		USBPassthroughConfig: models.USBPassthroughConfig{
+			Devices: []models.USBPassthroughDevice{
+				{Vendor: "046d", Product: "c52b"},
+			},
+		},
+		StartStopScript: models.StartStopScript{
+			StartScript: "echo start",
+			StopScript:  "echo stop",
+		},
+	}
+
+	runner := NewVMRunner(vm, cfg, runCfg)
+
+	// Verify all config sections propagated through getters
+	if !runner.VCPUPinning().Enabled {
+		t.Error("VCPUPinning should be enabled")
+	}
+	if len(runner.VCPUPinning().Mappings) != 1 || runner.VCPUPinning().Mappings[0].HostCPUID != 4 {
+		t.Error("VCPUPinning.Mappings not propagated")
+	}
+
+	devices := runner.PCIPassthroughDevices()
+	if len(devices) != 1 || devices[0].Address != "0000:01:00.0" {
+		t.Error("PCIPassthroughDevices not propagated")
+	}
+
+	usbDevices := runner.USBPassthroughDevices()
+	if len(usbDevices) != 1 || usbDevices[0].Vendor != "046d" {
+		t.Error("USBPassthroughDevices not propagated")
+	}
+
+	if runner.VCpuCount() != 4 {
+		t.Errorf("VCpuCount should be 4, got %d", runner.VCpuCount())
 	}
 }
 
@@ -345,7 +414,7 @@ func TestCleanupStaleSocket(t *testing.T) {
 	}
 
 	vm := &models.VM{ID: "1", Name: "test"}
-	runner := NewVMRunner(vm, cfg)
+	runner := NewVMRunner(vm, cfg, RunConfig{})
 	runner.socketPath = socketPath
 	runner.Cleanup()
 
@@ -456,11 +525,12 @@ func TestBuildQEMUArgsWithUSBPassthrough(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg)
-	runner.SetUSBPassthroughConfig(models.USBPassthroughConfig{
-		Devices: []models.USBPassthroughDevice{
-			{Vendor: "046d", Product: "c52b", Name: "Logitech Unifying Receiver", BusID: "1-1"},
-			{Vendor: "045e", Product: "028e", Name: "Xbox Controller", BusID: "3-2"},
+	runner := NewVMRunner(vm, cfg, RunConfig{
+		USBPassthroughConfig: models.USBPassthroughConfig{
+			Devices: []models.USBPassthroughDevice{
+				{Vendor: "046d", Product: "c52b", Name: "Logitech Unifying Receiver", BusID: "1-1"},
+				{Vendor: "045e", Product: "028e", Name: "Xbox Controller", BusID: "3-2"},
+			},
 		},
 	})
 
@@ -500,7 +570,7 @@ func TestBuildQEMUArgsWithoutUSBPassthrough(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg)
+	runner := NewVMRunner(vm, cfg, RunConfig{})
 	// No USB passthrough config set
 
 	args := runner.buildQEMUArgs(vmDir)
@@ -534,8 +604,8 @@ func TestDryRunFiltersUSBPassthrough(t *testing.T) {
 
 func TestBuildCPUOptsStringWithCPUPM(t *testing.T) {
 	runner := &VMRunner{
-		vm:         &models.VM{Name: "test"},
-		cpuOptions: models.CPUOptions{CPUPM: true},
+		vm:     &models.VM{Name: "test"},
+		runCfg: RunConfig{CPUOptions: models.CPUOptions{CPUPM: true}},
 	}
 
 	result := runner.buildCPUOptsString()
@@ -568,8 +638,9 @@ func TestBuildQEMUArgsWithCPUPM(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg)
-	runner.SetCPUOptions(models.CPUOptions{CPUPM: true})
+	runner := NewVMRunner(vm, cfg, RunConfig{
+		CPUOptions: models.CPUOptions{CPUPM: true},
+	})
 	args := runner.buildQEMUArgs(vmDir)
 	argStr := string(joinArgs(args))
 
@@ -606,7 +677,7 @@ func TestBuildQEMUArgsWithoutCPUPM(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg)
+	runner := NewVMRunner(vm, cfg, RunConfig{})
 	// CPUPM not set (defaults to false)
 	args := runner.buildQEMUArgs(vmDir)
 	argStr := string(joinArgs(args))
@@ -654,10 +725,11 @@ func TestBuildQEMUArgsWithCPUTopology(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg)
-	runner.SetCPUTopology(models.CPUTopology{
-		Enabled:      true,
-		SelectedCPUs: []int{4, 5, 6, 7},
+	runner := NewVMRunner(vm, cfg, RunConfig{
+		CPUTopology: models.CPUTopology{
+			Enabled:      true,
+			SelectedCPUs: []int{4, 5, 6, 7},
+		},
 	})
 	args := runner.buildQEMUArgs(vmDir)
 	argStr := string(joinArgs(args))
@@ -686,7 +758,7 @@ func TestBuildQEMUArgsWithoutCPUTopology(t *testing.T) {
 		// No CPU topology enabled
 	}
 
-	runner := NewVMRunner(vm, cfg)
+	runner := NewVMRunner(vm, cfg, RunConfig{})
 	args := runner.buildQEMUArgs(vmDir)
 	argStr := string(joinArgs(args))
 
@@ -698,12 +770,12 @@ func TestBuildQEMUArgsWithoutCPUTopology(t *testing.T) {
 
 func TestBuildCPUOptsString(t *testing.T) {
 	runner := &VMRunner{
-		vm: &models.VM{Name: "test"},
-		cpuOptions: models.CPUOptions{
+		vm:     &models.VM{Name: "test"},
+		runCfg: RunConfig{CPUOptions: models.CPUOptions{
 			HideKVM:   true,
 			HVRelaxed: true,
 			TopoExt:   true,
-		},
+		}},
 	}
 
 	result := runner.buildCPUOptsString()
@@ -721,11 +793,11 @@ func TestBuildCPUOptsString(t *testing.T) {
 
 func TestBuildCPUOptsStringWithHVVendorID(t *testing.T) {
 	runner := &VMRunner{
-		vm: &models.VM{Name: "test"},
-		cpuOptions: models.CPUOptions{
+		vm:     &models.VM{Name: "test"},
+		runCfg: RunConfig{CPUOptions: models.CPUOptions{
 			HideKVM:  true,
 			VendorID: "AuthenticAMD",
-		},
+		}},
 	}
 
 	result := runner.buildCPUOptsString()
@@ -744,32 +816,13 @@ func TestBuildCPUOptsStringWithHVVendorID(t *testing.T) {
 
 func TestBuildCPUOptsStringEmpty(t *testing.T) {
 	runner := &VMRunner{
-		vm:         &models.VM{Name: "test"},
-		cpuOptions: models.CPUOptions{},
+		vm:     &models.VM{Name: "test"},
+		runCfg: RunConfig{CPUOptions: models.CPUOptions{}},
 	}
 
 	result := runner.buildCPUOptsString()
 	if result != "" {
 		t.Errorf("Expected empty string for default CPU options, got %q", result)
-	}
-}
-
-func TestSetCPUOptions(t *testing.T) {
-	vm := &models.VM{ID: "1", Name: "test"}
-	cfg := &config.Config{DataFolder: "/tmp", QEMUPath: "/usr/bin/qemu-system-x86_64"}
-	runner := NewVMRunner(vm, cfg)
-
-	opts := models.CPUOptions{
-		HideKVM:  true,
-		VendorID: "TestVendor",
-	}
-	runner.SetCPUOptions(opts)
-
-	if !runner.cpuOptions.HideKVM {
-		t.Error("SetCPUOptions failed to set HideKVM")
-	}
-	if runner.cpuOptions.VendorID != "TestVendor" {
-		t.Error("SetCPUOptions failed to set VendorID")
 	}
 }
 
@@ -823,12 +876,13 @@ func TestBuildQEMUArgsWithHostTopology(t *testing.T) {
 		},
 	}
 
-	runner := NewVMRunner(vm, cfg)
-	runner.SetHostCPUTopology(hostTopo)
-	runner.SetCPUTopology(models.CPUTopology{
-		Enabled:         true,
-		SelectedCPUs:    []int{0, 1, 2, 3},
-		UseHostTopology: true,
+	runner := NewVMRunner(vm, cfg, RunConfig{
+		HostCPUTopology: hostTopo,
+		CPUTopology: models.CPUTopology{
+			Enabled:         true,
+			SelectedCPUs:    []int{0, 1, 2, 3},
+			UseHostTopology: true,
+		},
 	})
 
 	args := runner.buildQEMUArgs(vmDir)
@@ -883,13 +937,13 @@ func TestBuildQEMUArgsWithHostTopologyInvalidCPU(t *testing.T) {
 		},
 	}
 
-	runner := NewVMRunner(vm, cfg)
-	runner.SetHostCPUTopology(hostTopo)
-	// Include invalid CPU (99) in selected CPUs
-	runner.SetCPUTopology(models.CPUTopology{
-		Enabled:         true,
-		SelectedCPUs:    []int{0, 99},
-		UseHostTopology: true,
+	runner := NewVMRunner(vm, cfg, RunConfig{
+		HostCPUTopology: hostTopo,
+		CPUTopology: models.CPUTopology{
+			Enabled:         true,
+			SelectedCPUs:    []int{0, 99},
+			UseHostTopology: true,
+		},
 	})
 
 	// Should not panic - just skip invalid CPU and continue
@@ -942,7 +996,7 @@ func TestCleanupPreservesTPMState(t *testing.T) {
 		QEMUPath:   "/usr/bin/qemu-system-x86_64",
 	}
 	vm := &models.VM{ID: "1", Name: "test"}
-	runner := NewVMRunner(vm, cfg)
+	runner := NewVMRunner(vm, cfg, RunConfig{})
 	// Inject fake swtpm process
 	runner.swtpmProcess = fakeProc
 
@@ -999,7 +1053,7 @@ func TestStartTPMErrorDoesNotDeleteState(t *testing.T) {
 		TPMBinary:  "/nonexistent/swtpm-binary", // will fail to start
 	}
 	vm := &models.VM{ID: "1", Name: "test"}
-	runner := NewVMRunner(vm, cfg)
+	runner := NewVMRunner(vm, cfg, RunConfig{})
 
 	// startTPM should fail
 	err := runner.startTPM(vmDir)
@@ -1049,7 +1103,7 @@ func TestStartTPMOrphanKill(t *testing.T) {
 		TPMBinary:  "/nonexistent/swtpm-binary", // will fail to start
 	}
 	vm := &models.VM{ID: "1", Name: "test"}
-	runner := NewVMRunner(vm, cfg)
+	runner := NewVMRunner(vm, cfg, RunConfig{})
 
 	// startTPM should fail (bad binary) but should have killed the orphan first
 	err = runner.startTPM(vmDir)

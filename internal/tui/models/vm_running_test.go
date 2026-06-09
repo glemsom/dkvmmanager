@@ -443,7 +443,7 @@ func TestVMStartedMsgHandlerSetsRunner(t *testing.T) {
 	m := setupRunningModel(t, "starting")
 
 	// Create a real runner (with nil config, not used in this test)
-	runner := vm.NewVMRunner(&models.VM{Name: "test-vm", ID: "1"}, nil)
+	runner := vm.NewVMRunner(&models.VM{Name: "test-vm", ID: "1"}, nil, vm.RunConfig{})
 
 	// Simulate receiving VMStartedMsg with a runner
 	msg := VMStartedMsg{

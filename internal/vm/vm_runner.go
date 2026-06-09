@@ -46,64 +46,49 @@ func SetDryRunMode(enabled bool) {
 
 // VMRunner manages the lifecycle of a running QEMU virtual machine
 type VMRunner struct {
-	vm                   *models.VM
-	cfg                  *config.Config
-	cmd                  *exec.Cmd
-	cmdProcess           *os.Process // Cached for race-safe access
-	qmpClient            *QMPClient
-	socketPath           string
-	logChan              chan string
-	done                 chan struct{}
-	mu                   sync.Mutex
-	running              bool
-	exitErr              error
-	startTime            time.Time
-	dryRun               bool
-	pciPassthroughConfig models.PCIPassthroughConfig
-	usbPassthroughConfig models.USBPassthroughConfig
-	cpuOptions           models.CPUOptions
-	cpuTopology          models.CPUTopology
-	hostCPUTopology      models.HostCPUTopology
-	vcpuPinning          models.VCPUPinningGlobal
-	startStopScript      models.StartStopScript
-	memMB                int64       // Memory in MB for VM (dynamically allocated)
-	swtpmProcess         *os.Process // swtpm process, if TPM is enabled
+	vm         *models.VM
+	cfg        *config.Config
+	runCfg     RunConfig
+	cmd        *exec.Cmd
+	cmdProcess *os.Process // Cached for race-safe access
+	qmpClient  *QMPClient
+	socketPath string
+	logChan    chan string
+	done       chan struct{}
+	mu         sync.Mutex
+	running    bool
+	exitErr    error
+	startTime  time.Time
+	memMB      int64       // Memory in MB for VM (dynamically allocated)
+	swtpmProcess *os.Process // swtpm process, if TPM is enabled
 }
 
-// NewVMRunner creates a new VM runner for the given VM
-func NewVMRunner(vm *models.VM, cfg *config.Config) *VMRunner {
+// NewVMRunner creates a new VM runner for the given VM with the provided RunConfig.
+// runCfg aggregates all optional configuration (PCI/USB passthrough, CPU options,
+// topology, pinning, scripts, dry-run). A zero-valued RunConfig is safe to use.
+func NewVMRunner(vm *models.VM, cfg *config.Config, runCfg RunConfig) *VMRunner {
 	r := &VMRunner{
 		vm:      vm,
 		cfg:     cfg,
+		runCfg:  runCfg,
 		logChan: make(chan string, 256),
 		done:    make(chan struct{}),
 		memMB:   hugepages.DefaultMemoryMB, // default, overridden by Start()
 	}
+	// Package-level dry-run flag (e.g. from CLI --dry-run) overrides RunConfig
 	if dryRunMode {
-		r.dryRun = true
+		r.runCfg.DryRun = true
 	}
 	return r
 }
 
-// SetDryRun enables or disables dry-run mode on this runner
-func (r *VMRunner) SetDryRun(enabled bool) {
-	r.dryRun = enabled
-}
 
-// SetStartStopScript sets the start/stop script configuration
-func (r *VMRunner) SetStartStopScript(cfg models.StartStopScript) {
-	r.startStopScript = cfg
-}
 
-// SetVCPUPinning sets global vCPU pinning configuration for this run.
-func (r *VMRunner) SetVCPUPinning(p models.VCPUPinningGlobal) {
-	r.vcpuPinning = p
-}
 
-// SetHostCPUTopology sets the detected host CPU topology for topology-aware CPU allocation
-func (r *VMRunner) SetHostCPUTopology(topo models.HostCPUTopology) {
-	r.hostCPUTopology = topo
-}
+
+
+
+
 
 // LogChan returns a read-only channel that receives QEMU stdout/stderr lines
 func (r *VMRunner) LogChan() <-chan string {
@@ -156,12 +141,12 @@ func (r *VMRunner) MemoryMB() int64 {
 // VCpuCount returns the number of vCPUs allocated to the VM
 func (r *VMRunner) VCpuCount() int {
 	// First try to get from CPU topology
-	if r.cpuTopology.Enabled && len(r.cpuTopology.SelectedCPUs) > 0 {
-		return len(r.cpuTopology.SelectedCPUs)
+	if r.runCfg.CPUTopology.Enabled && len(r.runCfg.CPUTopology.SelectedCPUs) > 0 {
+		return len(r.runCfg.CPUTopology.SelectedCPUs)
 	}
 	// Fall back to vCPU pinning mappings count
-	if r.vcpuPinning.Enabled && len(r.vcpuPinning.Mappings) > 0 {
-		return len(r.vcpuPinning.Mappings)
+	if r.runCfg.VCPUPinning.Enabled && len(r.runCfg.VCPUPinning.Mappings) > 0 {
+		return len(r.runCfg.VCPUPinning.Mappings)
 	}
 	// Default: return 0 if not configured
 	return 0
@@ -169,17 +154,17 @@ func (r *VMRunner) VCpuCount() int {
 
 // VCPUPinning returns the vCPU pinning configuration
 func (r *VMRunner) VCPUPinning() models.VCPUPinningGlobal {
-	return r.vcpuPinning
+	return r.runCfg.VCPUPinning
 }
 
 // PCIPassthroughDevices returns the PCI passthrough devices
 func (r *VMRunner) PCIPassthroughDevices() []models.PCIPassthroughDevice {
-	return r.pciPassthroughConfig.Devices
+	return r.runCfg.PCIPassthroughConfig.Devices
 }
 
 // USBPassthroughDevices returns the USB passthrough devices
 func (r *VMRunner) USBPassthroughDevices() []models.USBPassthroughDevice {
-	return r.usbPassthroughConfig.Devices
+	return r.runCfg.USBPassthroughConfig.Devices
 }
 
 // ValidateOVMFFiles checks that OVMF_CODE.fd and OVMF_VARS.fd exist in the VM data directory
@@ -485,11 +470,11 @@ func (r *VMRunner) Start() error {
 	// Build QEMU arguments
 	args := r.buildQEMUArgs(vmDataDir)
 
-	if debugMode || r.dryRun {
+	if debugMode || r.runCfg.DryRun {
 		log.Printf("[DEBUG] QEMU command: %s %s", r.cfg.QEMUPath, strings.Join(args, " "))
 	}
 
-	if r.dryRun {
+	if r.runCfg.DryRun {
 		filtered := filterPassthroughArgs(args)
 		fullCmd := fmt.Sprintf("%s %s", r.cfg.QEMUPath, strings.Join(args, " "))
 		filteredCmd := fmt.Sprintf("%s %s", r.cfg.QEMUPath, strings.Join(filtered, " "))
@@ -821,7 +806,7 @@ func (r *VMRunner) connectQMP() {
 			r.mu.Unlock()
 
 			r.logChan <- "[QMP] Connected to QEMU monitor"
-			if err := r.ApplyVCPUPinning(r.vcpuPinning); err != nil {
+			if err := r.ApplyVCPUPinning(r.runCfg.VCPUPinning); err != nil {
 				r.logChan <- fmt.Sprintf("[vCPU pinning] WARNING: %v", err)
 			}
 			return
@@ -864,14 +849,14 @@ func filterPassthroughArgs(args []string) []string {
 // executeStartScript executes the start script before QEMU launches
 func (r *VMRunner) executeStartScript() error {
 	// Skip if neither builtin nor custom script is configured
-	if !r.startStopScript.UseBuiltin && r.startStopScript.StartScript == "" {
+	if !r.runCfg.StartStopScript.UseBuiltin && r.runCfg.StartStopScript.StartScript == "" {
 		// No script to execute
 		return nil
 	}
 
-	if r.startStopScript.UseBuiltin {
+	if r.runCfg.StartStopScript.UseBuiltin {
 		// Generate builtin script from PCI devices
-		script, err := GenerateBuiltinScript(r.pciPassthroughConfig.Devices)
+		script, err := GenerateBuiltinScript(r.runCfg.PCIPassthroughConfig.Devices)
 		if err != nil {
 			return fmt.Errorf("failed to generate builtin script: %w", err)
 		}
@@ -930,10 +915,10 @@ func (r *VMRunner) executeStartScript() error {
 		// Clean up temp file
 		os.Remove(scriptPath)
 
-	} else if r.startStopScript.StartScript != "" {
+	} else if r.runCfg.StartStopScript.StartScript != "" {
 		// Custom script - pass PCI devices as command-line arguments
-		args := []string{"/bin/bash", r.startStopScript.StartScript, "start"}
-		for _, dev := range r.pciPassthroughConfig.Devices {
+		args := []string{"/bin/bash", r.runCfg.StartStopScript.StartScript, "start"}
+		for _, dev := range r.runCfg.PCIPassthroughConfig.Devices {
 			args = append(args, dev.Address)
 		}
 		cmd := exec.Command(args[0], args[1:]...)
@@ -975,9 +960,9 @@ func (r *VMRunner) executeStartScript() error {
 		<-done2
 		<-done2
 
-		r.logChan <- fmt.Sprintf("[start script] executed: %s", r.startStopScript.StartScript)
+		r.logChan <- fmt.Sprintf("[start script] executed: %s", r.runCfg.StartStopScript.StartScript)
 		if debugMode {
-			log.Printf("[DEBUG] start script executed: %s", r.startStopScript.StartScript)
+			log.Printf("[DEBUG] start script executed: %s", r.runCfg.StartStopScript.StartScript)
 		}
 	}
 
@@ -989,11 +974,11 @@ func (r *VMRunner) executeStartScript() error {
 // executeStopScript executes the stop script after QEMU exits (non-blocking)
 func (r *VMRunner) executeStopScript() {
 	// Skip if no custom script config
-	if r.startStopScript.StopScript == "" && r.startStopScript.UseBuiltin {
+	if r.runCfg.StartStopScript.StopScript == "" && r.runCfg.StartStopScript.UseBuiltin {
 		return
 	}
 
-	if r.startStopScript.UseBuiltin {
+	if r.runCfg.StartStopScript.UseBuiltin {
 		// Generate builtin stop script
 		script := GenerateBuiltinStopScript()
 
@@ -1038,10 +1023,10 @@ func (r *VMRunner) executeStopScript() {
 		// Clean up temp file
 		os.Remove(scriptPath)
 
-	} else if r.startStopScript.StopScript != "" {
+	} else if r.runCfg.StartStopScript.StopScript != "" {
 		// Custom stop script (non-blocking) - pass PCI devices as CLI args
-		args := []string{"/bin/bash", r.startStopScript.StopScript, "stop"}
-		for _, dev := range r.pciPassthroughConfig.Devices {
+		args := []string{"/bin/bash", r.runCfg.StartStopScript.StopScript, "stop"}
+		for _, dev := range r.runCfg.PCIPassthroughConfig.Devices {
 			args = append(args, dev.Address)
 		}
 		cmd := exec.Command(args[0], args[1:]...)
