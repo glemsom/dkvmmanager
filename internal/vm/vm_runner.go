@@ -54,6 +54,7 @@ type VMRunner struct {
 	qmpClient  *QMPClient
 	socketPath string
 	logChan    chan string
+	viewChan   chan string
 	done       chan struct{}
 	mu         sync.Mutex
 	running    bool
@@ -61,6 +62,12 @@ type VMRunner struct {
 	startTime  time.Time
 	memMB      int64       // Memory in MB for VM (dynamically allocated)
 	swtpmProcess *os.Process // swtpm process, if TPM is enabled
+
+	// Persisted log (qemu.log on disk)
+	persistFile  *os.File
+	persistBuf  *bufio.Writer
+	persistQuit chan struct{}
+	persistWg   sync.WaitGroup
 }
 
 // NewVMRunner creates a new VM runner for the given VM with the provided RunConfig.
@@ -68,12 +75,13 @@ type VMRunner struct {
 // topology, pinning, scripts, dry-run). A zero-valued RunConfig is safe to use.
 func NewVMRunner(vm *models.VM, cfg *config.Config, runCfg RunConfig) *VMRunner {
 	r := &VMRunner{
-		vm:      vm,
-		cfg:     cfg,
-		runCfg:  runCfg,
-		logChan: make(chan string, 256),
-		done:    make(chan struct{}),
-		memMB:   hugepages.DefaultMemoryMB, // default, overridden by Start()
+		vm:       vm,
+		cfg:      cfg,
+		runCfg:   runCfg,
+		logChan:  make(chan string, 256),
+		viewChan: make(chan string, 256),
+		done:     make(chan struct{}),
+		memMB:    hugepages.DefaultMemoryMB, // default, overridden by Start()
 	}
 	// Package-level dry-run flag (e.g. from CLI --dry-run) overrides RunConfig
 	if dryRunMode {
@@ -92,7 +100,124 @@ func NewVMRunner(vm *models.VM, cfg *config.Config, runCfg RunConfig) *VMRunner 
 
 // LogChan returns a read-only channel that receives QEMU stdout/stderr lines
 func (r *VMRunner) LogChan() <-chan string {
-	return r.logChan
+	return r.viewChan
+}
+
+// startPersistLog opens the persisted qemu.log and starts the flusher goroutine.
+// The goroutine reads from the internal logChan, writes each line to the file,
+// and forwards it to viewChan for the LogChan() consumer.
+func (r *VMRunner) startPersistLog() error {
+	filePath := filepath.Join(r.getVMDataDir(), "qemu.log")
+
+	// Ensure the VM data directory exists
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return fmt.Errorf("failed to create log directory %s: %w", dir, err)
+	}
+
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open persisted log %s: %w", filePath, err)
+	}
+
+	r.persistFile = f
+	r.persistBuf = bufio.NewWriter(f)
+	r.persistQuit = make(chan struct{})
+	r.persistWg.Add(1)
+	go r.persistLogLoop()
+	return nil
+}
+
+// closePersistLog signals the flusher goroutine to stop, drains remaining lines,
+// flushes the buffered writer, and closes the file. It is safe to call multiple times.
+func (r *VMRunner) closePersistLog() {
+	// Idempotent close of persistQuit
+	if r.persistQuit != nil {
+		select {
+		case <-r.persistQuit:
+			// already closed
+		default:
+			close(r.persistQuit)
+		}
+	}
+	r.persistWg.Wait()
+}
+
+// persistLogLoop is the goroutine that reads lines from logChan, writes them
+// to the persisted file, and forwards them to viewChan. It exits when
+// persistQuit is closed, after draining any remaining lines.
+func (r *VMRunner) persistLogLoop() {
+	defer r.persistWg.Done()
+	defer func() {
+		if r.persistBuf != nil {
+			_ = r.persistBuf.Flush()
+		}
+		if r.persistFile != nil {
+			_ = r.persistFile.Close()
+			r.persistFile = nil
+		}
+		r.persistBuf = nil
+		close(r.viewChan)
+	}()
+
+	for {
+		select {
+		case line, ok := <-r.logChan:
+			if !ok {
+				return
+			}
+			r.writePersistLine(line)
+			r.forwardViewLine(line)
+		case <-r.persistQuit:
+			// Drain any remaining lines from logChan
+			for {
+				select {
+				case line, ok := <-r.logChan:
+					if !ok {
+						return
+					}
+					r.writePersistLine(line)
+					r.forwardViewLine(line)
+				default:
+					return
+				}
+			}
+		}
+	}
+}
+
+// writePersistLine writes a single line to the buffered persisted log file.
+// It flushes periodically (every line) for safety; can be tuned later.
+func (r *VMRunner) writePersistLine(line string) {
+	if r.persistBuf == nil {
+		return
+	}
+	_, err := fmt.Fprintln(r.persistBuf, line)
+	if err != nil {
+		// Write error — log but don't crash the runner. Reset the buffer
+		// so we don't keep trying on a broken file.
+		log.Printf("[WARN] Failed to write persisted log line: %v", err)
+		r.persistBuf = nil
+		return
+	}
+	// Flush every line for testability and crash safety.
+	// Can move to periodic flush if performance requires it.
+	_ = r.persistBuf.Flush()
+}
+
+// forwardViewLine sends a line to the view channel, dropping the oldest
+// line if the channel is full.
+func (r *VMRunner) forwardViewLine(line string) {
+	select {
+	case r.viewChan <- line:
+	default:
+		// Channel full, drop oldest
+		select {
+		case <-r.viewChan:
+		default:
+		}
+		r.viewChan <- line
+	}
 }
 
 // IsRunning returns true if the VM process is still running
@@ -404,6 +529,47 @@ func (r *VMRunner) Start() error {
 	}
 	r.mu.Unlock()
 
+	// Start the persisted log flusher before anything writes to logChan
+	persistStarted := false
+	if err := r.startPersistLog(); err != nil {
+		return fmt.Errorf("failed to start persisted log: %w", err)
+	}
+	persistStarted = true
+
+	// Ensure persist log is cleaned up if Start returns an error (keep alive on success)
+	defer func() {
+		if persistStarted {
+			r.closePersistLog()
+		}
+	}()
+
+	// Build VM data directory path early so we can emit dry-run output
+	vmDataDir := r.getVMDataDir()
+	r.socketPath = filepath.Join("/tmp", fmt.Sprintf("dkvm-%s.sock", r.vm.ID))
+
+	// In dry-run mode, build the QEMU args, emit them as DRY-RUN log lines,
+	// and return without starting any processes or allocating resources.
+	if r.runCfg.DryRun {
+		persistStarted = false // keep persist alive for the view
+		args := r.buildQEMUArgs(vmDataDir)
+		filtered := filterPassthroughArgs(args)
+		fullCmd := fmt.Sprintf("%s %s", r.cfg.QEMUPath, strings.Join(args, " "))
+		filteredCmd := fmt.Sprintf("%s %s", r.cfg.QEMUPath, strings.Join(filtered, " "))
+		log.Printf("[DRY-RUN] Full command: %s", fullCmd)
+		log.Printf("[DRY-RUN] Filtered command: %s", filteredCmd)
+		r.logChan <- "[DRY-RUN] Full QEMU command:"
+		r.logChan <- fullCmd
+		r.logChan <- "[DRY-RUN] Filtered QEMU command (no passthrough):"
+		r.logChan <- filteredCmd
+
+		// Flush the persisted log so the file is available to the caller
+		// but keep the channels open for the view to consume.
+		if r.persistBuf != nil {
+			_ = r.persistBuf.Flush()
+		}
+		return nil
+	}
+
 	// Check hugepages availability for VM memory
 	hugepagesCfg, err := hugepages.NewAutoConfig()
 	if err != nil {
@@ -446,9 +612,6 @@ func (r *VMRunner) Start() error {
 		return fmt.Errorf("start script failed: %w", err)
 	}
 
-	vmDataDir := r.getVMDataDir()
-	r.socketPath = filepath.Join("/tmp", fmt.Sprintf("dkvm-%s.sock", r.vm.ID))
-
 	// Clean up stale socket
 	os.Remove(r.socketPath)
 
@@ -470,21 +633,8 @@ func (r *VMRunner) Start() error {
 	// Build QEMU arguments
 	args := r.buildQEMUArgs(vmDataDir)
 
-	if debugMode || r.runCfg.DryRun {
+	if debugMode {
 		log.Printf("[DEBUG] QEMU command: %s %s", r.cfg.QEMUPath, strings.Join(args, " "))
-	}
-
-	if r.runCfg.DryRun {
-		filtered := filterPassthroughArgs(args)
-		fullCmd := fmt.Sprintf("%s %s", r.cfg.QEMUPath, strings.Join(args, " "))
-		filteredCmd := fmt.Sprintf("%s %s", r.cfg.QEMUPath, strings.Join(filtered, " "))
-		log.Printf("[DRY-RUN] Full command: %s", fullCmd)
-		log.Printf("[DRY-RUN] Filtered command: %s", filteredCmd)
-		r.logChan <- "[DRY-RUN] Full QEMU command:"
-		r.logChan <- fullCmd
-		r.logChan <- "[DRY-RUN] Filtered QEMU command (no passthrough):"
-		r.logChan <- filteredCmd
-		return nil
 	}
 
 	// Create command
@@ -537,6 +687,7 @@ func (r *VMRunner) Start() error {
 	// Wait for QMP socket and connect
 	go r.connectQMP()
 
+	persistStarted = false // keep persist log alive for the running VM
 	return nil
 }
 
@@ -607,6 +758,8 @@ func (r *VMRunner) Cleanup() {
 	}
 	// Ensure TPM process is terminated and state cleaned up
 	r.cleanupTPM()
+	// Close persisted log
+	r.closePersistLog()
 }
 
 // readOutput reads lines from a pipe and sends them to the log channel
@@ -697,6 +850,9 @@ func (r *VMRunner) monitorProcess() {
 
 	// Cleanup TPM process
 	r.cleanupTPM()
+
+	// Close the persisted log (flushes buffered writer to disk)
+	r.closePersistLog()
 
 	close(r.done)
 
