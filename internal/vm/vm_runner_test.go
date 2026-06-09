@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -485,6 +486,223 @@ func TestFilterPassthroughArgs(t *testing.T) {
 			}
 		})
 	}
+}
+
+// --- Persisted log tests (S1) ---
+
+func TestPersistLogWritesLines(t *testing.T) {
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+
+	vm := &models.VM{
+		ID:   "1",
+		Name: "test-vm",
+	}
+
+	runner := NewVMRunner(vm, cfg, RunConfig{})
+
+	// Start the persist log directly
+	if err := runner.startPersistLog(); err != nil {
+		t.Fatalf("startPersistLog() failed: %v", err)
+	}
+
+	// Send lines via logChan
+	runner.logChan <- "[stdout] line one"
+	runner.logChan <- "[stderr] line two"
+	runner.logChan <- "[start] line three"
+
+	// Close persist log to flush and finalize
+	runner.closePersistLog()
+
+	logPath := filepath.Join(dir, "vms", "1", "qemu.log")
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("Expected qemu.log to exist: %v", err)
+	}
+	content := string(data)
+
+	if !containsString(content, "[stdout] line one") {
+		t.Errorf("Expected first line in qemu.log, got:\n%s", content)
+	}
+	if !containsString(content, "[stderr] line two") {
+		t.Errorf("Expected second line in qemu.log, got:\n%s", content)
+	}
+	if !containsString(content, "[start] line three") {
+		t.Errorf("Expected third line in qemu.log, got:\n%s", content)
+	}
+}
+
+func TestPersistLogAppendsOnRestart(t *testing.T) {
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+
+	vm := &models.VM{
+		ID:   "1",
+		Name: "test-vm",
+	}
+
+	// First run
+	runner := NewVMRunner(vm, cfg, RunConfig{})
+	if err := runner.startPersistLog(); err != nil {
+		t.Fatalf("startPersistLog() failed: %v", err)
+	}
+	runner.logChan <- "[stdout] run one line"
+	runner.closePersistLog()
+
+	// Second run — same VM, same file
+	runner2 := NewVMRunner(vm, cfg, RunConfig{})
+	if err := runner2.startPersistLog(); err != nil {
+		t.Fatalf("startPersistLog() for second run failed: %v", err)
+	}
+	runner2.logChan <- "[stdout] run two line"
+	runner2.closePersistLog()
+
+	logPath := filepath.Join(dir, "vms", "1", "qemu.log")
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("Expected qemu.log to exist: %v", err)
+	}
+	content := string(data)
+
+	if !containsString(content, "run one line") {
+		t.Errorf("Expected first run line in qemu.log, got:\n%s", content)
+	}
+	if !containsString(content, "run two line") {
+		t.Errorf("Expected second run line in qemu.log, got:\n%s", content)
+	}
+
+	// Verify order: line 1 before line 2
+	idx1 := findIndex(content, "run one line")
+	idx2 := findIndex(content, "run two line")
+	if idx1 < 0 || idx2 < 0 {
+		t.Fatal("Could not find expected lines in qemu.log")
+	}
+	if idx2 < idx1 {
+		t.Errorf("Second run line appeared before first run line — file was truncated")
+	}
+}
+
+func TestPersistLogSlowFlushDoesNotBlock(t *testing.T) {
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+
+	vm := &models.VM{
+		ID:   "1",
+		Name: "test-vm",
+	}
+
+	runner := NewVMRunner(vm, cfg, RunConfig{})
+	if err := runner.startPersistLog(); err != nil {
+		t.Fatalf("startPersistLog() failed: %v", err)
+	}
+
+	// Send more lines than the buffer (256) without reading from viewChan.
+	// The writers should never block because the flusher's forwardViewLine
+	// has a drop-oldest fallback.
+	done := make(chan struct{})
+	go func() {
+		for i := 0; i < 500; i++ {
+			runner.logChan <- fmt.Sprintf("line %d", i)
+		}
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// All lines sent without blocking
+	case <-time.After(5 * time.Second):
+		t.Fatal("Timed out: logChan send blocked — backpressure not working")
+	}
+
+	runner.closePersistLog()
+
+	// File should exist with some content (may have dropped some lines)
+	logPath := filepath.Join(dir, "vms", "1", "qemu.log")
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("Expected qemu.log to exist: %v", err)
+	}
+	content := string(data)
+
+	// At minimum, the file should not be empty
+	if len(content) == 0 {
+		t.Error("qemu.log should not be empty")
+	}
+}
+
+func TestPersistLogWriteErrorDoesNotCrash(t *testing.T) {
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+
+	vm := &models.VM{
+		ID:   "1",
+		Name: "test-vm",
+	}
+
+	runner := NewVMRunner(vm, cfg, RunConfig{})
+	if err := runner.startPersistLog(); err != nil {
+		t.Fatalf("startPersistLog() failed: %v", err)
+	}
+
+	// Write a valid line first
+	runner.logChan <- "[stdout] before error"
+
+	// Corrupt the persistBuf by setting it to a broken writer
+	// (simulates a write error by making the underlying file unwriteable)
+	runner.persistFile.Close()
+
+	// Now send another line — should not panic, just log and continue
+	runner.logChan <- "[stdout] after error"
+
+	// Close should not panic either
+	runner.closePersistLog()
+
+	// The VM runner should still be usable
+	if runner.VM() != vm {
+		t.Error("Runner should still be usable after write error")
+	}
+}
+
+func findIndex(s, substr string) int {
+	bs := []byte(s)
+	needle := []byte(substr)
+	for i := 0; i <= len(bs)-len(needle); i++ {
+		match := true
+		for j := 0; j < len(needle); j++ {
+			if bs[i+j] != needle[j] {
+				match = false
+				break
+			}
+		}
+		if match {
+			return i
+		}
+	}
+	return -1
 }
 
 // Helper functions
