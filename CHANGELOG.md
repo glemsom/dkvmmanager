@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.24] - 2026-06-09
+
+### Added
+- **RunConfig struct and LoadRunConfigFromRepo helper**: New run configuration persistence for VMs with `LoadRunConfigFromRepo` helper function (`internal/vm/run_config.go`, `internal/vm/run_config_test.go`)
+- **RunConfig wired through NewVMRunner**: `RunConfig` struct is now passed through `NewVMRunner` and used during VM startup (closes #38) (`internal/tui/models/key_handlers.go`, `internal/vm/vm_runner.go`, `internal/vm/vm_runner_config.go`, etc.)
+- **Charmbracelet library migration from v1 to v2**: Migrated `bubbles`, `bubbletea`, and `lipgloss` libraries to their v2 APIs across the entire codebase
+- **Key event handling migrated from Bubble Tea v1 to v2**: Updated all key event handlers to use the new Bubble Tea v2 `tea.KeyMsg` API
+
+### Changed
+- **Charmbracelet v2 migration audit**: Added audit document tracking v2 migration status (closes #42) (`docs/charmbracelet-v2-migration-audit.md`)
+
+### Fixed
+- **Mouse event forwarding tests for Bubble Tea v2**: Added tests for proper mouse event routing in the form framework (closes #45) (`internal/tui/models/form/form_test.go`)
+- **Bubbles table and viewport v2 API usage**: Updated table and viewport usage to match v2 API (closes #46) (`internal/tui/components/vm_table.go`, `internal/tui/models/vm_running_test.go`)
+- **View tests for Lip Gloss v2 ANSI rendering**: Updated test assertions to match Lip Gloss v2 ANSI rendering output (`internal/tui/components/breadcrumbs_test.go`, `internal/tui/components/statusbar_test.go`, `internal/tui/components/tabs_test.go`)
+
 ## [0.1.22] - 2026-05-31
 
 ### Fixed
@@ -231,7 +247,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.22...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.24...HEAD
+[0.1.24]: https://github.com/glemsom/dkvmmanager/compare/v0.1.23...v0.1.24
 [0.1.22]: https://github.com/glemsom/dkvmmanager/compare/v0.1.21...v0.1.22
 [0.1.21]: https://github.com/glemsom/dkvmmanager/compare/v0.1.19...v0.1.21
 [0.1.19]: https://github.com/glemsom/dkvmmanager/compare/v0.1.18...v0.1.19
