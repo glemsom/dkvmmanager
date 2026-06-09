@@ -11,7 +11,7 @@ func (m *BlockDeviceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKeyPress(msg)
 	case BlockDeviceLoadedMsg:
 		// Devices already loaded via side effect in loadDevices command.
@@ -40,7 +40,7 @@ func (m *BlockDeviceModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.selectedIndex++
 		}
 
-	case "enter", " ", "space":
+	case "enter", "space":
 		return m.handleEnter()
 	}
 
@@ -75,7 +75,7 @@ func (m *AddDiskModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		// Delegate to internal models when in step 1, 2, or 3
 		if m.step == 1 && m.fileBrowser != nil {
 			inner, cmd := m.fileBrowser.Update(msg)
@@ -122,7 +122,7 @@ func (m *AddDiskModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.selectedIndex++
 		}
 
-	case "enter", " ", "space":
+	case "enter", "space":
 		return m.handleEnter()
 	}
 

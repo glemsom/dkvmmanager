@@ -296,9 +296,9 @@ func (m *StartStopScriptFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
-		case "enter", " ", "space":
+		case "enter", "space":
 			// Enter or Space toggles the mode when focused on toggle
 			// or opens file browser when focused on browse buttons
 			return m.handleEnter()

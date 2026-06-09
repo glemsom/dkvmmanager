@@ -154,7 +154,7 @@ func (m *LVMVolumeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKeyPress(msg)
 	case LVMVolumeLoadedMsg:
 		// Volumes already loaded via side effect in loadVolumes command.
@@ -183,7 +183,7 @@ func (m *LVMVolumeModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.selectedIndex++
 		}
 
-	case "enter", " ", "space":
+	case "enter", "space":
 		return m.handleEnter()
 	}
 
