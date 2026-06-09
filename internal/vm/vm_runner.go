@@ -54,7 +54,6 @@ type VMRunner struct {
 	qmpClient  *QMPClient
 	socketPath string
 	logChan    chan string
-	viewChan   chan string
 	done       chan struct{}
 	mu         sync.Mutex
 	running    bool
@@ -62,6 +61,14 @@ type VMRunner struct {
 	startTime  time.Time
 	memMB      int64       // Memory in MB for VM (dynamically allocated)
 	swtpmProcess *os.Process // swtpm process, if TPM is enabled
+
+	// Subscriber-based log dispatch (S2: replaces single viewChan)
+	subscribers map[chan string]struct{}
+	subsMu      sync.Mutex
+	// Staging buffer: holds recent lines when no subscribers exist.
+	// Drained into new subscriber channels on Subscribe().
+	staging    []string
+	stagingMax int
 
 	// Persisted log (qemu.log on disk)
 	persistFile  *os.File
@@ -75,13 +82,14 @@ type VMRunner struct {
 // topology, pinning, scripts, dry-run). A zero-valued RunConfig is safe to use.
 func NewVMRunner(vm *models.VM, cfg *config.Config, runCfg RunConfig) *VMRunner {
 	r := &VMRunner{
-		vm:       vm,
-		cfg:      cfg,
-		runCfg:   runCfg,
-		logChan:  make(chan string, 256),
-		viewChan: make(chan string, 256),
-		done:     make(chan struct{}),
-		memMB:    hugepages.DefaultMemoryMB, // default, overridden by Start()
+		vm:          vm,
+		cfg:         cfg,
+		runCfg:      runCfg,
+		logChan:     make(chan string, 256),
+		done:        make(chan struct{}),
+		memMB:       hugepages.DefaultMemoryMB, // default, overridden by Start()
+		subscribers: make(map[chan string]struct{}),
+		stagingMax:  256,
 	}
 	// Package-level dry-run flag (e.g. from CLI --dry-run) overrides RunConfig
 	if dryRunMode {
@@ -98,14 +106,67 @@ func NewVMRunner(vm *models.VM, cfg *config.Config, runCfg RunConfig) *VMRunner 
 
 
 
-// LogChan returns a read-only channel that receives QEMU stdout/stderr lines
-func (r *VMRunner) LogChan() <-chan string {
-	return r.viewChan
+// Subscribe returns a fresh buffered channel that receives new log lines.
+// The channel is closed when the runner exits. This replaces LogChan().
+//
+// Drain-on-subscribe: before registering the new subscriber, any lines
+// accumulated in the staging buffer (held because no subscriber was present)
+// are drained into the new channel so the subscriber sees a continuous stream
+// from the moment of the call.
+func (r *VMRunner) Subscribe() <-chan string {
+	ch := make(chan string, 256)
+
+	r.subsMu.Lock()
+	// Drain staging buffer into the new channel
+	for _, line := range r.staging {
+		select {
+		case ch <- line:
+		default:
+			select { case <-ch: default: }
+			ch <- line
+		}
+	}
+	r.staging = nil
+	r.subscribers[ch] = struct{}{}
+	r.subsMu.Unlock()
+
+	return ch
+}
+
+// RecentLog returns the last n lines from the persisted qemu.log file.
+// Returns fewer lines if the file is shorter, or an error if the file
+// cannot be read. A non-existent file returns nil, nil (no lines, no error).
+func (r *VMRunner) RecentLog(n int) ([]string, error) {
+	filePath := filepath.Join(r.getVMDataDir(), "qemu.log")
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to open persisted log %s: %w", filePath, err)
+	}
+	defer f.Close()
+
+	// Read all lines, keep only the last n
+	var allLines []string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		allLines = append(allLines, scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("failed to read persisted log %s: %w", filePath, err)
+	}
+
+	if len(allLines) <= n {
+		return allLines, nil
+	}
+	return allLines[len(allLines)-n:], nil
 }
 
 // startPersistLog opens the persisted qemu.log and starts the flusher goroutine.
 // The goroutine reads from the internal logChan, writes each line to the file,
-// and forwards it to viewChan for the LogChan() consumer.
+// and forwards it to all registered subscriber channels.
 func (r *VMRunner) startPersistLog() error {
 	filePath := filepath.Join(r.getVMDataDir(), "qemu.log")
 
@@ -144,8 +205,8 @@ func (r *VMRunner) closePersistLog() {
 }
 
 // persistLogLoop is the goroutine that reads lines from logChan, writes them
-// to the persisted file, and forwards them to viewChan. It exits when
-// persistQuit is closed, after draining any remaining lines.
+// to the persisted file, and forwards them to all subscriber channels.
+// It exits when persistQuit is closed, after draining any remaining lines.
 func (r *VMRunner) persistLogLoop() {
 	defer r.persistWg.Done()
 	defer func() {
@@ -157,7 +218,13 @@ func (r *VMRunner) persistLogLoop() {
 			r.persistFile = nil
 		}
 		r.persistBuf = nil
-		close(r.viewChan)
+		// Close all subscriber channels and clear the map
+		r.subsMu.Lock()
+		for ch := range r.subscribers {
+			close(ch)
+		}
+		r.subscribers = make(map[chan string]struct{})
+		r.subsMu.Unlock()
 	}()
 
 	for {
@@ -205,18 +272,33 @@ func (r *VMRunner) writePersistLine(line string) {
 	_ = r.persistBuf.Flush()
 }
 
-// forwardViewLine sends a line to the view channel, dropping the oldest
-// line if the channel is full.
+// forwardViewLine sends a line to all registered subscriber channels.
+// If no subscribers exist, the line is buffered in the staging buffer
+// (up to stagingMax) for future subscribers to drain.
 func (r *VMRunner) forwardViewLine(line string) {
-	select {
-	case r.viewChan <- line:
-	default:
-		// Channel full, drop oldest
-		select {
-		case <-r.viewChan:
-		default:
+	r.subsMu.Lock()
+	defer r.subsMu.Unlock()
+
+	if len(r.subscribers) == 0 {
+		// No subscribers yet, buffer in staging
+		r.staging = append(r.staging, line)
+		if len(r.staging) > r.stagingMax {
+			r.staging = r.staging[len(r.staging)-r.stagingMax:]
 		}
-		r.viewChan <- line
+		return
+	}
+
+	for ch := range r.subscribers {
+		select {
+		case ch <- line:
+		default:
+			// Channel full, drop oldest
+			select {
+			case <-ch:
+			default:
+			}
+			ch <- line
+		}
 	}
 }
 

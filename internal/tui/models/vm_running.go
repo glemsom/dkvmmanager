@@ -39,6 +39,12 @@ type VMLogMsg struct {
 	Line string
 }
 
+// LogSeedMsg is sent after seeding the log buffer from the persisted file.
+// It carries the lines read from the persisted log to initialize the view.
+type LogSeedMsg struct {
+	Lines []string
+}
+
 // VMStatusUpdateMsg is sent periodically to refresh VM status
 type VMStatusUpdateMsg struct {
 	Status  string
@@ -58,6 +64,9 @@ type VMRunningModel struct {
 	// Log lines accumulated
 	logLines    []string
 	maxLogLines int
+
+	// Subscribed log channel (from runner.Subscribe())
+	logSub <-chan string
 
 	// Status
 	status  string
@@ -86,11 +95,31 @@ func NewVMRunningModel(vmObj *models.VM, runner *vm.VMRunner) *VMRunningModel {
 // Init initializes the model
 func (m *VMRunningModel) Init() tea.Cmd {
 	return tea.Batch(
-		m.waitForLog(),
+		m.seedAndSubscribe(), // seed from persisted log, then subscribe
 		m.waitForVMExit(),
 		m.pollStatus(),      // periodic (500ms)
 		m.initialStatus(),   // immediate
 	)
+}
+
+// seedAndSubscribe reads the last N lines from the persisted log, seeds the
+// ring buffer, then subscribes to the live log stream. The drain-on-subscribe
+// semantic in the runner ensures that any lines buffered between the file read
+// and the subscription are delivered before new live lines.
+func (m *VMRunningModel) seedAndSubscribe() tea.Cmd {
+	return func() tea.Msg {
+		if m.runner == nil {
+			return nil
+		}
+
+		// Read the last 500 lines from the persisted log
+		lines, _ := m.runner.RecentLog(500)
+
+		// Subscribe to live log (drains any buffered lines first)
+		m.logSub = m.runner.Subscribe()
+
+		return LogSeedMsg{Lines: lines}
+	}
 }
 
 // initialStatus performs an immediate status check and returns a command
@@ -119,15 +148,16 @@ func (m *VMRunningModel) initialStatus() tea.Cmd {
 	}
 }
 
-// waitForLog returns a tea.Cmd that reads one log line from the runner
+// waitForLog returns a tea.Cmd that reads one log line from the subscribed channel.
+// The subscription is set up by seedAndSubscribe during Init.
 func (m *VMRunningModel) waitForLog() tea.Cmd {
 	return func() tea.Msg {
-		// Guard against nil runner
-		if m.runner == nil {
-			return nil // no-op until runner is set
+		// Guard against nil runner or not-yet-subscribed channel
+		if m.runner == nil || m.logSub == nil {
+			return nil // no-op until runner and subscription are set
 		}
 
-		line, ok := <-m.runner.LogChan()
+		line, ok := <-m.logSub
 		if !ok {
 			return VMLogMsg{Line: ""}
 		}
@@ -211,14 +241,41 @@ func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.calculateLayout()
 		return m, nil
 
-	case VMLogMsg:
-		if msg.Line != "" {
-			m.logLines = append(m.logLines, msg.Line)
-			if len(m.logLines) > m.maxLogLines {
-				m.logLines = m.logLines[len(m.logLines)-m.maxLogLines:]
+	case LogSeedMsg:
+		// Seed the ring buffer from the persisted log tail
+		if len(msg.Lines) > 0 {
+			// Keep at most maxLogLines
+			if len(msg.Lines) > m.maxLogLines {
+				msg.Lines = msg.Lines[len(msg.Lines)-m.maxLogLines:]
 			}
+			m.logLines = msg.Lines
 			m.updateViewport()
 			m.vp.GotoBottom()
+		}
+		// Now start reading from the subscribed channel
+		return m, m.waitForLog()
+
+	case VMLogMsg:
+		if msg.Line != "" {
+			// Dedup: skip if line already appears in the tail of the buffer.
+			// Prevents overlap between the persisted file tail (seeded via
+			// LogSeedMsg) and the staging buffer drained by Subscribe().
+			// Check last 20 lines to catch multi-line overlap at the boundary.
+			isDup := false
+			for i := len(m.logLines) - 1; i >= 0 && i >= len(m.logLines)-20; i-- {
+				if m.logLines[i] == msg.Line {
+					isDup = true
+					break
+				}
+			}
+			if !isDup {
+				m.logLines = append(m.logLines, msg.Line)
+				if len(m.logLines) > m.maxLogLines {
+					m.logLines = m.logLines[len(m.logLines)-m.maxLogLines:]
+				}
+				m.updateViewport()
+				m.vp.GotoBottom()
+			}
 		}
 		// If line is empty, channel was closed - don't re-poll
 		if msg.Line == "" {
@@ -241,7 +298,7 @@ func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.status = "starting" // will be updated by initialStatus
 		m.pollingSince = time.Now()
 		return m, tea.Batch(
-			m.waitForLog(),
+			m.seedAndSubscribe(),
 			m.waitForVMExit(),
 			m.pollStatus(),
 			m.initialStatus(),
