@@ -56,7 +56,7 @@ func (m *MountPointWarningModel) Init() tea.Cmd {
 // Update handles incoming messages.
 func (m *MountPointWarningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKeyPress(msg)
 	}
 
@@ -66,7 +66,7 @@ func (m *MountPointWarningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // handleKeyPress handles keyboard input.
 func (m *MountPointWarningModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "enter", " ", "space", "esc":
+	case "enter", "space", "esc":
 		// Dismiss the warning and return to the main menu
 		return m, func() tea.Msg {
 			return ViewChangeMsg{View: ViewMainMenu}

@@ -138,7 +138,7 @@ func (sf *ScrollableForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		sf.syncViewport()
 		return sf, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return sf.handleKey(msg)
 
 	case tea.MouseMsg:
@@ -223,7 +223,7 @@ func (sf *ScrollableForm) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		sf.vp.HalfPageDown()
 		return sf, nil
 
-	case " ", "space":
+	case "space":
 		if sh, ok := sf.model.(spaceHandler); ok {
 			pos := sf.currentPos()
 			sh.HandleSpace(pos)

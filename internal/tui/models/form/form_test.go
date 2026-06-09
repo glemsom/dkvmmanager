@@ -754,3 +754,145 @@ func TestScrollableForm_HeaderLines_WithTrailingNewline(t *testing.T) {
 		t.Fatal("expected viewport to be ready after SetSize")
 	}
 }
+
+// --- Mouse event forwarding (v2 compatibility) ---
+
+func TestScrollableForm_MouseWheel_ScrollsViewportDown(t *testing.T) {
+	// Build form with content taller than viewport
+	mock := &multiLineFormModel{
+		header: "A\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\nM\nN\nO\nP\nQ\nR\nS\nT",
+		footer: "footer",
+		positions: []FocusPos{
+			{Kind: FocusText, Label: "Name", Key: "name"},
+		},
+		focusIndex: 0,
+		positionLines: map[string]string{
+			"name": "Name: [     ]",
+		},
+	}
+	sf := NewScrollableForm(mock)
+
+	// Set a small viewport so content doesn't fully fit
+	sf.SetSize(40, 5)
+
+	initialOffset := sf.vp.YOffset()
+
+	// Send a mouse wheel down message
+	msg := tea.MouseWheelMsg{Button: tea.MouseWheelDown}
+	result, _ := sf.Update(msg)
+	sf = result.(*ScrollableForm)
+
+	// Viewport should have scrolled down
+	if sf.vp.YOffset() <= initialOffset {
+		t.Errorf("MouseWheelDown should scroll viewport down: offset changed from %d to %d",
+			initialOffset, sf.vp.YOffset())
+	}
+}
+
+func TestScrollableForm_MouseWheel_ScrollsViewportUp(t *testing.T) {
+	mock := &multiLineFormModel{
+		header: "A\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\nM\nN\nO\nP\nQ\nR\nS\nT",
+		footer: "footer",
+		positions: []FocusPos{
+			{Kind: FocusText, Label: "Name", Key: "name"},
+		},
+		focusIndex: 0,
+		positionLines: map[string]string{
+			"name": "Name: [     ]",
+		},
+	}
+	sf := NewScrollableForm(mock)
+	sf.SetSize(40, 5)
+
+	// First scroll down to have room to scroll up
+	sf.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
+	sf.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
+	sf.Update(tea.MouseWheelMsg{Button: tea.MouseWheelDown})
+
+	scrolledOffset := sf.vp.YOffset()
+
+	// Send a mouse wheel up message
+	result, _ := sf.Update(tea.MouseWheelMsg{Button: tea.MouseWheelUp})
+	sf = result.(*ScrollableForm)
+
+	// Viewport should have scrolled up (offset decreased)
+	if sf.vp.YOffset() >= scrolledOffset {
+		t.Errorf("MouseWheelUp should scroll viewport up: offset %d, expected < %d",
+			sf.vp.YOffset(), scrolledOffset)
+	}
+}
+
+func TestScrollableForm_MouseClick_DoesNotCrash(t *testing.T) {
+	// Verify that non-wheel mouse messages (MouseClickMsg, etc.) are
+	// safely forwarded to viewport without causing a panic or crash.
+	mock := &multiLineFormModel{
+		header: "Header",
+		footer: "footer",
+		positions: []FocusPos{
+			{Kind: FocusText, Label: "Name", Key: "name"},
+		},
+		focusIndex: 0,
+		positionLines: map[string]string{
+			"name": "Name: [     ]",
+		},
+	}
+	sf := NewScrollableForm(mock)
+	sf.SetSize(40, 10)
+
+	// MouseClickMsg implements MouseMsg; forwarding to viewport must not crash
+	result, cmd := sf.Update(tea.MouseClickMsg{Button: tea.MouseLeft})
+	if result == nil {
+		t.Fatal("expected non-nil model after MouseClickMsg")
+	}
+	if cmd != nil {
+		t.Errorf("expected nil cmd from MouseClickMsg, got %v", cmd)
+	}
+}
+
+func TestScrollableForm_MouseRelease_DoesNotCrash(t *testing.T) {
+	mock := &multiLineFormModel{
+		header: "Header",
+		footer: "footer",
+		positions: []FocusPos{
+			{Kind: FocusText, Label: "Name", Key: "name"},
+		},
+		focusIndex: 0,
+		positionLines: map[string]string{
+			"name": "Name: [     ]",
+		},
+	}
+	sf := NewScrollableForm(mock)
+	sf.SetSize(40, 10)
+
+	result, cmd := sf.Update(tea.MouseReleaseMsg{})
+	if result == nil {
+		t.Fatal("expected non-nil model after MouseReleaseMsg")
+	}
+	if cmd != nil {
+		t.Errorf("expected nil cmd from MouseReleaseMsg, got %v", cmd)
+	}
+}
+
+func TestScrollableForm_MouseMotion_DoesNotCrash(t *testing.T) {
+	mock := &multiLineFormModel{
+		header: "Header",
+		footer: "footer",
+		positions: []FocusPos{
+			{Kind: FocusText, Label: "Name", Key: "name"},
+		},
+		focusIndex: 0,
+		positionLines: map[string]string{
+			"name": "Name: [     ]",
+		},
+	}
+	sf := NewScrollableForm(mock)
+	sf.SetSize(40, 10)
+
+	result, cmd := sf.Update(tea.MouseMotionMsg{})
+	if result == nil {
+		t.Fatal("expected non-nil model after MouseMotionMsg")
+	}
+	if cmd != nil {
+		t.Errorf("expected nil cmd from MouseMotionMsg, got %v", cmd)
+	}
+}

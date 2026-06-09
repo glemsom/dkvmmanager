@@ -32,6 +32,7 @@ func NewVMTable(vms []models.VM, width, height int) *VMTable {
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
+		table.WithWidth(width),
 		table.WithHeight(height),
 	)
 

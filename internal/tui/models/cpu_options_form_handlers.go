@@ -29,7 +29,7 @@ func (m *CPUOptionsFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "pgdown":
 		m.vp.HalfPageDown()
 		return m, nil
-	case "enter", " ", "space":
+	case "enter", "space":
 		return m.handleEnterKey()
 	case "backspace":
 		m.handleBackspaceKey()

@@ -68,7 +68,7 @@ func (m *VMDeleteModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKeyPress(msg)
 	}
 
@@ -88,7 +88,7 @@ func (m *VMDeleteModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.selectedIndex++
 		}
 
-	case "enter", " ", "space":
+	case "enter", "space":
 		if m.selectedIndex == 0 {
 			// No - cancel deletion
 			if m.debugMode {

@@ -29,7 +29,7 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// If file browser is active in the sub-view, let ESC pass through
 	// so the form can close the browser instead of exiting the sub-view.
 	if m.isSubViewActive() {
-		if km, ok := msg.(tea.KeyMsg); ok && km.String() == "esc" {
+		if km, ok := msg.(tea.KeyPressMsg); ok && km.String() == "esc" {
 			if !m.isFileBrowserActiveInSubView() {
 				if m.currentView == ViewVMRunning && m.vmRunningModel != nil {
 					// VMRunning view: never allow ESC to leave - backgrounding disabled
@@ -208,7 +208,7 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKeyPress(msg)
 	case tea.WindowSizeMsg:
 		m.windowWidth = msg.Width
@@ -274,7 +274,7 @@ func (m *MainModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// Enter or Space key
-	if keyStr == "enter" || keyStr == " " {
+	if keyStr == "enter" || keyStr == "space" {
 		return m.handleMenuSelection()
 	}
 
@@ -542,7 +542,7 @@ func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ViewVMSelect:
 		m.ensureVMSelectList()
 		// Handle Enter or Space key to navigate to delete/edit confirmation
-		if km, ok := msg.(tea.KeyMsg); ok && (km.String() == "enter" || km.String() == " ") {
+		if km, ok := msg.(tea.KeyPressMsg); ok && (km.String() == "enter" || km.String() == "space") {
 			selectedIndex := m.vmSelectList.Index()
 			if selectedIndex >= 0 && selectedIndex < len(m.vmListForSelection) {
 				selectedVM := m.vmListForSelection[selectedIndex]

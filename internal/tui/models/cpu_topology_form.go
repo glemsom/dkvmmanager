@@ -356,7 +356,7 @@ func (m *CPUTopologyFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.SetSize(msg.Width, msg.Height)
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 
 	case tea.MouseMsg:
@@ -399,7 +399,7 @@ func (m *CPUTopologyFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "pgdown":
 		m.vp.HalfPageDown()
 		return m, nil
-	case "enter", " ", "space":
+	case "enter", "space":
 		return m.handleEnterKey()
 	}
 	return m, nil

@@ -202,7 +202,7 @@ func (m *VMRunningModel) pollStatus() tea.Cmd {
 // Update handles incoming messages
 func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKeyPress(msg)
 
 	case tea.WindowSizeMsg:

@@ -86,7 +86,7 @@ func (m *FileBrowserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKeyPress(msg)
 	case DirectoryLoadedMsg:
 		// Directory already loaded via side effect in loadDirectory command.
@@ -119,7 +119,7 @@ func (m *FileBrowserModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		return m.handleEnter()
 
-	case " ", "space":
+	case "space":
 		return m.handleEnter()
 
 	case "backspace":

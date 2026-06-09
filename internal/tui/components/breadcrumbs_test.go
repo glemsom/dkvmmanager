@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func TestNewBreadcrumbs(t *testing.T) {
@@ -386,12 +387,12 @@ func TestRenderSingleItem(t *testing.T) {
 	result := bc.Render()
 
 	// Should contain the label
-	if !strings.Contains(result, "Home") {
+	if !strings.Contains(ansi.Strip(result), "Home") {
 		t.Error("Render result does not contain 'Home'")
 	}
 
 	// Should not contain separator for single item
-	if strings.Contains(result, " > ") {
+	if strings.Contains(ansi.Strip(result), " > ") {
 		t.Error("Render result should not contain separator for single item")
 	}
 }
@@ -406,18 +407,18 @@ func TestRenderMultipleItems(t *testing.T) {
 	result := bc.Render()
 
 	// Should contain all labels
-	if !strings.Contains(result, "Home") {
+	if !strings.Contains(ansi.Strip(result), "Home") {
 		t.Error("Render result does not contain 'Home'")
 	}
-	if !strings.Contains(result, "Start VM") {
+	if !strings.Contains(ansi.Strip(result), "Start VM") {
 		t.Error("Render result does not contain 'VMs'")
 	}
-	if !strings.Contains(result, "VM Details") {
+	if !strings.Contains(ansi.Strip(result), "VM Details") {
 		t.Error("Render result does not contain 'VM Details'")
 	}
 
 	// Should contain separators
-	separatorCount := strings.Count(result, " > ")
+	separatorCount := strings.Count(ansi.Strip(result), " > ")
 	if separatorCount != 2 {
 		t.Errorf("Expected 2 separators, got %d", separatorCount)
 	}
@@ -432,16 +433,16 @@ func TestRenderStyling(t *testing.T) {
 	result := bc.Render()
 
 	// The result should contain the labels
-	if !strings.Contains(result, "Home") {
+	if !strings.Contains(ansi.Strip(result), "Home") {
 		t.Error("Render result does not contain 'Home'")
 	}
 
-	if !strings.Contains(result, "Start VM") {
+	if !strings.Contains(ansi.Strip(result), "Start VM") {
 		t.Error("Render result does not contain 'VMs'")
 	}
 
 	// Should contain the separator
-	if !strings.Contains(result, " > ") {
+	if !strings.Contains(ansi.Strip(result), " > ") {
 		t.Error("Render result does not contain separator")
 	}
 }
@@ -455,7 +456,7 @@ func TestRenderCurrentItemStyling(t *testing.T) {
 	result := bc.Render()
 
 	// The current item (last) should be present
-	if !strings.Contains(result, "Start VM") {
+	if !strings.Contains(ansi.Strip(result), "Start VM") {
 		t.Error("Render result does not contain current item 'VMs'")
 	}
 }
@@ -470,11 +471,11 @@ func TestRenderClickableItemsStyling(t *testing.T) {
 	result := bc.Render()
 
 	// Clickable items (before current) should be present
-	if !strings.Contains(result, "Home") {
+	if !strings.Contains(ansi.Strip(result), "Home") {
 		t.Error("Render result does not contain clickable item 'Home'")
 	}
 
-	if !strings.Contains(result, "Start VM") {
+	if !strings.Contains(ansi.Strip(result), "Start VM") {
 		t.Error("Render result does not contain clickable item 'VMs'")
 	}
 }
@@ -498,12 +499,12 @@ func TestRenderAfterStateChange(t *testing.T) {
 	}
 
 	// First result should not contain "VM Details"
-	if strings.Contains(result1, "VM Details") {
+	if strings.Contains(ansi.Strip(result1), "VM Details") {
 		t.Error("First render should not contain 'VM Details'")
 	}
 
 	// Second result should contain "VM Details"
-	if !strings.Contains(result2, "VM Details") {
+	if !strings.Contains(ansi.Strip(result2), "VM Details") {
 		t.Error("Second render should contain 'VM Details'")
 	}
 }
@@ -519,7 +520,7 @@ func TestRenderConsistency(t *testing.T) {
 	result1 := bc.Render()
 	result2 := bc.Render()
 
-	if result1 != result2 {
+	if ansi.Strip(result1) != ansi.Strip(result2) {
 		t.Error("Render should produce consistent results for same input")
 	}
 }
@@ -563,12 +564,12 @@ func TestRenderAfterRemoveItem(t *testing.T) {
 	}
 
 	// First result should contain "Start VM"
-	if !strings.Contains(result1, "Start VM") {
+	if !strings.Contains(ansi.Strip(result1), "Start VM") {
 		t.Error("First render should contain 'VMs'")
 	}
 
 	// Second result should not contain "Start VM"
-	if strings.Contains(result2, "Start VM") {
+	if strings.Contains(ansi.Strip(result2), "Start VM") {
 		t.Error("Second render should not contain 'VMs'")
 	}
 }
@@ -589,23 +590,23 @@ func TestRenderAfterSetCurrent(t *testing.T) {
 	result2 := bc.Render()
 
 	// Both results should contain all labels
-	if !strings.Contains(result1, "Home") {
+	if !strings.Contains(ansi.Strip(result1), "Home") {
 		t.Error("First render should contain 'Home'")
 	}
-	if !strings.Contains(result1, "Start VM") {
+	if !strings.Contains(ansi.Strip(result1), "Start VM") {
 		t.Error("First render should contain 'VMs'")
 	}
-	if !strings.Contains(result1, "VM Details") {
+	if !strings.Contains(ansi.Strip(result1), "VM Details") {
 		t.Error("First render should contain 'VM Details'")
 	}
 
-	if !strings.Contains(result2, "Home") {
+	if !strings.Contains(ansi.Strip(result2), "Home") {
 		t.Error("Second render should contain 'Home'")
 	}
-	if !strings.Contains(result2, "Start VM") {
+	if !strings.Contains(ansi.Strip(result2), "Start VM") {
 		t.Error("Second render should contain 'VMs'")
 	}
-	if !strings.Contains(result2, "VM Details") {
+	if !strings.Contains(ansi.Strip(result2), "VM Details") {
 		t.Error("Second render should contain 'VM Details'")
 	}
 }
@@ -638,13 +639,13 @@ func TestRenderWithSpecialCharacters(t *testing.T) {
 	result := bc.Render()
 
 	// Should contain all labels with special characters
-	if !strings.Contains(result, "Home") {
+	if !strings.Contains(ansi.Strip(result), "Home") {
 		t.Error("Render result does not contain 'Home'")
 	}
-	if !strings.Contains(result, "VM's Details") {
+	if !strings.Contains(ansi.Strip(result), "VM's Details") {
 		t.Error("Render result does not contain 'VM's Details'")
 	}
-	if !strings.Contains(result, "Settings & Config") {
+	if !strings.Contains(ansi.Strip(result), "Settings & Config") {
 		t.Error("Render result does not contain 'Settings & Config'")
 	}
 }
@@ -658,7 +659,7 @@ func TestRenderWithEmptyLabel(t *testing.T) {
 	result := bc.Render()
 
 	// Should still render with empty label
-	if !strings.Contains(result, "Start VM") {
+	if !strings.Contains(ansi.Strip(result), "Start VM") {
 		t.Error("Render result does not contain 'VMs'")
 	}
 }
@@ -673,7 +674,7 @@ func TestRenderWithLongLabel(t *testing.T) {
 	result := bc.Render()
 
 	// Should contain the long label
-	if !strings.Contains(result, longLabel) {
+	if !strings.Contains(ansi.Strip(result), longLabel) {
 		t.Error("Render result does not contain long label")
 	}
 }
@@ -687,16 +688,16 @@ func TestRenderColorCodes(t *testing.T) {
 	result := bc.Render()
 
 	// Verify that the labels are present
-	if !strings.Contains(result, "Home") {
+	if !strings.Contains(ansi.Strip(result), "Home") {
 		t.Error("Render result does not contain 'Home'")
 	}
 
-	if !strings.Contains(result, "Start VM") {
+	if !strings.Contains(ansi.Strip(result), "Start VM") {
 		t.Error("Render result does not contain 'VMs'")
 	}
 
 	// Verify that the separator is present
-	if !strings.Contains(result, " > ") {
+	if !strings.Contains(ansi.Strip(result), " > ") {
 		t.Error("Render result does not contain separator")
 	}
 }
@@ -723,7 +724,7 @@ func TestRenderSeparatorCount(t *testing.T) {
 			}
 
 			result := bc.Render()
-			separatorCount := strings.Count(result, " > ")
+			separatorCount := strings.Count(ansi.Strip(result), " > ")
 
 			if separatorCount != tt.expectedSeparator {
 				t.Errorf("Expected %d separators, got %d", tt.expectedSeparator, separatorCount)
@@ -767,18 +768,18 @@ func TestRenderAfterMultipleOperations(t *testing.T) {
 	result := bc.Render()
 
 	// Should contain expected items
-	if !strings.Contains(result, "Home") {
+	if !strings.Contains(ansi.Strip(result), "Home") {
 		t.Error("Render result does not contain 'Home'")
 	}
-	if !strings.Contains(result, "VM Details") {
+	if !strings.Contains(ansi.Strip(result), "VM Details") {
 		t.Error("Render result does not contain 'VM Details'")
 	}
-	if !strings.Contains(result, "Settings") {
+	if !strings.Contains(ansi.Strip(result), "Settings") {
 		t.Error("Render result does not contain 'Settings'")
 	}
 
 	// Should not contain removed item
-	if strings.Contains(result, "Start VM") {
+	if strings.Contains(ansi.Strip(result), "Start VM") {
 		t.Error("Render result should not contain 'VMs' after removal")
 	}
 }

@@ -313,7 +313,7 @@ func TestVMRunningModelKeyCtrlCWhenRunning(t *testing.T) {
 func TestVMRunningModelViewportScroll(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	m.updateViewport()
-	initialOffset := m.vp.YOffset
+	initialOffset := m.vp.YOffset()
 	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = updated.(*VMRunningModel)
 	_ = initialOffset
