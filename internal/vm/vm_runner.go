@@ -530,8 +530,44 @@ func (r *VMRunner) Start() error {
 	r.mu.Unlock()
 
 	// Start the persisted log flusher before anything writes to logChan
+	persistStarted := false
 	if err := r.startPersistLog(); err != nil {
 		return fmt.Errorf("failed to start persisted log: %w", err)
+	}
+	persistStarted = true
+
+	// Ensure persist log is cleaned up if Start returns an error (keep alive on success)
+	defer func() {
+		if persistStarted {
+			r.closePersistLog()
+		}
+	}()
+
+	// Build VM data directory path early so we can emit dry-run output
+	vmDataDir := r.getVMDataDir()
+	r.socketPath = filepath.Join("/tmp", fmt.Sprintf("dkvm-%s.sock", r.vm.ID))
+
+	// In dry-run mode, build the QEMU args, emit them as DRY-RUN log lines,
+	// and return without starting any processes or allocating resources.
+	if r.runCfg.DryRun {
+		persistStarted = false // keep persist alive for the view
+		args := r.buildQEMUArgs(vmDataDir)
+		filtered := filterPassthroughArgs(args)
+		fullCmd := fmt.Sprintf("%s %s", r.cfg.QEMUPath, strings.Join(args, " "))
+		filteredCmd := fmt.Sprintf("%s %s", r.cfg.QEMUPath, strings.Join(filtered, " "))
+		log.Printf("[DRY-RUN] Full command: %s", fullCmd)
+		log.Printf("[DRY-RUN] Filtered command: %s", filteredCmd)
+		r.logChan <- "[DRY-RUN] Full QEMU command:"
+		r.logChan <- fullCmd
+		r.logChan <- "[DRY-RUN] Filtered QEMU command (no passthrough):"
+		r.logChan <- filteredCmd
+
+		// Flush the persisted log so the file is available to the caller
+		// but keep the channels open for the view to consume.
+		if r.persistBuf != nil {
+			_ = r.persistBuf.Flush()
+		}
+		return nil
 	}
 
 	// Check hugepages availability for VM memory
@@ -576,9 +612,6 @@ func (r *VMRunner) Start() error {
 		return fmt.Errorf("start script failed: %w", err)
 	}
 
-	vmDataDir := r.getVMDataDir()
-	r.socketPath = filepath.Join("/tmp", fmt.Sprintf("dkvm-%s.sock", r.vm.ID))
-
 	// Clean up stale socket
 	os.Remove(r.socketPath)
 
@@ -600,21 +633,8 @@ func (r *VMRunner) Start() error {
 	// Build QEMU arguments
 	args := r.buildQEMUArgs(vmDataDir)
 
-	if debugMode || r.runCfg.DryRun {
+	if debugMode {
 		log.Printf("[DEBUG] QEMU command: %s %s", r.cfg.QEMUPath, strings.Join(args, " "))
-	}
-
-	if r.runCfg.DryRun {
-		filtered := filterPassthroughArgs(args)
-		fullCmd := fmt.Sprintf("%s %s", r.cfg.QEMUPath, strings.Join(args, " "))
-		filteredCmd := fmt.Sprintf("%s %s", r.cfg.QEMUPath, strings.Join(filtered, " "))
-		log.Printf("[DRY-RUN] Full command: %s", fullCmd)
-		log.Printf("[DRY-RUN] Filtered command: %s", filteredCmd)
-		r.logChan <- "[DRY-RUN] Full QEMU command:"
-		r.logChan <- fullCmd
-		r.logChan <- "[DRY-RUN] Filtered QEMU command (no passthrough):"
-		r.logChan <- filteredCmd
-		return nil
 	}
 
 	// Create command
@@ -667,6 +687,7 @@ func (r *VMRunner) Start() error {
 	// Wait for QMP socket and connect
 	go r.connectQMP()
 
+	persistStarted = false // keep persist log alive for the running VM
 	return nil
 }
 

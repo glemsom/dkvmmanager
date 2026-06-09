@@ -648,6 +648,64 @@ func TestPersistLogSlowFlushDoesNotBlock(t *testing.T) {
 	}
 }
 
+func TestPersistLogDryRunWritesToFile(t *testing.T) {
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+	os.WriteFile(filepath.Join(vmDir, "OVMF_CODE.fd"), []byte("fake"), 0644)
+	os.WriteFile(filepath.Join(vmDir, "OVMF_VARS.fd"), []byte("fake"), 0644)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+
+	vm := &models.VM{
+		ID:   "1",
+		Name: "test-vm",
+	}
+
+	runner := NewVMRunner(vm, cfg, RunConfig{DryRun: true})
+	if err := runner.Start(); err != nil {
+		t.Fatalf("Start() should succeed in dry-run: %v", err)
+	}
+
+	// Read the DRY-RUN lines from LogChan() (verifies API unchanged).
+	// This also acts as synchronization: the persist goroutine writes the
+	// line to the file BEFORE sending it to viewChan, so after we receive
+	// all lines the file is guaranteed up-to-date.
+	expectedPrefixes := []string{"[DRY-RUN] Full QEMU command:", "qemu-system-x86_64", "[DRY-RUN] Filtered QEMU command"}
+	for _, prefix := range expectedPrefixes {
+		select {
+		case line, ok := <-runner.LogChan():
+			if !ok {
+				t.Fatalf("LogChan() closed unexpectedly")
+			}
+			if !containsString(line, prefix) {
+				t.Errorf("Expected line containing %q, got: %s", prefix, line)
+			}
+		case <-time.After(time.Second):
+			t.Fatalf("Timed out reading from LogChan() for prefix: %s", prefix)
+		}
+	}
+
+	// Now check the file — guaranteed to be up-to-date because we consumed
+	// all log lines from the channel (goroutine writes file before sending).
+	logPath := filepath.Join(dir, "vms", "1", "qemu.log")
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("Expected qemu.log to exist after dry-run: %v", err)
+	}
+	content := string(data)
+
+	if !containsString(content, "[DRY-RUN] Full QEMU command:") {
+		t.Errorf("Expected DRY-RUN line in qemu.log, got:\n%s", content)
+	}
+	if !containsString(content, "[DRY-RUN] Filtered QEMU command") {
+		t.Errorf("Expected filtered DRY-RUN line in qemu.log, got:\n%s", content)
+	}
+}
+
 func TestPersistLogWriteErrorDoesNotCrash(t *testing.T) {
 	dir := t.TempDir()
 	vmDir := filepath.Join(dir, "vms", "1")
