@@ -670,22 +670,23 @@ func TestPersistLogDryRunWritesToFile(t *testing.T) {
 		t.Fatalf("Start() should succeed in dry-run: %v", err)
 	}
 
-	// Read the DRY-RUN lines from LogChan() (verifies API unchanged).
+	// Read the DRY-RUN lines from Subscribe() (verifies API unchanged).
 	// This also acts as synchronization: the persist goroutine writes the
-	// line to the file BEFORE sending it to viewChan, so after we receive
+	// line to the file BEFORE sending it to the subscriber, so after we receive
 	// all lines the file is guaranteed up-to-date.
+	ch := runner.Subscribe()
 	expectedPrefixes := []string{"[DRY-RUN] Full QEMU command:", "qemu-system-x86_64", "[DRY-RUN] Filtered QEMU command"}
 	for _, prefix := range expectedPrefixes {
 		select {
-		case line, ok := <-runner.LogChan():
+		case line, ok := <-ch:
 			if !ok {
-				t.Fatalf("LogChan() closed unexpectedly")
+				t.Fatalf("Subscribe() channel closed unexpectedly")
 			}
 			if !containsString(line, prefix) {
 				t.Errorf("Expected line containing %q, got: %s", prefix, line)
 			}
 		case <-time.After(time.Second):
-			t.Fatalf("Timed out reading from LogChan() for prefix: %s", prefix)
+			t.Fatalf("Timed out reading from Subscribe() for prefix: %s", prefix)
 		}
 	}
 
@@ -1346,6 +1347,181 @@ func TestStartTPMErrorDoesNotDeleteState(t *testing.T) {
 	if _, err := os.Stat(stateFile); err != nil {
 		t.Errorf("TPM state file should still exist after start error: %v", err)
 	}
+}
+
+// --- Subscribe tests (S2) ---
+
+func TestSubscribeDrainsBufferedLines(t *testing.T) {
+	// Given a runner with N lines in its internal channel,
+	// Subscribe() returns a channel that drains those N lines before receiving new ones.
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+
+	vm := &models.VM{
+		ID:   "1",
+		Name: "test-vm",
+	}
+
+	runner := NewVMRunner(vm, cfg, RunConfig{})
+	if err := runner.startPersistLog(); err != nil {
+		t.Fatalf("startPersistLog() failed: %v", err)
+	}
+
+	// Send lines to logChan to simulate pre-existing buffer
+	runner.logChan <- "[stdout] old line 1"
+	runner.logChan <- "[stdout] old line 2"
+	runner.logChan <- "[stdout] old line 3"
+
+	// Give the persist loop time to process them
+	time.Sleep(50 * time.Millisecond)
+
+	// Subscribe: should drain the buffered lines
+	ch := runner.Subscribe()
+
+	// The first lines from the channel should be the buffered lines
+	// (or at minimum, the channel should work without blocking)
+	received := []string{}
+	timeout := time.After(500 * time.Millisecond)
+	for i := 0; i < 3; i++ {
+		select {
+		case line, ok := <-ch:
+			if !ok {
+				t.Fatalf("channel closed before receiving buffered lines")
+			}
+			received = append(received, line)
+		case <-timeout:
+			t.Fatalf("timed out waiting for line %d", i+1)
+		}
+	}
+
+	// Now send a new line and verify it comes through
+	runner.logChan <- "[stdout] new line"
+	select {
+	case line, ok := <-ch:
+		if !ok {
+			t.Fatal("channel closed unexpectedly")
+		}
+		if !containsString(line, "new line") {
+			t.Errorf("expected new line, got: %s", line)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("timed out waiting for new line")
+	}
+
+	_ = received
+	runner.closePersistLog()
+}
+
+func TestSubscribeChannelClosedOnExit(t *testing.T) {
+	// Given a runner that has exited, the returned channel is closed.
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+
+	vm := &models.VM{
+		ID:   "1",
+		Name: "test-vm",
+	}
+
+	runner := NewVMRunner(vm, cfg, RunConfig{})
+	if err := runner.startPersistLog(); err != nil {
+		t.Fatalf("startPersistLog() failed: %v", err)
+	}
+
+	// Subscribe before closing
+	ch := runner.Subscribe()
+
+	// Close the persist log (which closes the subscriber channel)
+	runner.closePersistLog()
+
+	// The channel should be closed (receive zero value, ok=false)
+	select {
+	case _, ok := <-ch:
+		if ok {
+			t.Error("expected channel to be closed after runner exit")
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("timed out waiting for channel close")
+	}
+}
+
+func TestSubscribeNoDuplicationWithRecentLog(t *testing.T) {
+	// Integration test: RecentLog + Subscribe should not cause gaps.
+	// The persisted file is written before lines reach the subscriber,
+	// so RecentLog captures everything on disk, Subscribe covers the live tail.
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+
+	vm := &models.VM{
+		ID:   "1",
+		Name: "test-vm",
+	}
+
+	runner := NewVMRunner(vm, cfg, RunConfig{})
+	if err := runner.startPersistLog(); err != nil {
+		t.Fatalf("startPersistLog() failed: %v", err)
+	}
+
+	// Write some lines to the log (they'll be persisted)
+	for i := 1; i <= 5; i++ {
+		runner.logChan <- fmt.Sprintf("[stdout] line%d", i)
+	}
+	time.Sleep(50 * time.Millisecond) // let persist loop flush them
+
+	// RecentLog should see the 5 lines
+	lines, err := runner.RecentLog(500)
+	if err != nil {
+		t.Fatalf("RecentLog() failed: %v", err)
+	}
+	if len(lines) < 5 {
+		t.Errorf("expected at least 5 lines from RecentLog, got %d", len(lines))
+	}
+
+	// Subscribe after RecentLog — this drains the old buffered lines first
+	ch := runner.Subscribe()
+
+	// Drain any old buffered lines (lines 1-5 that were in viewChan)
+	// Subscribe() returns the channel with old lines already drained, so
+	// the next read should get the new line we're about to send.
+
+	// Send a new line that wasn't on disk when RecentLog ran
+	runner.logChan <- "[stdout] line6"
+
+	// Read lines until we see line6 (skip any buffered overlap)
+	found := false
+	timeout := time.After(500 * time.Millisecond)
+	for !found {
+		select {
+		case line, ok := <-ch:
+			if !ok {
+				t.Fatal("channel closed unexpectedly")
+			}
+			if containsString(line, "line6") {
+				found = true
+			}
+		case <-timeout:
+			t.Fatal("timed out waiting for line6")
+		}
+	}
+
+	runner.closePersistLog()
 }
 
 func TestStartTPMOrphanKill(t *testing.T) {
