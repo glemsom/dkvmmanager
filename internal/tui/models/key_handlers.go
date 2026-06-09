@@ -8,7 +8,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -374,36 +373,14 @@ func (m *MainModel) handleVMSelection() (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Create runner
-		runner := vm.NewVMRunner(vmObj, m.cfg)
-		// Load and inject PCI passthrough config
-		var pciCfg models.PCIPassthroughConfig
-		m.configRepo.GetConfig("pci_passthrough", &pciCfg)
-		runner.SetPCIPassthroughConfig(pciCfg)
-		// Load and inject USB passthrough config
-		var usbCfg models.USBPassthroughConfig
-		m.configRepo.GetConfig("usb_passthrough", &usbCfg)
-		runner.SetUSBPassthroughConfig(usbCfg)
-		// Load and inject CPU options for feature flags
-		var cpuOpts models.CPUOptions
-		m.configRepo.GetConfig("cpu_options", &cpuOpts)
-		runner.SetCPUOptions(cpuOpts)
-		// Load and inject start/stop script config
-		var scriptCfg models.StartStopScript
-		m.configRepo.GetConfig("custom_script", &scriptCfg)
-		runner.SetStartStopScript(scriptCfg)
-		// Load and inject vCPU pinning config
-		var vcpuPinning models.VCPUPinningGlobal
-		m.configRepo.GetConfig("vcpu_pinning", &vcpuPinning)
-		runner.SetVCPUPinning(vcpuPinning)
-		// Load and inject CPU topology config
-		var cpuTopo models.CPUTopology
-		m.configRepo.GetConfig("cpu_topology", &cpuTopo)
-		runner.SetCPUTopology(cpuTopo)
-		// Load host CPU topology for topology-aware allocation
+		// Load aggregated RunConfig from repo and host discovery
+		runCfg := vm.LoadRunConfigFromRepo(m.configRepo)
+		// Override HostCPUTopology with the model's discovery (supports testing mocks)
 		if hostTopo, err := m.hostDiscovery.ScanCPUTopology(); err == nil {
-			runner.SetHostCPUTopology(hostTopo)
+			runCfg.HostCPUTopology = hostTopo
 		}
+		// Create runner with RunConfig (replaces individual Set* calls)
+		runner := vm.NewVMRunner(vmObj, m.cfg, runCfg)
 
 		// Create running model immediately (runner will be set async)
 		vmRunningModel := NewVMRunningModel(vmObj, nil) // nil runner
