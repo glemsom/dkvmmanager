@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"syscall"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
@@ -66,7 +66,7 @@ func (m *MountPointWarningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // handleKeyPress handles keyboard input.
 func (m *MountPointWarningModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "enter", " ", "esc":
+	case "enter", " ", "space", "esc":
 		// Dismiss the warning and return to the main menu
 		return m, func() tea.Msg {
 			return ViewChangeMsg{View: ViewMainMenu}
@@ -86,7 +86,7 @@ func (m *MountPointWarningModel) SetSize(width, height int) {
 func (m *MountPointWarningModel) FileBrowserActive() bool { return false }
 
 // View returns the view for the model.
-func (m *MountPointWarningModel) View() string {
+func (m *MountPointWarningModel) View() tea.View {
 	warningTitle := lipgloss.NewStyle().
 		Foreground(styles.Colors.Warning).
 		Bold(true).
@@ -126,14 +126,14 @@ func (m *MountPointWarningModel) View() string {
 
 	// Center the modal in the terminal if dimensions are available
 	if m.width > 0 && m.height > 0 {
-		return lipgloss.Place(
+		return tea.NewView(lipgloss.Place(
 			m.width,
 			m.height,
 			lipgloss.Center,
 			lipgloss.Center,
 			modalContent,
-		)
+		))
 	}
 
-	return modalContent
+	return tea.NewView(modalContent)
 }

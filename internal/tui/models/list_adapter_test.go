@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/list"
+	"charm.land/bubbles/v2/list"
 	"github.com/glemsom/dkvmmanager/internal/models"
 )
 

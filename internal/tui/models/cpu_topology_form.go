@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
@@ -331,11 +331,11 @@ func (m *CPUTopologyFormModel) SetSize(w, h int) {
 	m.contentW = w
 	m.contentH = h
 	if !m.ready {
-		m.vp = viewport.New(w, h)
+		m.vp = viewport.New(viewport.WithWidth(w), viewport.WithHeight(h))
 		m.ready = true
 	} else {
-		m.vp.Width = w
-		m.vp.Height = h
+		m.vp.SetWidth(w)
+		m.vp.SetHeight(h)
 	}
 }
 
@@ -368,9 +368,9 @@ func (m *CPUTopologyFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View implements tea.Model (for backward compatibility).
-func (m *CPUTopologyFormModel) View() string {
+func (m *CPUTopologyFormModel) View() tea.View {
 	if !m.ready {
-		return "Loading form..."
+		return tea.NewView("Loading form...")
 	}
 	m.renderedLines = m.renderAllLines()
 	totalContent := ""
@@ -381,7 +381,7 @@ func (m *CPUTopologyFormModel) View() string {
 		totalContent += line
 	}
 	m.vp.SetContent(totalContent)
-	return m.vp.View()
+	return tea.NewView(m.vp.View())
 }
 
 // handleKey processes keyboard input (backward-compatible Update path).
@@ -399,7 +399,7 @@ func (m *CPUTopologyFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "pgdown":
 		m.vp.HalfPageDown()
 		return m, nil
-	case "enter", " ":
+	case "enter", " ", "space":
 		return m.handleEnterKey()
 	}
 	return m, nil

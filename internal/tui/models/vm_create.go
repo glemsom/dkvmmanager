@@ -2,7 +2,7 @@
 package models
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -95,7 +95,7 @@ func (m *VMCreateModel) forwardToForm(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View returns the view for the model.
-func (m *VMCreateModel) View() string {
+func (m *VMCreateModel) View() tea.View {
 	if fm, ok := m.form.Model().(*VMFormModel); ok {
 		if fm.addDiskModel != nil && fm.addDiskModel.active {
 			return fm.addDiskModel.View()

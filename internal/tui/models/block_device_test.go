@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func setupBlockDeviceModel(t *testing.T, devices []BlockDevice) *BlockDeviceModel {
@@ -38,19 +38,19 @@ func TestBlockDeviceModelHandleKeyPressUp(t *testing.T) {
 	m := setupBlockDeviceModel(t, devices)
 	m.selectedIndex = 2
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = updated.(*BlockDeviceModel)
 	if m.selectedIndex != 1 {
 		t.Errorf("Expected selectedIndex 1 after up, got %d", m.selectedIndex)
 	}
 
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = updated.(*BlockDeviceModel)
 	if m.selectedIndex != 0 {
 		t.Errorf("Expected selectedIndex 0 after up, got %d", m.selectedIndex)
 	}
 
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = updated.(*BlockDeviceModel)
 	if m.selectedIndex != 0 {
 		t.Errorf("Expected selectedIndex 0 (bounded at 0), got %d", m.selectedIndex)
@@ -64,13 +64,13 @@ func TestBlockDeviceModelHandleKeyPressDown(t *testing.T) {
 	}
 	m := setupBlockDeviceModel(t, devices)
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = updated.(*BlockDeviceModel)
 	if m.selectedIndex != 1 {
 		t.Errorf("Expected selectedIndex 1 after down, got %d", m.selectedIndex)
 	}
 
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = updated.(*BlockDeviceModel)
 	if m.selectedIndex != 1 {
 		t.Errorf("Expected selectedIndex 1 (bounded at len-1), got %d", m.selectedIndex)
@@ -82,7 +82,7 @@ func TestBlockDeviceModelHandleKeyPressESC(t *testing.T) {
 		{Path: "/dev/sda", Name: "sda", Size: "500G", Type: "disk"},
 	})
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = updated.(*BlockDeviceModel)
 
 	if m.active {
@@ -109,7 +109,7 @@ func TestBlockDeviceModelHandleKeyPressCtrlC(t *testing.T) {
 		{Path: "/dev/sda", Name: "sda", Size: "500G", Type: "disk"},
 	})
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	m = updated.(*BlockDeviceModel)
 
 	if m.active {
@@ -135,7 +135,7 @@ func TestBlockDeviceModelHandleEnter(t *testing.T) {
 	}
 	m := setupBlockDeviceModel(t, devices)
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = updated.(*BlockDeviceModel)
 
 	if m.active {
@@ -163,7 +163,7 @@ func TestBlockDeviceModelHandleEnter(t *testing.T) {
 func TestBlockDeviceModelHandleEnterEmpty(t *testing.T) {
 	m := setupBlockDeviceModel(t, nil)
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = updated.(*BlockDeviceModel)
 
 	if !m.active {
@@ -180,7 +180,7 @@ func TestBlockDeviceModelUpdateInactive(t *testing.T) {
 	})
 	m.active = false
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = updated.(*BlockDeviceModel)
 
 	if cmd != nil {
@@ -196,8 +196,8 @@ func TestBlockDeviceModelViewContainsHeader(t *testing.T) {
 		{Path: "/dev/sda", Name: "sda", Size: "500G", Type: "disk"},
 	})
 
-	view := m.View()
-	if !strings.Contains(view, "Select Block Device") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "Select Block Device") {
 		t.Error("View should contain 'Select Block Device'")
 	}
 }
@@ -205,8 +205,8 @@ func TestBlockDeviceModelViewContainsHeader(t *testing.T) {
 func TestBlockDeviceModelViewEmpty(t *testing.T) {
 	m := setupBlockDeviceModel(t, nil)
 
-	view := m.View()
-	if !strings.Contains(view, "(no block devices found)") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "(no block devices found)") {
 		t.Error("View should contain '(no block devices found)' for empty device list")
 	}
 }
@@ -216,14 +216,14 @@ func TestBlockDeviceModelViewDevice(t *testing.T) {
 		{Path: "/dev/sda", Name: "sda", Size: "500G", Type: "disk"},
 	})
 
-	view := m.View()
-	if !strings.Contains(view, "sda") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "sda") {
 		t.Error("View should contain device name 'sda'")
 	}
-	if !strings.Contains(view, "500G") {
+	if !strings.Contains(viewContent, "500G") {
 		t.Error("View should contain device size '500G'")
 	}
-	if !strings.Contains(view, "disk") {
+	if !strings.Contains(viewContent, "disk") {
 		t.Error("View should contain device type 'disk'")
 	}
 }
@@ -233,8 +233,8 @@ func TestBlockDeviceModelViewReadOnly(t *testing.T) {
 		{Path: "/dev/sda", Name: "sda", Size: "500G", Type: "disk", ReadOnly: true},
 	})
 
-	view := m.View()
-	if !strings.Contains(view, "[RO]") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "[RO]") {
 		t.Error("View should contain '[RO]' for read-only device")
 	}
 }
@@ -245,8 +245,8 @@ func TestBlockDeviceModelViewSelected(t *testing.T) {
 		{Path: "/dev/sdb", Name: "sdb", Size: "1T", Type: "disk"},
 	})
 
-	view := m.View()
-	lines := strings.Split(view, "\n")
+	viewContent := m.View().Content
+	lines := strings.Split(viewContent, "\n")
 	found := false
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -413,8 +413,8 @@ func TestBlockDeviceModelViewError(t *testing.T) {
 	m := setupBlockDeviceModel(t, nil)
 	m.errorMsg = "permission denied"
 
-	view := m.View()
-	if !strings.Contains(view, "Error: permission denied") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "Error: permission denied") {
 		t.Error("View should contain error message when errorMsg is set")
 	}
 }

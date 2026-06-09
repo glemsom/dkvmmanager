@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
@@ -119,7 +119,7 @@ func (m *FileBrowserModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		return m.handleEnter()
 
-	case " ":
+	case " ", "space":
 		return m.handleEnter()
 
 	case "backspace":
@@ -278,7 +278,7 @@ func isISOFile(name string) bool {
 }
 
 // View returns the rendered view
-func (m *FileBrowserModel) View() string {
+func (m *FileBrowserModel) View() tea.View {
 	headerStyle := lipgloss.NewStyle().
 		Foreground(styles.Colors.Primary).
 		Bold(true)
@@ -350,7 +350,7 @@ func (m *FileBrowserModel) View() string {
 	output += "\n\n"
 	output += helpStyle.Render("↑/↓ Navigate  Space/Enter Select  Backspace Parent  ESC Cancel") + "\n"
 
-	return output
+	return tea.NewView(output)
 }
 
 // SetDirectory sets the starting directory

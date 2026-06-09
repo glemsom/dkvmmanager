@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 	"github.com/glemsom/dkvmmanager/internal/vm"
@@ -88,7 +88,7 @@ func (m *VMDeleteModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.selectedIndex++
 		}
 
-	case "enter", " ":
+	case "enter", " ", "space":
 		if m.selectedIndex == 0 {
 			// No - cancel deletion
 			if m.debugMode {
@@ -123,7 +123,7 @@ func (m *VMDeleteModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // View returns the view for the model
-func (m *VMDeleteModel) View() string {
+func (m *VMDeleteModel) View() tea.View {
 	warningStyle := lipgloss.NewStyle().
 		Foreground(styles.Colors.Error).
 		Bold(true)
@@ -161,5 +161,5 @@ func (m *VMDeleteModel) View() string {
 		output += "\n\n" + m.statusMessage
 	}
 
-	return output
+	return tea.NewView(output)
 }

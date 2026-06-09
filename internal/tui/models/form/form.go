@@ -3,8 +3,8 @@ package form
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 )
 
 // ScrollableForm is the framework's core model. It owns a viewport and delegates
@@ -96,11 +96,11 @@ func (sf *ScrollableForm) SetSize(w, h int) {
 	sf.contentW = w
 	sf.contentH = h
 	if !sf.ready {
-		sf.vp = viewport.New(w, h)
+		sf.vp = viewport.New(viewport.WithWidth(w), viewport.WithHeight(h))
 		sf.ready = true
 	} else {
-		sf.vp.Width = w
-		sf.vp.Height = h
+		sf.vp.SetWidth(w)
+		sf.vp.SetHeight(h)
 	}
 	// Note: we deliberately do NOT call sf.model.SetSize(w, h) here.
 	// The FormModel is already wrapped by this ScrollableForm, and calling
@@ -129,11 +129,11 @@ func (sf *ScrollableForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		sf.contentW = msg.Width
 		sf.contentH = msg.Height
 		if !sf.ready {
-			sf.vp = viewport.New(msg.Width, msg.Height)
+			sf.vp = viewport.New(viewport.WithWidth(msg.Width), viewport.WithHeight(msg.Height))
 			sf.ready = true
 		} else {
-			sf.vp.Width = msg.Width
-			sf.vp.Height = msg.Height
+			sf.vp.SetWidth(msg.Width)
+			sf.vp.SetHeight(msg.Height)
 		}
 		sf.syncViewport()
 		return sf, nil
@@ -223,7 +223,7 @@ func (sf *ScrollableForm) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		sf.vp.HalfPageDown()
 		return sf, nil
 
-	case " ":
+	case " ", "space":
 		if sh, ok := sf.model.(spaceHandler); ok {
 			pos := sf.currentPos()
 			sh.HandleSpace(pos)
@@ -269,11 +269,11 @@ func (sf *ScrollableForm) handleEnter() (tea.Model, tea.Cmd) {
 }
 
 // View implements tea.Model.
-func (sf *ScrollableForm) View() string {
+func (sf *ScrollableForm) View() tea.View {
 	if !sf.ready {
-		return "Loading..."
+		return tea.NewView("Loading...")
 	}
-	return sf.vp.View()
+	return tea.NewView(sf.vp.View())
 }
 
 // syncViewport rebuilds the content and syncs the viewport to the focused position.
@@ -330,7 +330,7 @@ func (sf *ScrollableForm) syncViewport() {
 	// clamp based on the last line so the entire position fits in view.
 	if sf.focusIndex >= 0 && sf.focusIndex < len(posLineOffsets) {
 		focusedLastLine := posLineOffsets[sf.focusIndex] + posLineCounts[sf.focusIndex] - 1
-		sf.vp.YOffset = ClampOffset(sf.vp.YOffset, focusedLastLine, sf.vp.Height)
+		sf.vp.SetYOffset(ClampOffset(sf.vp.YOffset(), focusedLastLine, sf.vp.Height()))
 	}
 }
 

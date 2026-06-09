@@ -2,7 +2,7 @@
 package models
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -50,7 +50,7 @@ func (m *StartStopScriptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View returns the view for the model
-func (m *StartStopScriptModel) View() string {
+func (m *StartStopScriptModel) View() tea.View {
 	return m.form.View()
 }
 

@@ -5,7 +5,7 @@
 // and cursor tracking.
 package form
 
-import tea "github.com/charmbracelet/bubbletea"
+import tea "charm.land/bubbletea/v2"
 
 // FocusKind defines the type of focusable element in a form.
 type FocusKind int

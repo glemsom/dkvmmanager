@@ -2,8 +2,8 @@
 package models
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -52,7 +52,7 @@ func (m *BlockDeviceModel) Init() tea.Cmd {
 type BlockDeviceLoadedMsg struct{}
 
 // View returns the rendered view for BlockDeviceModel
-func (m *BlockDeviceModel) View() string {
+func (m *BlockDeviceModel) View() tea.View {
 	headerStyle := lipgloss.NewStyle().
 		Foreground(styles.Colors.Foreground).
 		Bold(true)
@@ -114,7 +114,7 @@ func (m *BlockDeviceModel) View() string {
 	output += "\n\n"
 	output += helpStyle.Render("↑/↓ Navigate  Space/Enter Select  ESC Cancel") + "\n"
 
-	return output
+	return tea.NewView(output)
 }
 
 // GetSelectedPath returns the selected device path
@@ -185,10 +185,10 @@ func (m *AddDiskModel) Init() tea.Cmd {
 }
 
 // View returns the rendered view for AddDiskModel
-func (m *AddDiskModel) View() string {
+func (m *AddDiskModel) View() tea.View {
 	switch m.step {
 	case 0:
-		return m.renderSourceSelect()
+		return tea.NewView(m.renderSourceSelect())
 	case 1:
 		if m.fileBrowser != nil {
 			return m.fileBrowser.View()
@@ -207,7 +207,7 @@ func (m *AddDiskModel) View() string {
 	headerStyle := lipgloss.NewStyle().
 		Foreground(styles.Colors.Foreground).
 		Bold(true)
-	return headerStyle.Render("Add Disk")
+	return tea.NewView(headerStyle.Render("Add Disk"))
 }
 
 func (m *AddDiskModel) renderSourceSelect() string {

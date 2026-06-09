@@ -30,17 +30,17 @@ func TestVMTableView(t *testing.T) {
 	}
 
 	table := NewVMTable(vms, 80, 10)
-	view := table.View()
+	viewContent := table.View().Content
 
-	if view == "" {
+	if viewContent == "" {
 		t.Error("View() returned empty string")
 	}
 
-	if !strings.Contains(view, "Test VM") {
+	if !strings.Contains(viewContent, "Test VM") {
 		t.Error("View() does not contain VM name")
 	}
 
-	if !strings.Contains(view, "vm-001") {
+	if !strings.Contains(viewContent, "vm-001") {
 		t.Error("View() does not contain VM ID")
 	}
 }
@@ -90,8 +90,8 @@ func TestVMTableSetVMs(t *testing.T) {
 		t.Errorf("Expected 2 VMs after SetVMs, got %d", len(table.vms))
 	}
 
-	view := table.View()
-	if !strings.Contains(view, "Updated VM 1") {
+	viewContent := table.View().Content
+	if !strings.Contains(viewContent, "Updated VM 1") {
 		t.Error("View() does not contain updated VM name")
 	}
 }
@@ -127,9 +127,9 @@ func TestVMTableDisksColumn(t *testing.T) {
 	}
 
 	table := NewVMTable(vms, 80, 10)
-	view := table.View()
+	viewContent := table.View().Content
 
-	if !strings.Contains(view, "2") {
+	if !strings.Contains(viewContent, "2") {
 		t.Error("View() should show disk count of 2")
 	}
 }
@@ -140,9 +140,9 @@ func TestVMTableEmptyMAC(t *testing.T) {
 	}
 
 	table := NewVMTable(vms, 80, 10)
-	view := table.View()
+	viewContent := table.View().Content
 
-	if !strings.Contains(view, "-") {
+	if !strings.Contains(viewContent, "-") {
 		t.Error("View() should show '-' for empty MAC")
 	}
 }

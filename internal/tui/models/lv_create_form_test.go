@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // --- parseVGSOutput tests (unchanged from original) ---
@@ -146,7 +146,7 @@ func TestLVCreateFormNavigationAndToggle(t *testing.T) {
 
 	// Tab through: VG(0) → name(1) → size(2) → unit(3) → thin(4)
 	for i := 0; i < 4; i++ {
-		_, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+		_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	}
 
 	// Check we're on "thin" position
@@ -156,7 +156,7 @@ func TestLVCreateFormNavigationAndToggle(t *testing.T) {
 	}
 
 	// Space toggles thin pool
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeySpace})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 	if !m.isThinPool {
 		t.Fatal("expected thin pool toggled on")
 	}
@@ -176,10 +176,10 @@ func TestLVCreateDryRunCreate(t *testing.T) {
 
 	// Navigate to Create button via Tab presses (7 steps: VG->name->size->unit->thin->contig->ro->create)
 	for i := 0; i < 7; i++ {
-		_, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+		_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	}
 
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if cmd == nil {
 		t.Fatal("expected create command")
 	}
@@ -205,9 +205,9 @@ func TestLVCreateEnterSubmitsFromNonCreateFocus(t *testing.T) {
 	m.sizeValue = "10"
 
 	// Navigate to name position (one tab from VG)
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if cmd == nil {
 		t.Fatal("expected create command from enter on non-create focus")
 	}
@@ -227,7 +227,7 @@ func TestLVCreateEnterOnVGOpensDropdown(t *testing.T) {
 	m.vgIndex = 0
 	m.focusIndex = 0 // VG position
 
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if !m.vgDropdownOpen {
 		t.Fatal("expected VG dropdown to open")
 	}
@@ -245,7 +245,7 @@ func TestLVCreateEnterOnVGWhenOpenConfirmsSelection(t *testing.T) {
 	m.vgDropdownOpen = true
 	m.vgDropdownIndex = 1
 
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if m.vgDropdownOpen {
 		t.Fatal("expected VG dropdown to close after confirm")
 	}
@@ -265,7 +265,7 @@ func TestLVCreateEscIsNoOp(t *testing.T) {
 	m.focusIndex = 0
 	m.vgDropdownOpen = true
 
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	// Form Update is a no-op for ESC (MainModel handles it)
 	if cmd != nil {
 		t.Fatal("expected no command from ESC (MainModel handles it)")
@@ -284,11 +284,11 @@ func TestLVCreateUpDownNavigatesVGDropdown(t *testing.T) {
 	// When the VG dropdown is open, the original code used up/down to
 	// navigate the dropdown list. In the new framework, left/right are
 	// dispatched to HandleLeft/HandleRight for dropdown navigation.
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
 	if m.vgDropdownIndex != 1 {
 		t.Fatalf("expected dropdown index 1 after right, got %d", m.vgDropdownIndex)
 	}
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
 	if m.vgDropdownIndex != 0 {
 		t.Fatalf("expected dropdown index 0 after left, got %d", m.vgDropdownIndex)
 	}
@@ -300,7 +300,7 @@ func TestLVCreateUnitCycling(t *testing.T) {
 
 	// Navigate to unit position: VG(0) → name(1) → size(2) → unit(3)
 	for i := 0; i < 3; i++ {
-		_, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+		_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	}
 
 	positions := m.BuildPositions()
@@ -309,21 +309,21 @@ func TestLVCreateUnitCycling(t *testing.T) {
 	}
 
 	// Right cycles forward: GiB → TiB → MiB → GiB
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
 	if m.unitIndex != 1 {
 		t.Fatalf("expected unitIndex 1 (TiB), got %d", m.unitIndex)
 	}
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
 	if m.unitIndex != 2 {
 		t.Fatalf("expected unitIndex 2 (MiB), got %d", m.unitIndex)
 	}
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
 	if m.unitIndex != 0 {
 		t.Fatalf("expected unitIndex 0 (wrap to GiB), got %d", m.unitIndex)
 	}
 
 	// Left cycles backward
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
 	if m.unitIndex != 2 {
 		t.Fatalf("expected unitIndex 2 (MiB) after left, got %d", m.unitIndex)
 	}
@@ -334,7 +334,7 @@ func TestLVCreateTextInput(t *testing.T) {
 	m.SetSize(76, 18)
 
 	// Tab to name position (one tab from VG at index 0)
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 
 	positions := m.BuildPositions()
 	if positions[m.focusIndex].Key != "name" {
@@ -343,27 +343,27 @@ func TestLVCreateTextInput(t *testing.T) {
 
 	// Type characters one at a time (framework expects single characters)
 	for _, ch := range "test" {
-		_, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		_, _ = m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 	}
 	if !strings.Contains(m.volumeName, "test") {
 		t.Fatalf("expected 'test' in volumeName, got %q", m.volumeName)
 	}
 
 	// Tab to size (one tab from name)
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	positions = m.BuildPositions()
 	if positions[m.focusIndex].Key != "size" {
 		t.Fatalf("expected focus on 'size', got %q", positions[m.focusIndex].Key)
 	}
 	for _, ch := range "50" {
-		_, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		_, _ = m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 	}
 	if !strings.Contains(m.sizeValue, "50") {
 		t.Fatalf("expected '50' in sizeValue, got %q", m.sizeValue)
 	}
 
 	// Backspace on size
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	if len(m.sizeValue) < 3 {
 		t.Fatalf("expected size to shrink after backspace, got %q", m.sizeValue)
 	}
@@ -375,21 +375,21 @@ func TestLVCreateToggleBehavior(t *testing.T) {
 
 	// Navigate to thin toggle: VG(0) → name(1) → size(2) → unit(3) → thin(4)
 	for i := 0; i < 4; i++ {
-		_, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+		_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	}
 
 	// Space toggles thin
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeySpace})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 	if !m.isThinPool {
 		t.Fatal("expected thin pool toggled on")
 	}
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeySpace})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 	if m.isThinPool {
 		t.Fatal("expected thin pool toggled off")
 	}
 
 	// Navigate to contiguous (skip stripped if single PV)
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	_, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	positions := m.BuildPositions()
 	if positions[m.focusIndex].Key != "contig" {
 		t.Fatalf("expected focus on 'contig', got %q", positions[m.focusIndex].Key)
@@ -402,13 +402,13 @@ func TestLVCreateRenderNoHardcodedVGFallback(t *testing.T) {
 	m := NewLVCreateFormModel()
 	m.SetSize(76, 18)
 
-	view := m.View()
+	viewContent := m.View().Content
 	// Should show Volume Group line with empty value
-	if !strings.Contains(view, "Volume Group:") {
-		t.Fatalf("expected 'Volume Group:' in view, got:\n%s", view)
+	if !strings.Contains(viewContent, "Volume Group:") {
+		t.Fatalf("expected 'Volume Group:' in view, got:\n%s", viewContent)
 	}
-	if strings.Contains(view, "ubuntu-vg") {
-		t.Fatalf("expected no hardcoded ubuntu-vg fallback, got:\n%s", view)
+	if strings.Contains(viewContent, "ubuntu-vg") {
+		t.Fatalf("expected no hardcoded ubuntu-vg fallback, got:\n%s", viewContent)
 	}
 }
 
@@ -442,8 +442,8 @@ func TestLVCreateStrippedShownWithMultiplePVs(t *testing.T) {
 	// Sync viewport after BuildPositions to include the stripped option
 	m.SetSize(76, 18)
 
-	view := m.View()
-	if !strings.Contains(view, "Stripped") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "Stripped") {
 		t.Fatal("expected Stripped option shown for VG with 2 PVs")
 	}
 }

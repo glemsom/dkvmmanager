@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/config"
 )
 
@@ -55,7 +55,7 @@ func TestFullTUIEditFlowReproducingBug(t *testing.T) {
 	}
 
 	// Step 3: Press Enter to select first VM (enter edit mode)
-	model, _ = m.delegateToSubView(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ = m.delegateToSubView(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
 
 	if m.currentView != ViewVMEdit {

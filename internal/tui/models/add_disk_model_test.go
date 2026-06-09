@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/config"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -68,7 +68,7 @@ func TestAddDiskModelHandleKeyPressUp(t *testing.T) {
 	m, _ := setupAddDiskTest(t)
 
 	m.selectedIndex = 1
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = updated.(*AddDiskModel)
 
 	if m.selectedIndex != 0 {
@@ -78,7 +78,7 @@ func TestAddDiskModelHandleKeyPressUp(t *testing.T) {
 		t.Error("Expected nil command")
 	}
 
-	updated, cmd = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	updated, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = updated.(*AddDiskModel)
 
 	if m.selectedIndex != 0 {
@@ -92,7 +92,7 @@ func TestAddDiskModelHandleKeyPressUp(t *testing.T) {
 func TestAddDiskModelHandleKeyPressDown(t *testing.T) {
 	m, _ := setupAddDiskTest(t)
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = updated.(*AddDiskModel)
 
 	if m.selectedIndex != 1 {
@@ -102,7 +102,7 @@ func TestAddDiskModelHandleKeyPressDown(t *testing.T) {
 		t.Error("Expected nil command")
 	}
 
-	updated, cmd = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = updated.(*AddDiskModel)
 
 	// Now there are 3 options: Disk image file, Block device, LVM Logical Volume
@@ -118,7 +118,7 @@ func TestAddDiskModelHandleKeyPressDown(t *testing.T) {
 func TestAddDiskModelHandleKeyPressESC(t *testing.T) {
 	m, _ := setupAddDiskTest(t)
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = updated.(*AddDiskModel)
 
 	if m.active {
@@ -141,7 +141,7 @@ func TestAddDiskModelHandleKeyPressESC(t *testing.T) {
 func TestAddDiskModelHandleKeyPressCtrlC(t *testing.T) {
 	m, _ := setupAddDiskTest(t)
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	m = updated.(*AddDiskModel)
 
 	if m.active {
@@ -164,7 +164,7 @@ func TestAddDiskModelHandleKeyPressCtrlC(t *testing.T) {
 func TestAddDiskModelHandleEnterStep0File(t *testing.T) {
 	m, _ := setupAddDiskTest(t)
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = updated.(*AddDiskModel)
 
 	if m.sourceType != DiskSourceFile {
@@ -182,7 +182,7 @@ func TestAddDiskModelHandleEnterStep0Device(t *testing.T) {
 	m, _ := setupAddDiskTest(t)
 
 	m.selectedIndex = 1
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = updated.(*AddDiskModel)
 
 	if m.sourceType != DiskSourceDevice {
@@ -200,7 +200,7 @@ func TestAddDiskModelHandleEnterStep0LVM(t *testing.T) {
 	m, _ := setupAddDiskTest(t)
 
 	m.selectedIndex = 2
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = updated.(*AddDiskModel)
 
 	if m.sourceType != DiskSourceLVM {
@@ -273,7 +273,7 @@ func TestAddDiskModelUpdateInactive(t *testing.T) {
 	m, _ := setupAddDiskTest(t)
 
 	m.active = false
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	_ = updated
 
 	if cmd != nil {
@@ -309,7 +309,7 @@ func TestAddDiskModelUpdateDelegatesToFileBrowser(t *testing.T) {
 
 	m.step = 1
 	m.fileBrowser = NewFileBrowserModel(FileTypeDiskImage)
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = updated.(*AddDiskModel)
 
 	if m.step != 1 {
@@ -322,7 +322,7 @@ func TestAddDiskModelUpdateDelegatesToBlockDevice(t *testing.T) {
 
 	m.step = 2
 	m.blockDevice = NewBlockDeviceModel()
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = updated.(*AddDiskModel)
 
 	if m.step != 2 {
@@ -333,14 +333,14 @@ func TestAddDiskModelUpdateDelegatesToBlockDevice(t *testing.T) {
 func TestAddDiskModelViewStep0(t *testing.T) {
 	m, _ := setupAddDiskTest(t)
 
-	view := m.View()
-	if !strings.Contains(view, "Add Hard Disk") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "Add Hard Disk") {
 		t.Error("View should contain 'Add Hard Disk'")
 	}
-	if !strings.Contains(view, "Select source type") {
+	if !strings.Contains(viewContent, "Select source type") {
 		t.Error("View should contain 'Select source type'")
 	}
-	if !strings.Contains(view, "Enter Select") {
+	if !strings.Contains(viewContent, "Enter Select") {
 		t.Error("View should contain 'Enter Select'")
 	}
 }
@@ -348,14 +348,14 @@ func TestAddDiskModelViewStep0(t *testing.T) {
 func TestAddDiskModelViewStep0ContainsOptions(t *testing.T) {
 	m, _ := setupAddDiskTest(t)
 
-	view := m.View()
-	if !strings.Contains(view, "Disk image file") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "Disk image file") {
 		t.Error("View should contain 'Disk image file'")
 	}
-	if !strings.Contains(view, "Block device") {
+	if !strings.Contains(viewContent, "Block device") {
 		t.Error("View should contain 'Block device'")
 	}
-	if !strings.Contains(view, "LVM Logical Volume") {
+	if !strings.Contains(viewContent, "LVM Logical Volume") {
 		t.Error("View should contain 'LVM Logical Volume'")
 	}
 }
@@ -366,13 +366,13 @@ func TestAddDiskModelViewStep1(t *testing.T) {
 	m.step = 1
 	m.fileBrowser = NewFileBrowserModel(FileTypeDiskImage)
 
-	fbView := m.fileBrowser.View()
-	view := m.View()
+	fbViewContent := m.fileBrowser.View().Content
+	viewContent := m.View().Content
 
-	if view == "" {
+	if viewContent == "" {
 		t.Error("View should not be empty at step 1")
 	}
-	_ = fbView
+	_ = fbViewContent
 }
 
 func TestAddDiskModelViewStep2(t *testing.T) {
@@ -381,11 +381,11 @@ func TestAddDiskModelViewStep2(t *testing.T) {
 	m.step = 2
 	m.blockDevice = NewBlockDeviceModel()
 
-	bdView := m.blockDevice.View()
-	view := m.View()
+	bdViewContent := m.blockDevice.View().Content
+	viewContent := m.View().Content
 
-	if view == "" {
+	if viewContent == "" {
 		t.Error("View should not be empty at step 2")
 	}
-	_ = bdView
+	_ = bdViewContent
 }

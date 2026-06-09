@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 	"github.com/glemsom/dkvmmanager/internal/vm"
@@ -297,7 +297,7 @@ func (m *VMRunningModel) calculateLayout() {
 		if availableHeight < 5 {
 			availableHeight = 5
 		}
-		m.vp = viewport.New(m.width, availableHeight)
+		m.vp = viewport.New(viewport.WithWidth(m.width), viewport.WithHeight(availableHeight))
 		// HighPerformanceMode setting removed (no longer supported in bubbles v1)
 		m.ready = true
 	} else {
@@ -307,8 +307,8 @@ func (m *VMRunningModel) calculateLayout() {
 		if availableHeight < 5 {
 			availableHeight = 5
 		}
-		m.vp.Width = m.width
-		m.vp.Height = availableHeight
+		m.vp.SetWidth(m.width)
+		m.vp.SetHeight(availableHeight)
 	}
 	m.updateViewport()
 }
@@ -340,9 +340,9 @@ func (m *VMRunningModel) updateViewport() {
 }
 
 // View returns the view for the model
-func (m *VMRunningModel) View() string {
+func (m *VMRunningModel) View() tea.View {
 	if !m.ready {
-		return "Loading..."
+		return tea.NewView("Loading...")
 	}
 
 	// Render info panel
@@ -352,7 +352,7 @@ func (m *VMRunningModel) View() string {
 	logView := m.vp.View()
 
 	// Combine with separator
-	return infoPanel + "\n" + logView
+	return tea.NewView(infoPanel + "\n" + logView)
 }
 
 // renderInfoPanel renders the VM information panel at the top

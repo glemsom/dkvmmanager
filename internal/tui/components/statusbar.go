@@ -2,9 +2,10 @@ package components
 
 import (
 	"fmt"
+	"image/color"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
@@ -105,7 +106,7 @@ func (s *StatusBar) Render(width int) string {
 
 // renderModeIndicator renders the mode indicator with Unicode icon and optional spinner
 func (s *StatusBar) renderModeIndicator() string {
-	var color lipgloss.Color
+	var color color.Color
 
 	switch s.mode {
 	case "Ready":

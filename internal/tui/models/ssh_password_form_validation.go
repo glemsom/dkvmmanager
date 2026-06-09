@@ -3,13 +3,13 @@ package models
 
 import (
 	"fmt"
+	"image/color"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
@@ -106,7 +106,7 @@ func (m *SSHPasswordFormModel) apply() tea.Cmd {
 }
 
 // strengthLabel returns a label and color for the given strength score
-func strengthLabel(score int) (string, lipgloss.Color) {
+func strengthLabel(score int) (string, color.Color) {
 	switch {
 	case score <= 1:
 		return "Weak", styles.Colors.Error

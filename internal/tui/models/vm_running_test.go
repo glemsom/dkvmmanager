@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 	models "github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -17,7 +17,7 @@ func setupRunningModel(t *testing.T, status string) *VMRunningModel {
 	return &VMRunningModel{
 		vm:          vmObj,
 		maxLogLines: 500,
-		vp:          viewport.New(80, 24),
+		vp:          viewport.New(viewport.WithWidth(80), viewport.WithHeight(24)),
 		ready:       true,
 		width:       80,
 		height:      24,
@@ -36,20 +36,20 @@ func TestVMRunningModelInit(t *testing.T) {
 func TestVMRunningModelViewNotReady(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	m.ready = false
-	view := m.View()
-	if view != "Loading..." {
-		t.Errorf("Expected 'Loading...', got '%s'", view)
+	viewContent := m.View().Content
+	if viewContent != "Loading..." {
+		t.Errorf("Expected 'Loading...', got '%s'", viewContent)
 	}
 }
 
 func TestVMRunningModelViewReady(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	m.updateViewport()
-	view := m.View()
-	if view == "Loading..." {
+	viewContent := m.View().Content
+	if viewContent == "Loading..." {
 		t.Error("View should not return 'Loading...' when ready")
 	}
-	if view == "" {
+	if viewContent == "" {
 		t.Error("View should not be empty when ready")
 	}
 }
@@ -165,11 +165,11 @@ func TestVMRunningModelWindowSizeUpdate(t *testing.T) {
 	if m.height != 30 {
 		t.Errorf("Expected height 30, got %d", m.height)
 	}
-	if m.vp.Width != 100 {
-		t.Errorf("Expected viewport width 100, got %d", m.vp.Width)
+	if m.vp.Width() != 100 {
+		t.Errorf("Expected viewport width 100, got %d", m.vp.Width())
 	}
-	if m.vp.Height != 23 { // 30 - infoHeight(4) - 3 = 23
-		t.Errorf("Expected viewport height 23, got %d", m.vp.Height)
+	if m.vp.Height() != 23 { // 30 - infoHeight(4) - 3 = 23
+		t.Errorf("Expected viewport height 23, got %d", m.vp.Height())
 	}
 }
 
@@ -198,19 +198,19 @@ func TestVMRunningModelSetSizeTwice(t *testing.T) {
 	if m.height != 40 {
 		t.Errorf("Expected height 40, got %d", m.height)
 	}
-	if m.vp.Width != 120 {
-		t.Errorf("Expected viewport width 120, got %d", m.vp.Width)
+	if m.vp.Width() != 120 {
+		t.Errorf("Expected viewport width 120, got %d", m.vp.Width())
 	}
-	if m.vp.Height != 33 { // 40 - infoHeight(4) - 3 = 33
-		t.Errorf("Expected viewport height 33, got %d", m.vp.Height)
+	if m.vp.Height() != 33 { // 40 - infoHeight(4) - 3 = 33
+		t.Errorf("Expected viewport height 33, got %d", m.vp.Height())
 	}
 }
 
 func TestVMRunningModelViewContentHeader(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	m.updateViewport()
-	view := m.View()
-	if !strings.Contains(view, "[RUNNING]") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "[RUNNING]") {
 		t.Error("View should contain status '[RUNNING]'")
 	}
 }
@@ -236,9 +236,9 @@ func TestVMRunningModelViewContentStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := setupRunningModel(t, tt.status)
 			m.updateViewport()
-			view := m.View()
-			if !strings.Contains(view, tt.expect) {
-				t.Errorf("Expected view to contain '%s', got:\n%s", tt.expect, view)
+			viewContent := m.View().Content
+			if !strings.Contains(viewContent, tt.expect) {
+				t.Errorf("Expected view to contain '%s', got:\n%s", tt.expect, viewContent)
 			}
 		})
 	}
@@ -250,11 +250,11 @@ func TestVMRunningModelViewContentLogs(t *testing.T) {
 	m = updated.(*VMRunningModel)
 	updated, _ = m.Update(VMLogMsg{Line: "qemu: boot complete"})
 	m = updated.(*VMRunningModel)
-	view := m.View()
-	if !strings.Contains(view, "qemu: starting") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "qemu: starting") {
 		t.Error("View should contain first log line")
 	}
-	if !strings.Contains(view, "qemu: boot complete") {
+	if !strings.Contains(viewContent, "qemu: boot complete") {
 		t.Error("View should contain second log line")
 	}
 }
@@ -262,8 +262,8 @@ func TestVMRunningModelViewContentLogs(t *testing.T) {
 func TestVMRunningModelViewEmptyLogs(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	m.updateViewport()
-	view := m.View()
-	if !strings.Contains(view, "Waiting for output...") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "Waiting for output...") {
 		t.Error("View should show 'Waiting for output...' with no logs")
 	}
 }
@@ -271,8 +271,8 @@ func TestVMRunningModelViewEmptyLogs(t *testing.T) {
 func TestVMRunningModelViewFooterNilRunner(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	m.updateViewport()
-	view := m.View()
-	if !strings.Contains(view, "q: Exit view") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "q: Exit view") {
 		t.Error("View should show 'q: Exit view' when runner is nil")
 	}
 }
@@ -280,15 +280,15 @@ func TestVMRunningModelViewFooterNilRunner(t *testing.T) {
 func TestVMRunningModelViewFooterStopped(t *testing.T) {
 	m := setupRunningModel(t, "stopped")
 	m.updateViewport()
-	view := m.View()
-	if !strings.Contains(view, "q: Exit view") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "q: Exit view") {
 		t.Error("View should show 'q: Exit view' when stopped")
 	}
 }
 
 func TestVMRunningModelKeyQWhenRunning(t *testing.T) {
 	m := setupRunningModel(t, "running")
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	m = updated.(*VMRunningModel)
 	if m.status != "running" {
 		t.Errorf("Expected status 'running' (no runner to stop), got '%s'", m.status)
@@ -300,7 +300,7 @@ func TestVMRunningModelKeyQWhenRunning(t *testing.T) {
 
 func TestVMRunningModelKeyCtrlCWhenRunning(t *testing.T) {
 	m := setupRunningModel(t, "running")
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	m = updated.(*VMRunningModel)
 	if m.status != "running" {
 		t.Errorf("Expected status 'running' (no runner to force stop), got '%s'", m.status)
@@ -314,7 +314,7 @@ func TestVMRunningModelViewportScroll(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	m.updateViewport()
 	initialOffset := m.vp.YOffset
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = updated.(*VMRunningModel)
 	_ = initialOffset
 }
@@ -331,8 +331,8 @@ func TestVMRunningModelStoppedMsgUpdatesViewport(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	updated, _ := m.Update(VMStoppedMsg{VMName: "test-vm", VMID: "1", Reason: "exited"})
 	m = updated.(*VMRunningModel)
-	view := m.View()
-	if !strings.Contains(view, "[STOPPED]") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "[STOPPED]") {
 		t.Error("View should show [STOPPED] after VMStoppedMsg")
 	}
 }
@@ -366,8 +366,8 @@ func TestVMRunningModelStatusUpdateNoThreads(t *testing.T) {
 func TestVMRunningModelStartTimeZero(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	m.updateViewport()
-	view := m.View()
-	if !strings.Contains(view, "[RUNNING]") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "[RUNNING]") {
 		t.Error("View should show [RUNNING]")
 	}
 }
@@ -375,8 +375,8 @@ func TestVMRunningModelStartTimeZero(t *testing.T) {
 func TestVMRunningModelViewContainsStatusIndicator(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	m.updateViewport()
-	view := m.View()
-	if !strings.Contains(view, "Status:") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "Status:") {
 		t.Error("View should contain 'Status:' label")
 	}
 }
@@ -384,8 +384,8 @@ func TestVMRunningModelViewContainsStatusIndicator(t *testing.T) {
 func TestVMRunningModelViewContainsQEMUOutput(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	m.updateViewport()
-	view := m.View()
-	if !strings.Contains(view, "QEMU Output") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "QEMU Output") {
 		t.Error("View should contain 'QEMU Output' separator")
 	}
 }
@@ -401,8 +401,8 @@ func TestVMRunningModelSetSizeUpdatesViewport(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	m.SetSize(100, 30)
 	m.updateViewport()
-	view := m.View()
-	if !strings.Contains(view, "[RUNNING]") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "[RUNNING]") {
 		t.Error("View should contain status after SetSize and updateViewport")
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // TestSSHPasswordForm_ImplementsFormModel verifies that SSHPasswordFormModel
@@ -27,13 +27,13 @@ func TestSSHPasswordForm_Integration_TextInput(t *testing.T) {
 	}
 
 	// Type "abc" into the newPassword field
-	result, _ := sf.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	result, _ := sf.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	sf = result.(*form.ScrollableForm)
 
-	result, _ = sf.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}})
+	result, _ = sf.Update(tea.KeyPressMsg{Code: 'b', Text: "b"})
 	sf = result.(*form.ScrollableForm)
 
-	result, _ = sf.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	result, _ = sf.Update(tea.KeyPressMsg{Code: 'c', Text: "c"})
 	sf = result.(*form.ScrollableForm)
 
 	// Verify the password was stored
@@ -56,27 +56,27 @@ func TestSSHPasswordForm_Integration_Navigation(t *testing.T) {
 	}
 
 	// Tab forward through all positions
-	result, _ := sf.Update(tea.KeyMsg{Type: tea.KeyTab})
+	result, _ := sf.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	sf = result.(*form.ScrollableForm)
 	if sf.FocusIndex() != 1 {
 		t.Errorf("after Tab, expected focus 1 (confirmPassword), got %d", sf.FocusIndex())
 	}
 
-	result, _ = sf.Update(tea.KeyMsg{Type: tea.KeyTab})
+	result, _ = sf.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	sf = result.(*form.ScrollableForm)
 	if sf.FocusIndex() != 2 {
 		t.Errorf("after second Tab, expected focus 2 (apply), got %d", sf.FocusIndex())
 	}
 
 	// Clamping at end
-	result, _ = sf.Update(tea.KeyMsg{Type: tea.KeyTab})
+	result, _ = sf.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	sf = result.(*form.ScrollableForm)
 	if sf.FocusIndex() != 2 {
 		t.Errorf("expected focus clamped at 2, got %d", sf.FocusIndex())
 	}
 
 	// Shift+Tab backward
-	result, _ = sf.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("shift+tab")})
+	result, _ = sf.Update(tea.KeyPressMsg{Text: "shift+tab"})
 	sf = result.(*form.ScrollableForm)
 	if sf.FocusIndex() != 1 {
 		t.Errorf("after Shift+Tab, expected focus 1, got %d", sf.FocusIndex())
@@ -91,7 +91,7 @@ func TestSSHPasswordForm_Integration_Backspace(t *testing.T) {
 
 	// Type "hello"
 	for _, ch := range "hello" {
-		result, _ := sf.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		result, _ := sf.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		sf = result.(*form.ScrollableForm)
 	}
 
@@ -100,7 +100,7 @@ func TestSSHPasswordForm_Integration_Backspace(t *testing.T) {
 	}
 
 	// Backspace should delete 'o'
-	result, _ := sf.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	result, _ := sf.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	sf = result.(*form.ScrollableForm)
 
 	if fm.newPassword != "hell" {
@@ -116,12 +116,12 @@ func TestSSHPasswordForm_Integration_Delete(t *testing.T) {
 
 	// Type "hello"
 	for _, ch := range "hello" {
-		result, _ := sf.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		result, _ := sf.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		sf = result.(*form.ScrollableForm)
 	}
 
 	// Delete at end of string does nothing
-	result, _ := sf.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	result, _ := sf.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 	sf = result.(*form.ScrollableForm)
 
 	if fm.newPassword != "hello" {
@@ -129,18 +129,18 @@ func TestSSHPasswordForm_Integration_Delete(t *testing.T) {
 	}
 
 	// Backspace to position 3 ("hel")
-	sf.Update(tea.KeyMsg{Type: tea.KeyBackspace}) // "hell", cursor at 4
-	sf.Update(tea.KeyMsg{Type: tea.KeyBackspace}) // "hel", cursor at 3
+	sf.Update(tea.KeyPressMsg{Code: tea.KeyBackspace}) // "hell", cursor at 4
+	sf.Update(tea.KeyPressMsg{Code: tea.KeyBackspace}) // "hel", cursor at 3
 
 	// Delete at end still does nothing
-	sf.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	sf.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 	if fm.newPassword != "hel" {
 		t.Errorf("expected 'hel' after delete at end, got %q", fm.newPassword)
 	}
 
 	// Now type 'o' back, then delete should remove it
-	sf.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}}) // "helo", cursor at 4
-	result, _ = sf.Update(tea.KeyMsg{Type: tea.KeyBackspace})     // "hel", cursor at 3
+	sf.Update(tea.KeyPressMsg{Code: 'o', Text: "o"}) // "helo", cursor at 4
+	result, _ = sf.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})     // "hel", cursor at 3
 	sf = result.(*form.ScrollableForm)
 	if fm.newPassword != "hel" {
 		t.Errorf("expected 'hel', got %q", fm.newPassword)
@@ -159,8 +159,8 @@ func TestSSHPasswordForm_Integration_HandleEnter_Save(t *testing.T) {
 	fm.confirmPassword = "testpass123"
 
 	// Navigate to Apply button (2 Tabs)
-	sf.Update(tea.KeyMsg{Type: tea.KeyTab})
-	result, _ := sf.Update(tea.KeyMsg{Type: tea.KeyTab})
+	sf.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	result, _ := sf.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	sf = result.(*form.ScrollableForm)
 
 	if sf.FocusIndex() != 2 {
@@ -172,7 +172,7 @@ func TestSSHPasswordForm_Integration_HandleEnter_Save(t *testing.T) {
 	dryRunMode = true
 	defer func() { dryRunMode = origDryRun }()
 
-	result, cmd := sf.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, cmd := sf.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	sf = result.(*form.ScrollableForm)
 
 	if cmd == nil {
@@ -194,12 +194,12 @@ func TestSSHPasswordForm_Integration_HandleEnter_ValidationError(t *testing.T) {
 	sf.SetSize(80, 24)
 
 	// Navigate to Apply button (2 Tabs)
-	sf.Update(tea.KeyMsg{Type: tea.KeyTab})
-	result, _ := sf.Update(tea.KeyMsg{Type: tea.KeyTab})
+	sf.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	result, _ := sf.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	sf = result.(*form.ScrollableForm)
 
 	// Press Enter without filling in passwords
-	_, cmd := sf.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := sf.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 
 	// Should not produce a save command when validation fails
 	if cmd != nil {
@@ -264,13 +264,13 @@ func TestSSHPasswordForm_Integration_Render(t *testing.T) {
 	sf := form.NewScrollableForm(fm)
 	sf.SetSize(80, 24)
 
-	view := sf.View()
-	if view == "" {
+	viewContent := sf.View().Content
+	if viewContent == "" {
 		t.Fatal("expected non-empty view")
 	}
 
 	// View should contain the form title
-	if view == "Loading..." {
+	if viewContent == "Loading..." {
 		t.Error("view shows loading state after SetSize")
 	}
 }

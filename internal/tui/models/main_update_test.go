@@ -3,7 +3,7 @@ package models
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestWindowSizeMsg(t *testing.T) {
@@ -20,8 +20,8 @@ func TestWindowSizeMsg(t *testing.T) {
 	}
 
 	// Verify view renders without panic
-	view := m.View()
-	if view == "" {
+	viewContent := m.View().Content
+	if viewContent == "" {
 		t.Error("View should not be empty after window resize")
 	}
 }

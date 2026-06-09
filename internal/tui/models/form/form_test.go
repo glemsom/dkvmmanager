@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // --- Mock FormModel for testing ---
@@ -213,7 +213,7 @@ func TestScrollableForm_TabKey_MovesFocusForward(t *testing.T) {
 	}
 	sf := NewScrollableForm(mock)
 
-	msg := tea.KeyMsg{Type: tea.KeyTab, Runes: []rune{'\t'}}
+	msg := tea.KeyPressMsg{Code: tea.KeyTab}
 	result, _ := sf.Update(msg)
 	sf = result.(*ScrollableForm)
 
@@ -235,7 +235,7 @@ func TestScrollableForm_ShiftTab_MovesFocusBackward(t *testing.T) {
 
 	// In bubbletea, shift+tab is detected via msg.String() == "shift+tab".
 	// When Type is KeyRunes, String() returns string(Runes).
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("shift+tab")}
+	msg := tea.KeyPressMsg{Text: "shift+tab"}
 	result, _ := sf.Update(msg)
 	sf = result.(*ScrollableForm)
 
@@ -255,7 +255,7 @@ func TestScrollableForm_UpArrow_MovesFocusUp(t *testing.T) {
 	}
 	sf := NewScrollableForm(mock)
 
-	msg := tea.KeyMsg{Type: tea.KeyUp}
+	msg := tea.KeyPressMsg{Code: tea.KeyUp}
 	result, _ := sf.Update(msg)
 	sf = result.(*ScrollableForm)
 
@@ -274,7 +274,7 @@ func TestScrollableForm_DownArrow_MovesFocusDown(t *testing.T) {
 	}
 	sf := NewScrollableForm(mock)
 
-	msg := tea.KeyMsg{Type: tea.KeyDown}
+	msg := tea.KeyPressMsg{Code: tea.KeyDown}
 	result, _ := sf.Update(msg)
 	sf = result.(*ScrollableForm)
 
@@ -293,7 +293,7 @@ func TestScrollableForm_EnterKey_DispatchesToFormModel(t *testing.T) {
 	}
 	sf := NewScrollableForm(mock)
 
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	msg := tea.KeyPressMsg{Code: tea.KeyEnter}
 	result, _ := sf.Update(msg)
 	sf = result.(*ScrollableForm)
 
@@ -312,7 +312,7 @@ func TestScrollableForm_CharInput_DispatchesToFormModel(t *testing.T) {
 	}
 	sf := NewScrollableForm(mock)
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
+	msg := tea.KeyPressMsg{Code: 'a', Text: "a"}
 	result, _ := sf.Update(msg)
 	sf = result.(*ScrollableForm)
 
@@ -332,7 +332,7 @@ func TestScrollableForm_Backspace_DispatchesToFormModel(t *testing.T) {
 	}
 	sf := NewScrollableForm(mock)
 
-	msg := tea.KeyMsg{Type: tea.KeyBackspace}
+	msg := tea.KeyPressMsg{Code: tea.KeyBackspace}
 	result, _ := sf.Update(msg)
 	_ = result
 
@@ -349,7 +349,7 @@ func TestScrollableForm_Delete_DispatchesToFormModel(t *testing.T) {
 	}
 	sf := NewScrollableForm(mock)
 
-	msg := tea.KeyMsg{Type: tea.KeyDelete}
+	msg := tea.KeyPressMsg{Code: tea.KeyDelete}
 	result, _ := sf.Update(msg)
 	_ = result
 
@@ -374,9 +374,9 @@ func TestScrollableForm_View_ReturnsContent(t *testing.T) {
 	// Must set size first to initialize viewport
 	sf.SetSize(80, 24)
 
-	view := sf.View()
+	viewContent := sf.View().Content
 
-	if view == "" {
+	if viewContent == "" {
 		t.Fatal("expected non-empty view")
 	}
 	// The view should contain the header, position, and footer content
@@ -388,9 +388,9 @@ func TestScrollableForm_View_NotReady(t *testing.T) {
 	sf := NewScrollableForm(mock)
 
 	// Without SetSize/WindowSizeMsg, viewport is not ready
-	view := sf.View()
-	if view != "Loading..." {
-		t.Errorf("expected 'Loading...' when not ready, got %q", view)
+	viewContent := sf.View().Content
+	if viewContent != "Loading..." {
+		t.Errorf("expected 'Loading...' when not ready, got %q", viewContent)
 	}
 }
 
@@ -487,10 +487,10 @@ func TestScrollableForm_ScrollsToMultilinePosition(t *testing.T) {
 	// Focused content starts at line 5 (0-indexed): header(1) + blank(1) + "enabled"(2) + "save"(2) = 6,
 	// so "apply_kernel" starts at line 5 (0-indexed). With viewport height 5, the end of the
 	// visible area (offset + height) must be > 5 to include line 5.
-	if sf.vp.YOffset+sf.vp.Height <= 5 {
+	if sf.vp.YOffset()+sf.vp.Height() <= 5 {
 		t.Errorf("viewport should be scrolled so the focused position is visible: "+
 			"offset=%d + height=%d = %d, but focused content starts at line ~5",
-			sf.vp.YOffset, sf.vp.Height, sf.vp.YOffset+sf.vp.Height)
+			sf.vp.YOffset(), sf.vp.Height(), sf.vp.YOffset()+sf.vp.Height())
 	}
 }
 
@@ -528,17 +528,17 @@ func TestScrollableForm_ScrollsToCPUTopologySaveButton(t *testing.T) {
 	// The viewport must be scrolled so the entire save button is visible.
 	// The LAST line of the save button (line 30) must be < offset + height.
 	saveButtonLastLine := 30 // 2 (header) + 24 (cores) + 4 (save lines before button text)
-	if saveButtonLastLine >= sf.vp.YOffset+sf.vp.Height {
+	if saveButtonLastLine >= sf.vp.YOffset()+sf.vp.Height() {
 		t.Errorf("save button last line %d should be visible in viewport: "+
 			"offset=%d + height=%d = %d, but last line is below viewport",
-			saveButtonLastLine, sf.vp.YOffset, sf.vp.Height, sf.vp.YOffset+sf.vp.Height)
+			saveButtonLastLine, sf.vp.YOffset(), sf.vp.Height(), sf.vp.YOffset()+sf.vp.Height())
 	}
 	// Also verify the first line of the save button is at or above the viewport top
 	saveButtonFirstLine := 26
-	if saveButtonFirstLine < sf.vp.YOffset {
+	if saveButtonFirstLine < sf.vp.YOffset() {
 		t.Errorf("save button first line %d should not be above viewport: "+
 			"offset=%d",
-			saveButtonFirstLine, sf.vp.YOffset)
+			saveButtonFirstLine, sf.vp.YOffset())
 	}
 }
 
@@ -575,10 +575,10 @@ func TestScrollableForm_PageDown_ScrollsWithoutChangingFocus(t *testing.T) {
 	sf.SetSize(96, 33)
 
 	// Record initial offset
-	initialOffset := sf.vp.YOffset
+	initialOffset := sf.vp.YOffset()
 
 	// PgDown should scroll the viewport WITHOUT changing focus
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("pgdown")}
+	msg := tea.KeyPressMsg{Text: "pgdown"}
 	result, _ := sf.Update(msg)
 	sf = result.(*ScrollableForm)
 
@@ -588,9 +588,9 @@ func TestScrollableForm_PageDown_ScrollsWithoutChangingFocus(t *testing.T) {
 	}
 
 	// Viewport should have scrolled down
-	if sf.vp.YOffset <= initialOffset {
+	if sf.vp.YOffset() <= initialOffset {
 		t.Errorf("PgDown should scroll viewport down: offset=%d, initial=%d",
-			sf.vp.YOffset, initialOffset)
+			sf.vp.YOffset(), initialOffset)
 	}
 }
 
@@ -619,10 +619,10 @@ func TestScrollableForm_PageUp_ScrollsWithoutChangingFocus(t *testing.T) {
 	sf.SetSize(96, 33)
 
 	// Manually scroll down (simulating user having scrolled down)
-	sf.vp.YOffset = 20
+	sf.vp.SetYOffset(20)
 
 	// PgUp should scroll the viewport UP WITHOUT changing focus
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("pgup")}
+	msg := tea.KeyPressMsg{Text: "pgup"}
 	result, _ := sf.Update(msg)
 	sf = result.(*ScrollableForm)
 
@@ -632,9 +632,9 @@ func TestScrollableForm_PageUp_ScrollsWithoutChangingFocus(t *testing.T) {
 	}
 
 	// Viewport should have scrolled up
-	if sf.vp.YOffset >= 20 {
+	if sf.vp.YOffset() >= 20 {
 		t.Errorf("PgUp should scroll viewport up: offset=%d, expected < 20",
-			sf.vp.YOffset)
+			sf.vp.YOffset())
 	}
 }
 
@@ -681,13 +681,13 @@ func TestScrollableForm_ScrollDownThenUp_CanSeeTopOfList(t *testing.T) {
 	// After initial syncViewport, the focused position (Apply to Kernel) should be visible
 	// Use PgUp to scroll back up — multiple times if needed
 	for i := 0; i < 10; i++ {
-		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("pgup")}
+		msg := tea.KeyPressMsg{Text: "pgup"}
 		result, _ := sf.Update(msg)
 		sf = result.(*ScrollableForm)
 	}
 
 	// After sufficient PgUp, the viewport should be at or near the top
-	if sf.vp.YOffset > 5 {
+	if sf.vp.YOffset() > 5 {
 		// Good — we can scroll back to see the header
 	} else {
 		// Even better — we scrolled all the way to the top
@@ -707,12 +707,12 @@ func TestScrollableForm_ScrollDownThenUp_CanSeeTopOfList(t *testing.T) {
 	}
 	// The allocation header starts at line 3 (0-indexed)
 	allocationHeaderLine := 3
-	isVisible := sf.vp.YOffset <= allocationHeaderLine &&
-		(sf.vp.YOffset+sf.vp.Height) > allocationHeaderLine
-	if !isVisible && sf.vp.YOffset > 0 {
+	isVisible := sf.vp.YOffset() <= allocationHeaderLine &&
+		(sf.vp.YOffset()+sf.vp.Height()) > allocationHeaderLine
+	if !isVisible && sf.vp.YOffset() > 0 {
 		// Try one more: after PgUp the offset should have decreased
 		t.Logf("After PgUp: offset=%d, height=%d, headerLines=%d",
-			sf.vp.YOffset, sf.vp.Height, headerLineCount)
+			sf.vp.YOffset(), sf.vp.Height(), headerLineCount)
 	}
 }
 

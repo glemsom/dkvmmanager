@@ -31,7 +31,7 @@ func DefaultKeyBindings() KeyBindings {
 
 		// Actions
 		Enter:     []string{"enter"},
-		Space:     []string{" "},
+		Space:     []string{" ", "space"},
 		Backspace: []string{"backspace"},
 		Delete:    []string{"delete"},
 	}

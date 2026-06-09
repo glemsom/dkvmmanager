@@ -2,10 +2,11 @@ package components
 
 import (
 	"fmt"
+	"image/color"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
@@ -60,12 +61,12 @@ func (c *VMCardView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View renders all VM cards
-func (c *VMCardView) View() string {
+func (c *VMCardView) View() tea.View {
 	if len(c.vms) == 0 {
-		return lipgloss.NewStyle().
+		return tea.NewView(lipgloss.NewStyle().
 			Foreground(styles.Colors.Muted).
 			Italic(true).
-			Render("No virtual machines configured.")
+			Render("No virtual machines configured."))
 	}
 
 	var cards []string
@@ -73,7 +74,7 @@ func (c *VMCardView) View() string {
 		cards = append(cards, c.renderCard(vm, i == c.cursor))
 	}
 
-	return strings.Join(cards, "\n")
+	return tea.NewView(strings.Join(cards, "\n"))
 }
 
 // renderCard renders a single VM as a bordered card
@@ -84,7 +85,7 @@ func (c *VMCardView) renderCard(vm models.VM, selected bool) string {
 	}
 
 	// Determine border color based on selection and focus state
-	var borderColor lipgloss.Color
+	var borderColor color.Color
 	if selected {
 		if c.focused {
 			borderColor = styles.Colors.Primary

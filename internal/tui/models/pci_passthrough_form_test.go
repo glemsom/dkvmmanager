@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
@@ -125,9 +125,9 @@ func TestPCIFORMNoROMInRender(t *testing.T) {
 	m.BuildPositions()
 	m.syncViewport()
 
-	view := m.View()
-	if strings.Contains(view, "ROM:") || strings.Contains(view, "rom_path") || strings.Contains(view, "(optional ROM)") {
-		t.Errorf("View should not contain any ROM references.\nView:\n%s", view)
+	viewContent := m.View().Content
+	if strings.Contains(viewContent, "ROM:") || strings.Contains(viewContent, "rom_path") || strings.Contains(viewContent, "(optional ROM)") {
+		t.Errorf("View should not contain any ROM references.\nView:\n%s", viewContent)
 	}
 }
 
@@ -486,7 +486,7 @@ func TestPCIFORMSavePreservesSelectedDevices(t *testing.T) {
 	positions := m.BuildPositions()
 	m.SetFocusIndex(len(positions) - 1)
 
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if cmd == nil {
 		// Validation may fail in test env (no lspci); skip the test
 		t.Skip("PCI validation failed (lspci not available in test env)")
@@ -525,7 +525,7 @@ func TestPCIFORMNoROMInSavedConfig(t *testing.T) {
 	positions := m.BuildPositions()
 	m.SetFocusIndex(len(positions) - 1)
 
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if cmd == nil {
 		// Validation may fail in test env (no lspci); skip the test
 		t.Skip("PCI validation failed (lspci not available in test env)")
@@ -589,9 +589,9 @@ func TestPCIFORMViewShowsNoDevicesMessage(t *testing.T) {
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 25})
 	m.syncViewport()
 
-	view := m.View()
-	if !strings.Contains(view, "No PCI devices found") {
-		t.Errorf("Expected 'No PCI devices found' message, got:\n%s", view)
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "No PCI devices found") {
+		t.Errorf("Expected 'No PCI devices found' message, got:\n%s", viewContent)
 	}
 }
 
@@ -612,13 +612,13 @@ func TestPCIFORMToggleViaEnterKey(t *testing.T) {
 	addr := positions[m.focusIndex].Key
 
 	// Enter to select
-	m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if !m.selected[addr] {
 		t.Error("Device should be selected after Enter")
 	}
 
 	// Enter to deselect
-	m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if m.selected[addr] {
 		t.Error("Device should be deselected after second Enter")
 	}
@@ -641,7 +641,7 @@ func TestPCIFORMToggleViaSpaceKey(t *testing.T) {
 	addr := positions[m.focusIndex].Key
 
 	// Space to select
-	m.Update(tea.KeyMsg{Type: tea.KeySpace})
+	m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 	if !m.selected[addr] {
 		t.Error("Device should be selected after Space")
 	}
@@ -654,7 +654,7 @@ func TestPCIFORMNavigationTabCycle(t *testing.T) {
 	positions := m.BuildPositions()
 
 	// Tab forward — first position is now a FocusHeader (group header)
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = model.(*PCIPassthroughFormModel)
 
 	// After first Tab from index 0, should be at index 1 (second position)
@@ -664,7 +664,7 @@ func TestPCIFORMNavigationTabCycle(t *testing.T) {
 
 	// Tab through to the apply kernel button (last position)
 	for i := 0; i < len(positions); i++ {
-		model, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+		model, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 		m = model.(*PCIPassthroughFormModel)
 	}
 
@@ -681,16 +681,16 @@ func TestPCIFORMNavigationShiftTabBackward(t *testing.T) {
 	m := newTestPCIForm(t)
 
 	// Tab forward once
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = model.(*PCIPassthroughFormModel)
 	firstFocusable := m.focusIndex
 
-	model, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = model.(*PCIPassthroughFormModel)
 	_ = m.focusIndex // second position reached
 
 	// Shift+Tab should go back
-	model, _ = m.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	model, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
 	m = model.(*PCIPassthroughFormModel)
 	if m.focusIndex != firstFocusable {
 		t.Errorf("After Shift+Tab, focusIndex = %d, want %d", m.focusIndex, firstFocusable)
@@ -720,7 +720,7 @@ func TestPCIFORMNavigationUpArrow(t *testing.T) {
 	}
 
 	m.SetFocusIndex(toggleIdx)
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = model.(*PCIPassthroughFormModel)
 
 	// Should have moved back
@@ -748,7 +748,7 @@ func TestPCIFORMNavigationDownArrow(t *testing.T) {
 	}
 
 	m.SetFocusIndex(firstToggleIdx)
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = model.(*PCIPassthroughFormModel)
 
 	// Should have moved forward
@@ -762,7 +762,7 @@ func TestPCIFORMNavigationBoundaryUp(t *testing.T) {
 	m := newTestPCIForm(t)
 
 	m.SetFocusIndex(0)
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = model.(*PCIPassthroughFormModel)
 
 	if m.focusIndex != 0 {
@@ -777,7 +777,7 @@ func TestPCIFORMNavigationBoundaryDown(t *testing.T) {
 	positions := m.BuildPositions()
 	m.SetFocusIndex(len(positions) - 1)
 	lastIdx := m.focusIndex
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = model.(*PCIPassthroughFormModel)
 
 	if m.focusIndex != lastIdx {
@@ -882,7 +882,7 @@ func TestPCIFORMSelectMultipleGroups(t *testing.T) {
 	positions := m.BuildPositions()
 	m.SetFocusIndex(len(positions) - 1)
 
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if cmd == nil {
 		// Validation may fail in test env (no lspci); skip the test
 		t.Skip("PCI validation failed (lspci not available in test env)")

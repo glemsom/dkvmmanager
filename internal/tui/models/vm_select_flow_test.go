@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
 )
 
@@ -121,14 +121,14 @@ func TestVMSelectViewRendering(t *testing.T) {
 	}
 
 	// Render the full view
-	view := m.View()
-	t.Logf("Full view:\n%s", view)
+	viewContent := m.View().Content
+	t.Logf("Full view:\n%s", viewContent)
 
 	// Verify the view contains expected elements
-	if !strings.Contains(view, "DKVM Manager") {
+	if !strings.Contains(viewContent, "DKVM Manager") {
 		t.Error("View should contain header 'DKVM Manager'")
 	}
-	if !strings.Contains(view, "alpha-vm") {
+	if !strings.Contains(viewContent, "alpha-vm") {
 		t.Error("View should contain VM name 'alpha-vm'")
 	}
 

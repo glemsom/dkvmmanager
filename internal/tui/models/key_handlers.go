@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/charmbracelet/bubbles/list"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/list"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )

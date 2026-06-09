@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/config"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -98,17 +98,17 @@ func TestVMDeleteModelView(t *testing.T) {
 		t.Fatalf("NewVMDeleteModel() returned error: %v", err)
 	}
 
-	view := model.View()
-	if !strings.Contains(view, "WARNING") {
+	viewContent := model.View().Content
+	if !strings.Contains(viewContent, "WARNING") {
 		t.Error("View should contain warning message")
 	}
-	if !strings.Contains(view, "test-vm") {
+	if !strings.Contains(viewContent, "test-vm") {
 		t.Error("View should contain VM name")
 	}
-	if !strings.Contains(view, "No") {
+	if !strings.Contains(viewContent, "No") {
 		t.Error("View should contain 'No' option")
 	}
-	if !strings.Contains(view, "Yes") {
+	if !strings.Contains(viewContent, "Yes") {
 		t.Error("View should contain 'Yes' option")
 	}
 }
@@ -122,7 +122,7 @@ func TestVMDeleteModelSelectNo(t *testing.T) {
 	}
 
 	// selectedIndex is 0 (No) by default, press Enter
-	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updatedModel, cmd := model.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	_ = updatedModel
 
 	if cmd == nil {
@@ -148,11 +148,11 @@ func TestVMDeleteModelSelectYes(t *testing.T) {
 	}
 
 	// Navigate to Yes (index 1)
-	updated, _ := model.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := model.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	model = updated.(*VMDeleteModel)
 
 	// Press Enter on Yes
-	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updatedModel, cmd := model.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	_ = updatedModel
 
 	if cmd == nil {
@@ -192,21 +192,21 @@ func TestVMDeleteModelNavigation(t *testing.T) {
 	}
 
 	// Press down to go to Yes
-	updated, _ := model.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := model.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m := updated.(*VMDeleteModel)
 	if m.selectedIndex != 1 {
 		t.Errorf("Expected selectedIndex 1 after down, got %d", m.selectedIndex)
 	}
 
 	// Press up to go back to No
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = updated.(*VMDeleteModel)
 	if m.selectedIndex != 0 {
 		t.Errorf("Expected selectedIndex 0 after up, got %d", m.selectedIndex)
 	}
 
 	// Press up again - should stay at 0
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = updated.(*VMDeleteModel)
 	if m.selectedIndex != 0 {
 		t.Errorf("Expected selectedIndex 0 (bounded), got %d", m.selectedIndex)

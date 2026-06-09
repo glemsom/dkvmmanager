@@ -1,16 +1,17 @@
 package styles
 
 import (
+	"image/color"
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 func TestColorPalette(t *testing.T) {
 	tests := []struct {
 		name     string
-		color    lipgloss.Color
+		color    color.Color
 		expected string
 	}{
 		{"Primary", Colors.Primary, "4"},
@@ -25,8 +26,8 @@ func TestColorPalette(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if string(tt.color) != tt.expected {
-				t.Errorf("Colors.%s = %s, want %s", tt.name, tt.color, tt.expected)
+			if tt.color != lipgloss.Color(tt.expected) {
+				t.Errorf("Colors.%s = %v, want %s", tt.name, tt.color, tt.expected)
 			}
 		})
 	}
@@ -35,7 +36,7 @@ func TestColorPalette(t *testing.T) {
 func TestStatusColors(t *testing.T) {
 	tests := []struct {
 		name     string
-		color    lipgloss.Color
+		color    color.Color
 		expected string
 	}{
 		{"Running", StatusColors.Running, "2"},
@@ -45,8 +46,8 @@ func TestStatusColors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if string(tt.color) != tt.expected {
-				t.Errorf("StatusColors.%s = %s, want %s", tt.name, tt.color, tt.expected)
+			if tt.color != lipgloss.Color(tt.expected) {
+				t.Errorf("StatusColors.%s = %v, want %s", tt.name, tt.color, tt.expected)
 			}
 		})
 	}

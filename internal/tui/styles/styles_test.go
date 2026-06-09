@@ -1,9 +1,10 @@
 package styles
 
 import (
+	"image/color"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 func TestHighlightStyle(t *testing.T) {
@@ -288,7 +289,7 @@ func TestHeadingStyle(t *testing.T) {
 	tests := []struct {
 		name     string
 		level    int
-		expected lipgloss.Color
+		expected color.Color
 	}{
 		{"Level 1", 1, Colors.Primary},
 		{"Level 2", 2, Colors.Secondary},

@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/charmbracelet/bubbles/list"
+	"charm.land/bubbles/v2/list"
 	"github.com/glemsom/dkvmmanager/internal/config"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
 	"github.com/glemsom/dkvmmanager/internal/vm"

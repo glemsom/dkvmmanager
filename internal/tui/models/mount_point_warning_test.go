@@ -4,14 +4,14 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestMountPointWarningModelEnterKey(t *testing.T) {
 	m := NewMountPointWarningModel()
 
 	// Test Enter key - using Type: tea.KeyEnter
-	keyMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	keyMsg := tea.KeyPressMsg{Code: tea.KeyEnter}
 	model, cmd := m.Update(keyMsg)
 
 	if _, ok := model.(*MountPointWarningModel); !ok {
@@ -32,7 +32,7 @@ func TestMountPointWarningModelEnterKey(t *testing.T) {
 func TestMountPointWarningModelEscKey(t *testing.T) {
 	m := NewMountPointWarningModel()
 
-	keyMsg := tea.KeyMsg{Type: tea.KeyEsc}
+	keyMsg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	model, cmd := m.Update(keyMsg)
 
 	if _, ok := model.(*MountPointWarningModel); !ok {
@@ -52,7 +52,7 @@ func TestMountPointWarningModelEscKey(t *testing.T) {
 func TestMountPointWarningModelSpaceKey(t *testing.T) {
 	m := NewMountPointWarningModel()
 
-	keyMsg := tea.KeyMsg{Type: tea.KeySpace}
+	keyMsg := tea.KeyPressMsg{Code: tea.KeySpace}
 	model, cmd := m.Update(keyMsg)
 
 	if _, ok := model.(*MountPointWarningModel); !ok {
@@ -72,7 +72,7 @@ func TestMountPointWarningModelSpaceKey(t *testing.T) {
 func TestMountPointWarningModelKeyString(t *testing.T) {
 	// Test what msg.String() returns for various key types
 	testCases := []struct {
-		keyType tea.KeyType
+		keyCode rune
 	}{
 		{tea.KeyEnter},
 		{tea.KeyEsc},
@@ -80,29 +80,29 @@ func TestMountPointWarningModelKeyString(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		keyMsg := tea.KeyMsg{Type: tc.keyType}
-		t.Logf("KeyType %v: String() = %q", tc.keyType, keyMsg.String())
+		keyMsg := tea.KeyPressMsg{Code: tc.keyCode}
+		t.Logf("KeyCode %v: String() = %q", tc.keyCode, keyMsg.String())
 	}
 }
 
 func TestMountPointWarningModelKeyStringWithRunes(t *testing.T) {
-	// Test with KeyRunes - this is what some terminals send for Enter
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'\n'}}
-	t.Logf("KeyRunes with \\n: String() = %q", keyMsg.String())
+	// Test with printable runes - this is what some terminals send for Enter
+	keyMsg := tea.KeyPressMsg{Code: '\n', Text: "\n"}
+	t.Logf("KeyPressMsg with \\n: String() = %q", keyMsg.String())
 
-	keyMsg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'\r'}}
-	t.Logf("KeyRunes with \\r: String() = %q", keyMsg.String())
+	keyMsg = tea.KeyPressMsg{Code: '\r', Text: "\r"}
+	t.Logf("KeyPressMsg with \\r: String() = %q", keyMsg.String())
 }
 
 func TestMountPointWarningModelView(t *testing.T) {
 	m := NewMountPointWarningModel()
 
 	// Test View without SetSize - should still render
-	view := m.View()
-	if view == "" {
+	viewContent := m.View().Content
+	if viewContent == "" {
 		t.Error("View() returned empty string")
 	}
-	if len(view) < 10 {
+	if len(viewContent) < 10 {
 		t.Error("View() returned unexpectedly short string")
 	}
 }
@@ -114,8 +114,8 @@ func TestMountPointWarningModelSetSize(t *testing.T) {
 	m.SetSize(100, 30)
 
 	// View should still render
-	view := m.View()
-	if view == "" {
+	viewContent := m.View().Content
+	if viewContent == "" {
 		t.Error("View() returned empty string after SetSize")
 	}
 }
@@ -124,16 +124,16 @@ func TestMountPointWarningModelViewWithSize(t *testing.T) {
 	m := NewMountPointWarningModel()
 	m.SetSize(80, 24)
 
-	view := m.View()
-	if view == "" {
+	viewContent := m.View().Content
+	if viewContent == "" {
 		t.Error("View() returned empty string after SetSize")
 	}
 
 	// The view should contain the warning text
-	if !strings.Contains(view, "Mount Point Warning") {
+	if !strings.Contains(viewContent, "Mount Point Warning") {
 		t.Error("View() missing 'Mount Point Warning' title")
 	}
-	if !strings.Contains(view, "dkvmdata") {
+	if !strings.Contains(viewContent, "dkvmdata") {
 		t.Error("View() missing 'dkvmdata' text")
 	}
 }

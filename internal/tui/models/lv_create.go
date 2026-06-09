@@ -2,7 +2,7 @@
 package models
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
@@ -32,7 +32,7 @@ func (m *LVCreateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View implements tea.Model.
-func (m *LVCreateModel) View() string {
+func (m *LVCreateModel) View() tea.View {
 	return m.form.View()
 }
 

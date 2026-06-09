@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
@@ -103,9 +103,9 @@ func (m *LVCreateFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View implements tea.Model.
-func (m *LVCreateFormModel) View() string {
+func (m *LVCreateFormModel) View() tea.View {
 	if m.form == nil || !m.form.Ready() {
-		return "Loading form..."
+		return tea.NewView("Loading form...")
 	}
 	return m.form.View()
 }

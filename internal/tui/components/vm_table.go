@@ -3,9 +3,9 @@ package components
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/table"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/table"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
@@ -102,7 +102,7 @@ func (v *VMTable) Init() tea.Cmd {
 
 // View renders the table with a ">" cursor indicator on the selected row,
 // matching the visual convention used by the rest of the TUI (main menu, config menu).
-func (v *VMTable) View() string {
+func (v *VMTable) View() tea.View {
 	cursor := v.table.Cursor()
 	rows := v.table.Rows()
 
@@ -125,7 +125,7 @@ func (v *VMTable) View() string {
 		defer v.table.SetRows(rows) // restore original after render
 	}
 
-	return v.table.View()
+	return tea.NewView(v.table.View())
 }
 
 // SelectedVM returns the currently selected VM

@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/models"
 )
 
@@ -56,24 +56,10 @@ func Run(debug bool, dryRun bool, testRun string, skipMountCheck bool) {
 	}
 
 	// Create the program
-	// When debug mode is enabled, we don't use AltScreen because:
-	// 1. AltScreen creates a separate buffer for the TUI
-	// 2. Log output (redirected to file) doesn't go to the alternate buffer
-	// 3. This would cause debug messages to appear on the main terminal anyway
-	// By disabling AltScreen in debug mode, the TUI and log output share the same terminal.
-	// We also need to redirect TUI output to stderr so that log output (going to the file)
-	// doesn't interfere with the TUI display.
-	var opts []tea.ProgramOption
-	if debug {
-		opts = append(opts, tea.WithOutput(os.Stderr))
-	} else {
-		opts = append(opts, tea.WithAltScreen())
-	}
-
-	p := tea.NewProgram(
-		m,
-		opts...,
-	)
+	// In v2, WithOutput and WithAltScreen are removed — they become view fields.
+	// AltScreen is controlled via the tea.View returned by View().
+	// The debug mode (alt screen disabled) is handled in MainModel.View().
+	p := tea.NewProgram(m)
 
 	// Run the program
 	if _, err := p.Run(); err != nil {

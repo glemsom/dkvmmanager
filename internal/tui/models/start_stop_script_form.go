@@ -2,8 +2,8 @@
 package models
 
 import (
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
@@ -222,11 +222,11 @@ func (m *StartStopScriptFormModel) SetSize(w, h int) {
 	m.contentW = w
 	m.contentH = h
 	if !m.ready {
-		m.vp = viewport.New(w, h)
+		m.vp = viewport.New(viewport.WithWidth(w), viewport.WithHeight(h))
 		m.ready = true
 	} else {
-		m.vp.Width = w
-		m.vp.Height = h
+		m.vp.SetWidth(w)
+		m.vp.SetHeight(h)
 	}
 }
 
@@ -298,7 +298,7 @@ func (m *StartStopScriptFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "enter", " ":
+		case "enter", " ", "space":
 			// Enter or Space toggles the mode when focused on toggle
 			// or opens file browser when focused on browse buttons
 			return m.handleEnter()
@@ -351,18 +351,18 @@ func (m *StartStopScriptFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View implements tea.Model (for backward compatibility).
-func (m *StartStopScriptFormModel) View() string {
+func (m *StartStopScriptFormModel) View() tea.View {
 	// If file browser is active, show it instead of the form
 	if m.fileBrowser != nil && m.fileBrowser.active {
 		return m.fileBrowser.View()
 	}
 
 	if !m.ready {
-		return "Loading form..."
+		return tea.NewView("Loading form...")
 	}
 	// Ensure viewport content is rendered
 	m.syncViewport()
-	return m.vp.View()
+	return tea.NewView(m.vp.View())
 }
 
 // handleEnter handles Enter key in the form (backward compat).

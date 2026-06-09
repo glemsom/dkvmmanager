@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/fields"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
@@ -144,11 +144,11 @@ func (m *CPUOptionsFormModel) SetSize(w, h int) {
 	m.contentW = w
 	m.contentH = h
 	if !m.ready {
-		m.vp = viewport.New(w, h)
+		m.vp = viewport.New(viewport.WithWidth(w), viewport.WithHeight(h))
 		m.ready = true
 	} else {
-		m.vp.Width = w
-		m.vp.Height = h
+		m.vp.SetWidth(w)
+		m.vp.SetHeight(h)
 	}
 }
 
@@ -161,7 +161,7 @@ func (m *CPUOptionsFormModel) syncViewport() {
 	totalContent := strings.Join(m.renderedLines, "\n")
 	m.vp.SetContent(totalContent)
 	if m.focusedLineIndex() >= 0 {
-		m.vp.YOffset = form.ClampOffset(m.vp.YOffset, m.focusedLineIndex(), m.vp.Height)
+		m.vp.SetYOffset(form.ClampOffset(m.vp.YOffset(), m.focusedLineIndex(), m.vp.Height()))
 	}
 }
 
@@ -222,9 +222,9 @@ func (m *CPUOptionsFormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View implements tea.Model (for backward compatibility).
-func (m *CPUOptionsFormModel) View() string {
+func (m *CPUOptionsFormModel) View() tea.View {
 	if !m.ready {
-		return "Loading form..."
+		return tea.NewView("Loading form...")
 	}
 	m.renderedLines = m.renderAllLines()
 	totalContent := ""
@@ -235,7 +235,7 @@ func (m *CPUOptionsFormModel) View() string {
 		totalContent += line
 	}
 	m.vp.SetContent(totalContent)
-	return m.vp.View()
+	return tea.NewView(m.vp.View())
 }
 
 // getToggleValue returns the boolean value for a toggle field (uses reflection).

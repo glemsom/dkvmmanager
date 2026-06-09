@@ -3,7 +3,7 @@ package models
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
@@ -12,7 +12,7 @@ func TestHandleKeyPressQuit(t *testing.T) {
 	m := setupTestModel(t)
 
 	// Test 'q' key
-	model, cmd := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	model, cmd := m.handleKeyPress(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	m = model.(*MainModel)
 
 	if !m.quitting {
@@ -26,7 +26,7 @@ func TestHandleKeyPressQuit(t *testing.T) {
 func TestHandleKeyPressCtrlC(t *testing.T) {
 	m := setupTestModel(t)
 
-	model, cmd := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyCtrlC})
+	model, cmd := m.handleKeyPress(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	m = model.(*MainModel)
 
 	if !m.quitting {
@@ -41,7 +41,7 @@ func TestHandleKeyPressEscapeMainMenu(t *testing.T) {
 	m := setupTestModel(t)
 	m.currentView = ViewMainMenu
 
-	model, cmd := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyEsc})
+	model, cmd := m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = model.(*MainModel)
 
 	if !m.quitting {
@@ -60,7 +60,7 @@ func TestHandleKeyPressEscapeSubView(t *testing.T) {
 	m.currentView = ViewVMCreate
 	m.viewRegistry = reg
 
-	model, _ := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyEsc})
+	model, _ := m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = model.(*MainModel)
 
 	if m.currentView != ViewMainMenu {
@@ -78,7 +78,7 @@ func TestHandleKeyPressRefresh(t *testing.T) {
 	// Add another VM
 	_, _ = m.vmManager.CreateVM("refresh-test-vm")
 
-	model, _ := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	model, _ := m.handleKeyPress(tea.KeyPressMsg{Code: 'r', Text: "r"})
 	m = model.(*MainModel)
 
 	newCount := len(m.menuList.Items())
@@ -92,7 +92,7 @@ func TestHandleKeyPressEnterConfigTab(t *testing.T) {
 	m.tabModel.SetActiveTab(components.TabConfiguration)
 	m.configSelectedIndex = 0 // "Add new VM"
 
-	model, _ := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ := m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
 
 	if m.currentView != ViewVMCreate {
@@ -110,7 +110,7 @@ func TestHandleKeyPressDelegatesToList(t *testing.T) {
 	initialIndex := m.menuList.Index()
 
 	// Send down arrow key
-	model, _ := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyDown})
+	model, _ := m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = model.(*MainModel)
 
 	newIndex := m.menuList.Index()
@@ -129,7 +129,7 @@ func TestHandleKeyPressVMSelectDelegation(t *testing.T) {
 	m.vmListForSelection, _ = m.vmManager.ListVMs()
 
 	// Send a key - should not panic
-	model, _ := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyDown})
+	model, _ := m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = model.(*MainModel)
 
 	// Just verify it doesn't crash
@@ -155,7 +155,7 @@ func TestVMSelectEnterDeleteMode(t *testing.T) {
 	}
 
 	// Simulate pressing Enter on the selected VM
-	model, _ = m.delegateToSubView(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ = m.delegateToSubView(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
 
 	if m.currentView != ViewVMDelete {
@@ -183,7 +183,7 @@ func TestVMSelectEnterEditMode(t *testing.T) {
 	}
 
 	// Simulate pressing Enter on the selected VM
-	model, _ = m.delegateToSubView(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ = m.delegateToSubView(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
 
 	if m.currentView != ViewVMEdit {
@@ -205,7 +205,7 @@ func TestVMSelectBreadcrumbsAfterDeleteEnter(t *testing.T) {
 	initialBreadcrumbs := m.breadcrumbs.Len()
 
 	// Simulate pressing Enter on the selected VM
-	model, _ = m.delegateToSubView(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ = m.delegateToSubView(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
 
 	if m.breadcrumbs.Len() <= initialBreadcrumbs {
@@ -233,7 +233,7 @@ func TestUpdateESCFromVMEdit(t *testing.T) {
 	m.currentView = ViewVMEdit
 
 	// Press ESC through Update() - the real message path
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = model.(*MainModel)
 
 	if m.currentView != ViewMainMenu {
@@ -252,7 +252,7 @@ func TestUpdateESCFromVMCreate(t *testing.T) {
 	m.viewRegistry = reg
 	m.currentView = ViewVMCreate
 
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = model.(*MainModel)
 
 	if m.currentView != ViewMainMenu {
@@ -292,7 +292,7 @@ func TestStartStopScriptBrowseOpensFileBrowser(t *testing.T) {
 		t.Fatalf("Expected focus on start_browse, got Kind=%d Key=%s", pos.Kind, pos.Key)
 	}
 
-	model, _ = m.delegateToSubView(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ = m.delegateToSubView(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
 
 	if ssm.Form().fileBrowser == nil {

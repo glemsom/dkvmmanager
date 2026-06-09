@@ -1,9 +1,10 @@
 package styles
 
 import (
+	"image/color"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	theme "github.com/glemsom/dkvmmanager/internal/tui/theme"
 )
 
@@ -12,9 +13,9 @@ var Colors = theme.DefaultTheme
 
 // StatusColors defines colors for VM status indicators
 var StatusColors = struct {
-	Running lipgloss.Color
-	Stopped lipgloss.Color
-	Error   lipgloss.Color
+	Running color.Color
+	Stopped color.Color
+	Error   color.Color
 }{
 	Running: theme.DefaultTheme.Success,
 	Stopped: theme.DefaultTheme.Muted,
@@ -111,7 +112,7 @@ func DisabledButtonStyle() lipgloss.Style {
 
 // StatusIndicator returns a styled status indicator (bullet)
 func StatusIndicator(status string) string {
-	var color lipgloss.Color
+	var color color.Color
 	var symbol string
 
 	switch status {

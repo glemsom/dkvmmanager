@@ -4,7 +4,7 @@ package models
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
@@ -29,7 +29,7 @@ func (m *CPUOptionsFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "pgdown":
 		m.vp.HalfPageDown()
 		return m, nil
-	case "enter", " ":
+	case "enter", " ", "space":
 		return m.handleEnterKey()
 	case "backspace":
 		m.handleBackspaceKey()

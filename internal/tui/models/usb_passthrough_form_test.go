@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
@@ -112,7 +112,7 @@ func TestUSBNavigationTabCycle(t *testing.T) {
 
 	// Tab forward through all positions
 	for i := 1; i < len(positions); i++ {
-		model, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+		model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 		m = model.(*USBPassthroughFormModel)
 		if m.focusIndex != i {
 			t.Errorf("After Tab #%d, expected focusIndex=%d, got %d", i, i, m.focusIndex)
@@ -120,7 +120,7 @@ func TestUSBNavigationTabCycle(t *testing.T) {
 	}
 
 	// At last position, Tab should stay
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = model.(*USBPassthroughFormModel)
 	if m.focusIndex != len(positions)-1 {
 		t.Errorf("Tab at last position should stay at %d, got %d", len(positions)-1, m.focusIndex)
@@ -132,15 +132,15 @@ func TestUSBNavigationShiftTabBackward(t *testing.T) {
 	m := newTestUSBForm(t)
 
 	// Tab forward once
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = model.(*USBPassthroughFormModel)
 	firstFocusable := m.focusIndex
 
-	model, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = model.(*USBPassthroughFormModel)
 
 	// Shift+Tab should go back
-	model, _ = m.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	model, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
 	m = model.(*USBPassthroughFormModel)
 	if m.focusIndex != firstFocusable {
 		t.Errorf("After Shift+Tab, focusIndex = %d, want %d", m.focusIndex, firstFocusable)
@@ -152,7 +152,7 @@ func TestUSBNavigationUpArrow(t *testing.T) {
 	m := newTestUSBForm(t)
 
 	m.SetFocusIndex(1)
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = model.(*USBPassthroughFormModel)
 
 	if m.focusIndex >= 1 {
@@ -165,7 +165,7 @@ func TestUSBNavigationDownArrow(t *testing.T) {
 	m := newTestUSBForm(t)
 
 	m.SetFocusIndex(0)
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = model.(*USBPassthroughFormModel)
 
 	if m.focusIndex <= 0 {
@@ -178,7 +178,7 @@ func TestUSBNavigationBoundaryUp(t *testing.T) {
 	m := newTestUSBForm(t)
 
 	m.SetFocusIndex(0)
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = model.(*USBPassthroughFormModel)
 
 	if m.focusIndex != 0 {
@@ -193,7 +193,7 @@ func TestUSBNavigationBoundaryDown(t *testing.T) {
 	positions := m.BuildPositions()
 	m.SetFocusIndex(len(positions) - 1)
 	lastIdx := m.focusIndex
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = model.(*USBPassthroughFormModel)
 
 	if m.focusIndex != lastIdx {
@@ -220,13 +220,13 @@ func TestUSBToggleViaEnterKey(t *testing.T) {
 	addr := positions[m.focusIndex].Key
 
 	// Enter to select
-	m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if !m.selected[addr] {
 		t.Error("Device should be selected after Enter")
 	}
 
 	// Enter to deselect
-	m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if m.selected[addr] {
 		t.Error("Device should be deselected after second Enter")
 	}
@@ -249,7 +249,7 @@ func TestUSBToggleViaSpaceKey(t *testing.T) {
 	addr := positions[m.focusIndex].Key
 
 	// Space to select
-	m.Update(tea.KeyMsg{Type: tea.KeySpace})
+	m.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 	if !m.selected[addr] {
 		t.Error("Device should be selected after Space")
 	}
@@ -351,9 +351,9 @@ func TestUSBViewShowsNoDevicesMessage(t *testing.T) {
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 25})
 	m.syncViewport()
 
-	view := m.View()
-	if !strings.Contains(view, "No USB devices found") {
-		t.Errorf("Expected 'No USB devices found' message, got:\n%s", view)
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "No USB devices found") {
+		t.Errorf("Expected 'No USB devices found' message, got:\n%s", viewContent)
 	}
 }
 

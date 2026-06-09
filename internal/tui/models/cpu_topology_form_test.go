@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
@@ -56,7 +56,7 @@ func TestCPUTopologyFormToggle(t *testing.T) {
 	key := coreKey(pos.dieID, pos.coreID)
 	initialSelected := formModel.coreSelected[key]
 
-	model, _ := formModel.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ := formModel.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	formModel = model.(*CPUTopologyFormModel)
 
 	if formModel.coreSelected[key] == initialSelected {
@@ -83,13 +83,13 @@ func TestCPUTopologyFormNavigation(t *testing.T) {
 		t.Errorf("Initial focusIndex = %d, want 0", formModel.focusIndex)
 	}
 
-	model, _ := formModel.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ := formModel.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	formModel = model.(*CPUTopologyFormModel)
 	if formModel.focusIndex != 1 {
 		t.Errorf("After Tab, focusIndex = %d, want 1", formModel.focusIndex)
 	}
 
-	model, _ = formModel.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	model, _ = formModel.Update(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
 	formModel = model.(*CPUTopologyFormModel)
 	if formModel.focusIndex != 0 {
 		t.Errorf("After Shift+Tab, focusIndex = %d, want 0", formModel.focusIndex)
@@ -116,7 +116,7 @@ func TestCPUTopologyFormSave(t *testing.T) {
 	for i, pos := range formModel.positions {
 		if pos.Kind == form.FocusToggle && pos.Data != nil {
 			formModel.focusIndex = i
-			formModel.Update(tea.KeyMsg{Type: tea.KeySpace})
+			formModel.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 			break
 		}
 	}
@@ -124,7 +124,7 @@ func TestCPUTopologyFormSave(t *testing.T) {
 	// Navigate to save button (last position)
 	formModel.focusIndex = len(formModel.positions) - 1
 
-	model, cmd := formModel.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, cmd := formModel.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	formModel = model.(*CPUTopologyFormModel)
 
 	if cmd == nil {
@@ -206,7 +206,7 @@ func TestCPUTopologyFormZeroHostWarning(t *testing.T) {
 			key := coreKey(d.dieID, d.coreID)
 			if !formModel.coreSelected[key] {
 				formModel.focusIndex = i
-				formModel.Update(tea.KeyMsg{Type: tea.KeySpace})
+				formModel.Update(tea.KeyPressMsg{Code: tea.KeySpace})
 			}
 		}
 	}
@@ -217,9 +217,9 @@ func TestCPUTopologyFormZeroHostWarning(t *testing.T) {
 	}
 
 	// Verify the warning text appears in the view
-	view := formModel.View()
-	if !strings.Contains(view, "No cores reserved for host") {
-		t.Errorf("Expected zero-host warning in view, but it was not found.\nView:\n%s", view)
+	viewContent := formModel.View().Content
+	if !strings.Contains(viewContent, "No cores reserved for host") {
+		t.Errorf("Expected zero-host warning in view, but it was not found.\nView:\n%s", viewContent)
 	}
 }
 

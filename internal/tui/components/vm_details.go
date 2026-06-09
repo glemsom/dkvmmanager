@@ -5,7 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
@@ -45,11 +46,11 @@ func (p *VMDetailsPanel) SetSize(width, height int) {
 	p.height = height
 }
 
-func (p *VMDetailsPanel) View() string {
+func (p *VMDetailsPanel) View() tea.View {
 	if p.vm == nil {
-		return p.renderEmpty()
+		return tea.NewView(p.renderEmpty())
 	}
-	return p.renderDetails()
+	return tea.NewView(p.renderDetails())
 }
 
 func (p *VMDetailsPanel) renderEmpty() string {

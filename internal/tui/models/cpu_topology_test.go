@@ -3,7 +3,7 @@ package models
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // TestCPUTopologyModelInit tests wrapper model initialization
@@ -51,14 +51,14 @@ func TestCPUTopologyModelView(t *testing.T) {
 		t.Fatalf("NewCPUTopologyModel returned error: %v", err)
 	}
 
-	view := model.View()
-	if view != "Loading..." {
-		t.Errorf("Expected 'Loading...', got %q", view)
+	viewContent := model.View().Content
+	if viewContent != "Loading..." {
+		t.Errorf("Expected 'Loading...', got %q", viewContent)
 	}
 
 	model.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
-	view = model.View()
-	if view == "Loading..." {
+	viewContent = model.View().Content
+	if viewContent == "Loading..." {
 		t.Error("Should not show loading after WindowSizeMsg")
 	}
 }

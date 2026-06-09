@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/config"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -112,8 +112,8 @@ func TestEditFormArrowKeyNavigation(t *testing.T) {
 	editModel.form.SetSize(76, 28)
 
 	// Capture the initial view - should show focus indicator on first field
-	initialView := editModel.View()
-	if !strings.Contains(initialView, "> ") {
+	initialViewContent := editModel.View().Content
+	if !strings.Contains(initialViewContent, "> ") {
 		t.Error("Initial view should contain focus indicator '> ' prefix")
 	}
 
@@ -122,7 +122,7 @@ func TestEditFormArrowKeyNavigation(t *testing.T) {
 	// Press down arrow twice to reach first hard disk list item (position 2)
 	// (position 1 is the hardDisks_label which doesn't show indicators)
 	for i := 0; i < 2; i++ {
-		model, _ := editModel.Update(tea.KeyMsg{Type: tea.KeyDown})
+		model, _ := editModel.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 		editModel = model.(*VMEditModel)
 	}
 
@@ -133,15 +133,15 @@ func TestEditFormArrowKeyNavigation(t *testing.T) {
 	}
 
 	// List items show [Del] when focused, not '> '
-	afterView := editModel.View()
-	if !strings.Contains(afterView, "[Del]") {
+	afterViewContent := editModel.View().Content
+	if !strings.Contains(afterViewContent, "[Del]") {
 		t.Error("Focused list item should show [Del] button indicator")
 	}
 
 	// Press down to reach +Add button, then Tab to verify Tab works
-	model, _ := editModel.Update(tea.KeyMsg{Type: tea.KeyDown})
+	model, _ := editModel.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	editModel = model.(*VMEditModel)
-	model, _ = editModel.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ = editModel.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	editModel = model.(*VMEditModel)
 
 	// Focus should have moved forward by Tab
@@ -168,7 +168,7 @@ func TestEditFormArrowNavigationViaMainModel(t *testing.T) {
 	}
 
 	// Select first VM to enter edit mode
-	model, _ = m.delegateToSubView(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ = m.delegateToSubView(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
 
 	if m.currentView != ViewVMEdit {
@@ -188,19 +188,19 @@ func TestEditFormArrowNavigationViaMainModel(t *testing.T) {
 	// Verify list items show [Del] button when focused
 	// First navigate to the hard disk list item (position 2) from start
 	for i := 0; i < 2; i++ {
-		model, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+		model, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 		m = model.(*MainModel)
 	}
 
-	view := editModel.View()
+	viewContent := editModel.View().Content
 	// When a list item is focused, it should show [Del] button
-	if !strings.Contains(view, "[Del]") {
+	if !strings.Contains(viewContent, "[Del]") {
 		t.Error("Focused list item should show [Del] button indicator")
 	}
 
 	// Now navigate to macAddress text field (position 6) to check '> '
 	for i := 0; i < 4; i++ {
-		model, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+		model, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 		m = model.(*MainModel)
 	}
 
@@ -209,8 +209,8 @@ func TestEditFormArrowNavigationViaMainModel(t *testing.T) {
 		t.Errorf("Focus index should have moved past list items. Got: %d", editModel.form.FocusIndex())
 	}
 
-	view = editModel.View()
-	if !strings.Contains(view, "> ") {
+	viewContent = editModel.View().Content
+	if !strings.Contains(viewContent, "> ") {
 		t.Error("Rendered view should contain '> ' focus indicator on text field")
 	}
 }

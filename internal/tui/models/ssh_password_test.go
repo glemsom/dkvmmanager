@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	tform "github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
@@ -51,11 +51,11 @@ func TestSSHPasswordFormCharInput(t *testing.T) {
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	// Focus is on newPassword (index 0)
-	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	model, _ := form.Update(tea.KeyPressMsg{Code: 's', Text: "s"})
 	form = model.(*SSHPasswordFormModel)
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	model, _ = form.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
 	form = model.(*SSHPasswordFormModel)
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	model, _ = form.Update(tea.KeyPressMsg{Code: 'c', Text: "c"})
 	form = model.(*SSHPasswordFormModel)
 
 	if form.newPassword != "sec" {
@@ -69,15 +69,15 @@ func TestSSHPasswordFormBackspace(t *testing.T) {
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	// Type "abc"
-	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	model, _ := form.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	form = model.(*SSHPasswordFormModel)
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}})
+	model, _ = form.Update(tea.KeyPressMsg{Code: 'b', Text: "b"})
 	form = model.(*SSHPasswordFormModel)
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	model, _ = form.Update(tea.KeyPressMsg{Code: 'c', Text: "c"})
 	form = model.(*SSHPasswordFormModel)
 
 	// Backspace removes 'c'
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	model, _ = form.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	form = model.(*SSHPasswordFormModel)
 
 	if form.newPassword != "ab" {
@@ -96,21 +96,21 @@ func TestSSHPasswordFormNavigation(t *testing.T) {
 	}
 
 	// Tab moves to confirmPassword (index 1)
-	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ := form.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	form = model.(*SSHPasswordFormModel)
 	if form.currentPos().fieldName != "confirmPassword" {
 		t.Errorf("Expected confirmPassword after Tab, got %s", form.currentPos().fieldName)
 	}
 
 	// Tab moves to apply (index 2)
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ = form.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	form = model.(*SSHPasswordFormModel)
 	if form.currentPos().kind != sshPwApply {
 		t.Errorf("Expected apply button after Tab, got kind %d", form.currentPos().kind)
 	}
 
 	// Shift+Tab moves back to confirmPassword
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	model, _ = form.Update(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
 	form = model.(*SSHPasswordFormModel)
 	if form.currentPos().fieldName != "confirmPassword" {
 		t.Errorf("Expected confirmPassword after Shift+Tab, got %s", form.currentPos().fieldName)
@@ -123,18 +123,18 @@ func TestSSHPasswordFormDelete(t *testing.T) {
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	// Type "abc"
-	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	model, _ := form.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	form = model.(*SSHPasswordFormModel)
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}})
+	model, _ = form.Update(tea.KeyPressMsg{Code: 'b', Text: "b"})
 	form = model.(*SSHPasswordFormModel)
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	model, _ = form.Update(tea.KeyPressMsg{Code: 'c', Text: "c"})
 	form = model.(*SSHPasswordFormModel)
 
 	// Move cursor to start
 	form.setCursorOffset("newPassword", 0)
 
 	// Delete removes 'a'
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	model, _ = form.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 	form = model.(*SSHPasswordFormModel)
 
 	if form.newPassword != "bc" {
@@ -149,7 +149,7 @@ func TestSSHPasswordValidationEmptyFields(t *testing.T) {
 
 	// Navigate to apply and press Enter
 	form.focusIndex = len(form.positions) - 1
-	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ := form.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	form = model.(*SSHPasswordFormModel)
 
 	if _, ok := form.errors["newPassword"]; !ok {
@@ -169,7 +169,7 @@ func TestSSHPasswordValidationMismatch(t *testing.T) {
 	form.confirmPassword = "different"
 	form.focusIndex = len(form.positions) - 1
 
-	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ := form.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	form = model.(*SSHPasswordFormModel)
 
 	if errMsg, ok := form.errors["confirmPassword"]; !ok {
@@ -188,7 +188,7 @@ func TestSSHPasswordValidationTooShort(t *testing.T) {
 	form.confirmPassword = "abc"
 	form.focusIndex = len(form.positions) - 1
 
-	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ := form.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	form = model.(*SSHPasswordFormModel)
 
 	if errMsg, ok := form.errors["newPassword"]; !ok {
@@ -207,7 +207,7 @@ func TestSSHPasswordValidationSuccess(t *testing.T) {
 	form.confirmPassword = "validpass"
 	form.focusIndex = len(form.positions) - 1
 
-	model, cmd := form.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, cmd := form.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	form = model.(*SSHPasswordFormModel)
 
 	if len(form.errors) != 0 {
@@ -260,20 +260,20 @@ func TestPasswordMasking(t *testing.T) {
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	// Type some characters
-	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	model, _ := form.Update(tea.KeyPressMsg{Code: 's', Text: "s"})
 	form = model.(*SSHPasswordFormModel)
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	model, _ = form.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
 	form = model.(*SSHPasswordFormModel)
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	model, _ = form.Update(tea.KeyPressMsg{Code: 'c', Text: "c"})
 	form = model.(*SSHPasswordFormModel)
 
-	view := form.View()
+	viewContent := form.View().Content
 
 	// The password characters should be masked with asterisks, not visible as "sec"
-	if strings.Contains(view, "sec") {
+	if strings.Contains(viewContent, "sec") {
 		t.Error("View should not contain plaintext password")
 	}
-	if !strings.Contains(view, "*") {
+	if !strings.Contains(viewContent, "*") {
 		t.Error("View should contain asterisk masking characters")
 	}
 }
@@ -304,11 +304,11 @@ func TestSSHPasswordFormWindowSize(t *testing.T) {
 	if !form.ready {
 		t.Error("Form should be ready after WindowSizeMsg")
 	}
-	if form.vp.Width != 80 {
-		t.Errorf("Viewport width = %d, want 80", form.vp.Width)
+	if form.vp.Width() != 80 {
+		t.Errorf("Viewport width = %d, want 80", form.vp.Width())
 	}
-	if form.vp.Height != 24 {
-		t.Errorf("Viewport height = %d, want 24", form.vp.Height)
+	if form.vp.Height() != 24 {
+		t.Errorf("Viewport height = %d, want 24", form.vp.Height())
 	}
 }
 
@@ -330,8 +330,8 @@ func TestSSHPasswordFormSetSize(t *testing.T) {
 
 	// Resize again
 	form.SetSize(120, 40)
-	if form.vp.Width != 120 {
-		t.Errorf("Viewport width = %d, want 120 after resize", form.vp.Width)
+	if form.vp.Width() != 120 {
+		t.Errorf("Viewport width = %d, want 120 after resize", form.vp.Width())
 	}
 }
 
@@ -346,7 +346,7 @@ func TestSSHPasswordFormESCWhileApplying(t *testing.T) {
 	form.applying = true
 
 	// Key input should be ignored while applying
-	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	model, _ := form.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	form = model.(*SSHPasswordFormModel)
 
 	if !form.applying {
@@ -358,9 +358,9 @@ func TestSSHPasswordFormESCWhileApplying(t *testing.T) {
 func TestSSHPasswordFormEmptyViewBeforeReady(t *testing.T) {
 	form := NewSSHPasswordFormModel()
 
-	view := form.View()
-	if view != "Loading form..." {
-		t.Errorf("View before ready = %q, want %q", view, "Loading form...")
+	viewContent := form.View().Content
+	if viewContent != "Loading form..." {
+		t.Errorf("View before ready = %q, want %q", viewContent, "Loading form...")
 	}
 }
 
@@ -417,8 +417,8 @@ func TestSSHPasswordModelView(t *testing.T) {
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	m = updated.(*SSHPasswordModel)
 
-	view := m.View()
-	if view == "" {
+	viewContent := m.View().Content
+	if viewContent == "" {
 		t.Error("View() should return non-empty string")
 	}
 }
@@ -431,7 +431,7 @@ func TestSSHPasswordModelUpdateDelegatesKeyPress(t *testing.T) {
 
 	initialField := m.Form().currentPos().fieldName
 
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	updated, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = updated.(*SSHPasswordModel)
 
 	newField := m.Form().currentPos().fieldName
@@ -453,7 +453,7 @@ func TestSSHPasswordFormApplyDryRun(t *testing.T) {
 	form.confirmPassword = "validpass"
 	form.focusIndex = len(form.positions) - 1
 
-	model, cmd := form.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, cmd := form.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	form = model.(*SSHPasswordFormModel)
 
 	if cmd == nil {
@@ -480,7 +480,7 @@ func TestSSHPasswordFormApplyInvalidChars(t *testing.T) {
 	form.confirmPassword = "p@ss!w0rd#"
 	form.focusIndex = len(form.positions) - 1
 
-	model, cmd := form.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, cmd := form.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	_ = model.(*SSHPasswordFormModel)
 
 	if cmd == nil {

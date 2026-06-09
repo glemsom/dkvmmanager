@@ -4,9 +4,9 @@ package models
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	"github.com/charmbracelet/lipgloss"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/viewport"
+	"charm.land/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
@@ -221,11 +221,11 @@ func (m *SSHPasswordFormModel) SetSize(w, h int) {
 	m.contentW = w
 	m.contentH = h
 	if !m.ready {
-		m.vp = viewport.New(w, h)
+		m.vp = viewport.New(viewport.WithWidth(w), viewport.WithHeight(h))
 		m.ready = true
 	} else {
-		m.vp.Width = w
-		m.vp.Height = h
+		m.vp.SetWidth(w)
+		m.vp.SetHeight(h)
 	}
 }
 
@@ -415,7 +415,7 @@ func (m *SSHPasswordFormModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "pgdown":
 		m.vp.HalfPageDown()
 		return m, nil
-	case "enter", " ":
+	case "enter", " ", "space":
 		return m.handleEnterKey()
 	case "backspace":
 		m.handleBackspaceKey()
@@ -498,14 +498,14 @@ func (m *SSHPasswordFormModel) handleCharInput(ch string) {
 }
 
 // View implements tea.Model (for backward compatibility).
-func (m *SSHPasswordFormModel) View() string {
+func (m *SSHPasswordFormModel) View() tea.View {
 	if !m.ready {
-		return "Loading form..."
+		return tea.NewView("Loading form...")
 	}
 	m.renderedLines = m.renderAllLines()
 	totalContent := strings.Join(m.renderedLines, "\n")
 	m.vp.SetContent(totalContent)
-	return m.vp.View()
+	return tea.NewView(m.vp.View())
 }
 
 // sshPos is a legacy position type for backward-compatible test access.

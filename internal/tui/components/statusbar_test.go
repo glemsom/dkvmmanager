@@ -1,10 +1,11 @@
 package components
 
 import (
+	"image/color"
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
@@ -329,7 +330,7 @@ func TestRenderModeColors(t *testing.T) {
 	tests := []struct {
 		name          string
 		mode          string
-		expectedColor lipgloss.Color
+		expectedColor color.Color
 	}{
 		{"Ready mode uses green", "Ready", styles.StatusColors.Running},
 		{"Editing mode uses yellow", "Editing", styles.Colors.Warning},

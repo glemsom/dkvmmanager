@@ -2,7 +2,7 @@
 package models
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
@@ -46,7 +46,7 @@ func (m *SSHPasswordModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View returns the view for the model.
-func (m *SSHPasswordModel) View() string {
+func (m *SSHPasswordModel) View() tea.View {
 	return m.form.View()
 }
 

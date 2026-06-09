@@ -3,7 +3,8 @@ package components
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
@@ -79,12 +80,12 @@ func (v *VMListView) SelectedVM() *models.VM {
 	return nil
 }
 
-func (v *VMListView) View() string {
+func (v *VMListView) View() tea.View {
 	if len(v.vms) == 0 {
 		emptyStyle := lipgloss.NewStyle().
 			Foreground(styles.Colors.Muted).
 			Italic(true)
-		return emptyStyle.Render("No virtual machines configured.\n\nPress 'n' to create a new VM.")
+		return tea.NewView(emptyStyle.Render("No virtual machines configured.\n\nPress 'n' to create a new VM."))
 	}
 
 	var lines []string
@@ -149,5 +150,5 @@ func (v *VMListView) View() string {
 			Render(strings.Join(lines, "\n"))
 	}
 
-	return content
+	return tea.NewView(content)
 }

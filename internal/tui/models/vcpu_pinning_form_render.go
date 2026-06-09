@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
@@ -348,7 +348,7 @@ func (m *VCPUPinningFormModel) syncViewport() {
 	m.vp.SetContent(content)
 	// Ensure focused element is visible
 	if m.focusedLineIndex() >= 0 {
-		m.vp.SetYOffset(form.ClampOffset(m.vp.YOffset, m.focusedLineIndex(), m.vp.Height))
+		m.vp.SetYOffset(form.ClampOffset(m.vp.YOffset(), m.focusedLineIndex(), m.vp.Height()))
 	}
 }
 

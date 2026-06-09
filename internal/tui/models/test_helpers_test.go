@@ -3,7 +3,7 @@ package models
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // sendRunes sends individual rune key presses through Update() and returns the updated model.
@@ -11,7 +11,7 @@ import (
 func sendRunes(t *testing.T, m *MainModel, runes ...rune) *MainModel {
 	t.Helper()
 	for _, r := range runes {
-		model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		model, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		m = model.(*MainModel)
 	}
 	return m
@@ -19,10 +19,10 @@ func sendRunes(t *testing.T, m *MainModel, runes ...rune) *MainModel {
 
 // sendKeys sends special key presses (KeyEnter, KeyEsc, KeyTab, etc.) through Update()
 // and returns the updated model.
-func sendKeys(t *testing.T, m *MainModel, keys ...tea.KeyType) *MainModel {
+func sendKeys(t *testing.T, m *MainModel, keys ...rune) *MainModel {
 	t.Helper()
 	for _, k := range keys {
-		model, _ := m.Update(tea.KeyMsg{Type: k})
+		model, _ := m.Update(tea.KeyPressMsg{Code: k})
 		m = model.(*MainModel)
 	}
 	return m
@@ -31,10 +31,10 @@ func sendKeys(t *testing.T, m *MainModel, keys ...tea.KeyType) *MainModel {
 // sendKeysWithCmd sends key presses through Update() and executes any returned tea.Cmd,
 // feeding the resulting message back through Update(). Returns the final model.
 // This exercises the full async command pipeline that real user interactions trigger.
-func sendKeysWithCmd(t *testing.T, m *MainModel, keys ...tea.KeyType) *MainModel {
+func sendKeysWithCmd(t *testing.T, m *MainModel, keys ...rune) *MainModel {
 	t.Helper()
 	for _, k := range keys {
-		model, cmd := m.Update(tea.KeyMsg{Type: k})
+		model, cmd := m.Update(tea.KeyPressMsg{Code: k})
 		m = model.(*MainModel)
 		if cmd != nil {
 			msg := cmd()

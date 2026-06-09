@@ -1,31 +1,33 @@
 package theme
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"image/color"
+
+	"charm.land/lipgloss/v2"
 )
 
 // Theme defines the color palette for the TUI.
 type Theme struct {
 	// Primary colors
-	Primary         lipgloss.Color // Main accent color
-	PrimaryDim      lipgloss.Color // Dimmed for backgrounds
-	Secondary       lipgloss.Color // Secondary accent color
-	SecondaryDim    lipgloss.Color // Dimmed for backgrounds
-	Success         lipgloss.Color // Success states
-	SuccessDim      lipgloss.Color // Subtle background tints
-	Warning         lipgloss.Color // Warning states
-	WarningDim      lipgloss.Color // Subtle background tints
-	Error           lipgloss.Color // Error states
-	ErrorDim        lipgloss.Color // Subtle background tints
-	Foreground      lipgloss.Color // Normal text color
-	ForegroundDim   lipgloss.Color // Dimmed text for less emphasis
-	Muted           lipgloss.Color // Disabled/muted text
-	Background      lipgloss.Color // Panel backgrounds
-	Border          lipgloss.Color // Border color
-	FocusedBackground lipgloss.Color // Focused pane background
-	UnfocusedBackground lipgloss.Color // Unfocused pane background
-	FocusBorder     lipgloss.Color // Border color when focused
-	HoverBackground lipgloss.Color // Background on hover/focus
+	Primary         color.Color // Main accent color
+	PrimaryDim      color.Color // Dimmed for backgrounds
+	Secondary       color.Color // Secondary accent color
+	SecondaryDim    color.Color // Dimmed for backgrounds
+	Success         color.Color // Success states
+	SuccessDim      color.Color // Subtle background tints
+	Warning         color.Color // Warning states
+	WarningDim      color.Color // Subtle background tints
+	Error           color.Color // Error states
+	ErrorDim        color.Color // Subtle background tints
+	Foreground      color.Color // Normal text color
+	ForegroundDim   color.Color // Dimmed text for less emphasis
+	Muted           color.Color // Disabled/muted text
+	Background      color.Color // Panel backgrounds
+	Border          color.Color // Border color
+	FocusedBackground color.Color // Focused pane background
+	UnfocusedBackground color.Color // Unfocused pane background
+	FocusBorder     color.Color // Border color when focused
+	HoverBackground color.Color // Background on hover/focus
 }
 
 // NewDarkTheme creates a theme suitable for dark terminals in pure textmode.

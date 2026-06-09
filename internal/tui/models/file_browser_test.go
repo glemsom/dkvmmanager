@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func setupFileBrowserTest(t *testing.T, fileType FileType) (*FileBrowserModel, string) {
@@ -333,7 +333,7 @@ func TestFileBrowserHandleKeyPressUp(t *testing.T) {
 		active:        true,
 	}
 
-	updated, _ := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyUp})
+	updated, _ := m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = updated.(*FileBrowserModel)
 
 	if m.selectedIndex != 0 {
@@ -356,7 +356,7 @@ func TestFileBrowserHandleKeyPressDown(t *testing.T) {
 		active:        true,
 	}
 
-	updated, _ := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = updated.(*FileBrowserModel)
 
 	if m.selectedIndex != 1 {
@@ -379,7 +379,7 @@ func TestFileBrowserHandleKeyPressVimKeys(t *testing.T) {
 		active:        true,
 	}
 
-	updated, _ := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	updated, _ := m.handleKeyPress(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	m = updated.(*FileBrowserModel)
 
 	if m.selectedIndex != 0 {
@@ -387,7 +387,7 @@ func TestFileBrowserHandleKeyPressVimKeys(t *testing.T) {
 	}
 
 	m.selectedIndex = 1
-	updated, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	updated, _ = m.handleKeyPress(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	m = updated.(*FileBrowserModel)
 
 	if m.selectedIndex != 2 {
@@ -409,7 +409,7 @@ func TestFileBrowserHandleKeyPressESC(t *testing.T) {
 		active:        true,
 	}
 
-	updated, cmd := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyEsc})
+	updated, cmd := m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = updated.(*FileBrowserModel)
 
 	if m.active {
@@ -443,7 +443,7 @@ func TestFileBrowserHandleKeyPressCtrlC(t *testing.T) {
 		active:        true,
 	}
 
-	updated, cmd := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyCtrlC})
+	updated, cmd := m.handleKeyPress(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	m = updated.(*FileBrowserModel)
 
 	if m.active {
@@ -609,7 +609,7 @@ func TestFileBrowserUpdateInactive(t *testing.T) {
 		active:        false,
 	}
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	_ = updated
 
 	if cmd != nil {
@@ -635,8 +635,8 @@ func TestFileBrowserViewContainsHeader(t *testing.T) {
 			active:     true,
 		}
 
-		view := m.View()
-		if !strings.Contains(view, tt.header) {
+		viewContent := m.View().Content
+		if !strings.Contains(viewContent, tt.header) {
 			t.Errorf("View with fileType %d should contain '%s'", tt.fileType, tt.header)
 		}
 	}
@@ -650,8 +650,8 @@ func TestFileBrowserViewContainsCurrentDir(t *testing.T) {
 		active:     true,
 	}
 
-	view := m.View()
-	if !strings.Contains(view, "/some/test/path") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "/some/test/path") {
 		t.Error("View should contain current directory path")
 	}
 }
@@ -664,8 +664,8 @@ func TestFileBrowserViewEmptyDir(t *testing.T) {
 		active:     true,
 	}
 
-	view := m.View()
-	if !strings.Contains(view, "(empty directory)") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "(empty directory)") {
 		t.Error("View should show '(empty directory)' when no files")
 	}
 }
@@ -678,11 +678,11 @@ func TestFileBrowserViewContainsHelp(t *testing.T) {
 		active:     true,
 	}
 
-	view := m.View()
-	if !strings.Contains(view, "Navigate") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "Navigate") {
 		t.Error("View should contain help text with 'Navigate'")
 	}
-	if !strings.Contains(view, "ESC Cancel") {
+	if !strings.Contains(viewContent, "ESC Cancel") {
 		t.Error("View should contain help text with 'ESC Cancel'")
 	}
 }

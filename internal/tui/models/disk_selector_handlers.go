@@ -1,7 +1,7 @@
 package models
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // Update handles incoming messages
@@ -40,7 +40,7 @@ func (m *BlockDeviceModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.selectedIndex++
 		}
 
-	case "enter", " ":
+	case "enter", " ", "space":
 		return m.handleEnter()
 	}
 
@@ -122,7 +122,7 @@ func (m *AddDiskModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.selectedIndex++
 		}
 
-	case "enter", " ":
+	case "enter", " ", "space":
 		return m.handleEnter()
 	}
 

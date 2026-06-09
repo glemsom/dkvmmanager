@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/config"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/fields"
@@ -89,9 +89,9 @@ func TestCPUOptionsFormToggle(t *testing.T) {
 		pressKeys []tea.KeyMsg
 		want      bool
 	}{
-		{"HideKVM single toggle", "HideKVM", []tea.KeyMsg{{Type: tea.KeyEnter}}, true},
-		{"HideKVM double toggle", "HideKVM", []tea.KeyMsg{{Type: tea.KeyEnter}, {Type: tea.KeyEnter}}, false},
-		{"HVRelaxed toggle", "HVRelaxed", []tea.KeyMsg{{Type: tea.KeyEnter}}, true},
+		{"HideKVM single toggle", "HideKVM", []tea.KeyMsg{tea.KeyPressMsg{Code: tea.KeyEnter}}, true},
+		{"HideKVM double toggle", "HideKVM", []tea.KeyMsg{tea.KeyPressMsg{Code: tea.KeyEnter}, tea.KeyPressMsg{Code: tea.KeyEnter}}, false},
+		{"HVRelaxed toggle", "HVRelaxed", []tea.KeyMsg{tea.KeyPressMsg{Code: tea.KeyEnter}}, true},
 	}
 
 	for _, tc := range tests {
@@ -131,7 +131,7 @@ func TestCPUOptionsFormNavigation(t *testing.T) {
 	}
 
 	// Tab moves to VendorID (index 2)
-	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ := form.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	form = model.(*CPUOptionsFormModel)
 	if form.currentPos().fieldName != "VendorID" {
 		t.Errorf("Expected VendorID after Tab, got %s", form.currentPos().fieldName)
@@ -144,15 +144,15 @@ func TestCPUOptionsFormTextEditing(t *testing.T) {
 	form := NewCPUOptionsFormModel(vmManager.Repository())
 
 	// Move to VendorID (index 2)
-	model, _ := form.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ := form.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	form = model.(*CPUOptionsFormModel)
 
 	// Type "AMD"
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'A'}})
+	model, _ = form.Update(tea.KeyPressMsg{Code: 'A', Text: "A"})
 	form = model.(*CPUOptionsFormModel)
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'M'}})
+	model, _ = form.Update(tea.KeyPressMsg{Code: 'M', Text: "M"})
 	form = model.(*CPUOptionsFormModel)
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'D'}})
+	model, _ = form.Update(tea.KeyPressMsg{Code: 'D', Text: "D"})
 	form = model.(*CPUOptionsFormModel)
 
 	if form.getTextValue("VendorID") != "AMD" {
@@ -160,7 +160,7 @@ func TestCPUOptionsFormTextEditing(t *testing.T) {
 	}
 
 	// Backspace removes last character
-	model, _ = form.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	model, _ = form.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	form = model.(*CPUOptionsFormModel)
 
 	if form.getTextValue("VendorID") != "AM" {
@@ -182,7 +182,7 @@ func TestCPUOptionsFormSave(t *testing.T) {
 	form.focusIndex = len(form.positions) - 1
 
 	// Press Enter to save
-	model, cmd := form.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, cmd := form.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	form = model.(*CPUOptionsFormModel)
 
 	// Command should return CPUOptionsUpdatedMsg
@@ -233,7 +233,7 @@ func TestCPUOptionsFormAllToggles(t *testing.T) {
 		initialVal := form.getToggleValue(field)
 
 		// Toggle
-		model, _ := form.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		model, _ := form.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		form = model.(*CPUOptionsFormModel)
 
 		newVal := form.getToggleValue(field)

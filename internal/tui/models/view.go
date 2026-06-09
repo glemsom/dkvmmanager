@@ -4,7 +4,7 @@ package models
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
@@ -95,21 +95,21 @@ func (m *MainModel) renderActiveContent() string {
 func (m *MainModel) renderActiveContentWithWidth(width int) string {
 	// Registry-based render: delegate to active registered sub-view
 	if m.viewRegistry != nil && m.viewRegistry.IsActive() {
-		return m.viewRegistry.ActiveModel().View()
+		return m.viewRegistry.ActiveModel().View().Content
 	}
 
 	// Fallback: render non-registry sub-views
 	switch m.currentView {
 	case ViewVMDelete:
 		if m.vmDeleteModel != nil {
-			return m.vmDeleteModel.View()
+			return m.vmDeleteModel.View().Content
 		}
 		return "Loading..."
 	case ViewVMSelect:
 		return m.renderVMSelectView()
 	case ViewVMRunning:
 		if m.vmRunningModel != nil {
-			return m.vmRunningModel.View()
+			return m.vmRunningModel.View().Content
 		}
 		return "Loading..."
 	}

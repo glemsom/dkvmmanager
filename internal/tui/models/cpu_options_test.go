@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestNewCPUOptionsModel(t *testing.T) {
@@ -64,8 +64,8 @@ func TestCPUOptionsModelView(t *testing.T) {
 	mgr := createTestVMManager(t)
 	m := NewCPUOptionsModel(mgr.Repository())
 
-	view := m.View()
-	if view == "" {
+	viewContent := m.View().Content
+	if viewContent == "" {
 		t.Error("View() should return non-empty string")
 	}
 }
@@ -77,8 +77,8 @@ func TestCPUOptionsModelViewContainsHeader(t *testing.T) {
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	m = updated.(*CPUOptionsModel)
 
-	view := m.View()
-	if !strings.Contains(view, "Hypervisor Stealth") {
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "Hypervisor Stealth") {
 		t.Error("View() should contain 'Hypervisor Stealth' section header")
 	}
 }
@@ -90,7 +90,7 @@ func TestCPUOptionsModelUpdateDelegatesKeyPress(t *testing.T) {
 	fm := m.Form()
 	initialField := fm.currentPos().fieldName
 
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	updated, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	wrapped := updated.(*CPUOptionsModel)
 
 	newField := wrapped.Form().currentPos().fieldName

@@ -3,7 +3,7 @@ package models
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
 )
 
@@ -83,11 +83,11 @@ func TestEnterWorksAfterTabSwitch(t *testing.T) {
 	m := setupTestModelWithVMs(t)
 
 	// Switch to Configuration tab via keyboard
-	model, _ := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ := m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = model.(*MainModel)
 
 	// Press Enter immediately (without arrow keys) - should not panic
-	model, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ = m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
 
 	if m == nil {
@@ -104,21 +104,21 @@ func TestTabNavigation(t *testing.T) {
 	}
 
 	// Tab key should switch to Configuration
-	model, _ := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ := m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = model.(*MainModel)
 	if m.tabModel.GetActiveTab() != components.TabConfiguration {
 		t.Error("Expected tab to be TabConfiguration after Tab key")
 	}
 
 	// Tab key again should switch to Power
-	model, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ = m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = model.(*MainModel)
 	if m.tabModel.GetActiveTab() != components.TabPower {
 		t.Error("Expected tab to be TabPower after second Tab key")
 	}
 
 	// Shift+Tab should go back
-	model, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyShiftTab})
+	model, _ = m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
 	m = model.(*MainModel)
 	if m.tabModel.GetActiveTab() != components.TabConfiguration {
 		t.Error("Expected tab to be TabConfiguration after Shift+Tab")
@@ -134,7 +134,7 @@ func TestArrowKeysWorkAfterTabSwitch(t *testing.T) {
 	}
 
 	// Press right arrow to switch to Configuration tab
-	model, _ := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyRight})
+	model, _ := m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyRight})
 	m = model.(*MainModel)
 
 	if m.tabModel.GetActiveTab() != components.TabConfiguration {
@@ -147,7 +147,7 @@ func TestArrowKeysWorkAfterTabSwitch(t *testing.T) {
 	}
 
 	// Press down arrow - should immediately move cursor on configList
-	model, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyDown})
+	model, _ = m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = model.(*MainModel)
 
 	if m.configList.Index() != 1 {
@@ -158,7 +158,7 @@ func TestArrowKeysWorkAfterTabSwitch(t *testing.T) {
 	}
 
 	// Switch to Power tab
-	model, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyRight})
+	model, _ = m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyRight})
 	m = model.(*MainModel)
 
 	if m.tabModel.GetActiveTab() != components.TabPower {
@@ -171,7 +171,7 @@ func TestArrowKeysWorkAfterTabSwitch(t *testing.T) {
 	}
 
 	// Down arrow on Power tab
-	model, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyDown})
+	model, _ = m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = model.(*MainModel)
 
 	if m.powerList.Index() != 1 {
@@ -183,11 +183,11 @@ func TestTabSwitchRestoresCursor(t *testing.T) {
 	m := setupTestModel(t)
 
 	// Navigate on Configuration tab: press down twice
-	model, _ := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyTab}) // Switch to Config
+	model, _ := m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyTab}) // Switch to Config
 	m = model.(*MainModel)
-	model, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyDown}) // cursor → 1
+	model, _ = m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyDown}) // cursor → 1
 	m = model.(*MainModel)
-	model, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyDown}) // cursor → 2
+	model, _ = m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyDown}) // cursor → 2
 	m = model.(*MainModel)
 
 	if m.configList.Index() != 2 {
@@ -195,9 +195,9 @@ func TestTabSwitchRestoresCursor(t *testing.T) {
 	}
 
 	// Switch away to Power and back to Configuration
-	model, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyRight}) // Power
+	model, _ = m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyRight}) // Power
 	m = model.(*MainModel)
-	model, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyLeft}) // Back to Config
+	model, _ = m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyLeft}) // Back to Config
 	m = model.(*MainModel)
 
 	if m.tabModel.GetActiveTab() != components.TabConfiguration {
@@ -210,7 +210,7 @@ func TestTabSwitchRestoresCursor(t *testing.T) {
 	}
 
 	// Arrow keys should work immediately after restore
-	model, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyDown})
+	model, _ = m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = model.(*MainModel)
 
 	if m.configList.Index() != 3 {
@@ -227,11 +227,11 @@ func TestVMsTabArrowKeysAfterSwitch(t *testing.T) {
 	}
 
 	// Switch to Configuration and back via Tab
-	model, _ := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyTab}) // Config
+	model, _ := m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyTab}) // Config
 	m = model.(*MainModel)
-	model, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyTab}) // Power
+	model, _ = m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyTab}) // Power
 	m = model.(*MainModel)
-	model, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyTab}) // VMs (wraps)
+	model, _ = m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyTab}) // VMs (wraps)
 	m = model.(*MainModel)
 
 	if m.tabModel.GetActiveTab() != components.TabVMs {
@@ -244,7 +244,7 @@ func TestVMsTabArrowKeysAfterSwitch(t *testing.T) {
 	}
 
 	// Down arrow should work immediately
-	model, _ = m.handleKeyPress(tea.KeyMsg{Type: tea.KeyDown})
+	model, _ = m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = model.(*MainModel)
 
 	if m.menuList.Index() != 1 {

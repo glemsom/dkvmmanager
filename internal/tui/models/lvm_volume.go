@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
@@ -183,7 +183,7 @@ func (m *LVMVolumeModel) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.selectedIndex++
 		}
 
-	case "enter", " ":
+	case "enter", " ", "space":
 		return m.handleEnter()
 	}
 
@@ -204,7 +204,7 @@ func (m *LVMVolumeModel) handleEnter() (tea.Model, tea.Cmd) {
 }
 
 // View returns the rendered view for LVMVolumeModel
-func (m *LVMVolumeModel) View() string {
+func (m *LVMVolumeModel) View() tea.View {
 	headerStyle := lipgloss.NewStyle().
 		Foreground(styles.Colors.Primary).
 		Bold(true)
@@ -271,7 +271,7 @@ func (m *LVMVolumeModel) View() string {
 	output += "\n\n"
 	output += helpStyle.Render("↑/↓ Navigate  Space/Enter Select  ESC Cancel") + "\n"
 
-	return output
+	return tea.NewView(output)
 }
 
 // GetSelectedPath returns the selected volume path

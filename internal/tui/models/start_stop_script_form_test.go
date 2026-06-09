@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/config"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
@@ -53,7 +53,7 @@ func TestCustomScriptFormToggleBuiltin(t *testing.T) {
 	}
 
 	// Toggle to builtin mode via Enter key
-	model, _ := fm.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ := fm.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	fm = model.(*StartStopScriptFormModel)
 
 	// After toggle: should be builtin mode
@@ -67,7 +67,7 @@ func TestCustomScriptFormToggleBuiltin(t *testing.T) {
 	}
 
 	// Toggle back to custom
-	model, _ = fm.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, _ = fm.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	fm = model.(*StartStopScriptFormModel)
 
 	if fm.config.UseBuiltin {
@@ -95,21 +95,21 @@ func TestCustomScriptFormNavigation(t *testing.T) {
 
 	// In custom mode initially: 7 positions (0-6)
 	// Tab moves to index 1
-	model, _ := fm.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model, _ := fm.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	fm = model.(*StartStopScriptFormModel)
 	if fm.focusIndex != 1 {
 		t.Errorf("Expected focusIndex 1 after Tab, got %d", fm.focusIndex)
 	}
 
 	// Up arrow at index 1 should go to index 0
-	model, _ = fm.Update(tea.KeyMsg{Type: tea.KeyUp})
+	model, _ = fm.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	fm = model.(*StartStopScriptFormModel)
 	if fm.focusIndex != 0 {
 		t.Errorf("Expected focusIndex 0 after Up, got %d", fm.focusIndex)
 	}
 
 	// Down arrow should go to index 1
-	model, _ = fm.Update(tea.KeyMsg{Type: tea.KeyDown})
+	model, _ = fm.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	fm = model.(*StartStopScriptFormModel)
 	if fm.focusIndex != 1 {
 		t.Errorf("Expected focusIndex 1 after Down, got %d", fm.focusIndex)
@@ -126,23 +126,23 @@ func TestCustomScriptFormRenderBuiltin(t *testing.T) {
 
 	// Set size and render
 	fm.SetSize(78, 20)
-	view := fm.View()
+	viewContent := fm.View().Content
 
 	// Should contain key text
-	if !strings.Contains(view, "Custom Start/Stop Script") {
+	if !strings.Contains(viewContent, "Custom Start/Stop Script") {
 		t.Error("Expected 'Custom Start/Stop Script' in view")
 	}
 	// Should show single-line toggle
-	if !strings.Contains(view, "[Builtin]") {
+	if !strings.Contains(viewContent, "[Builtin]") {
 		t.Error("Expected '[Builtin]' in view")
 	}
-	if !strings.Contains(view, "[Custom]") {
+	if !strings.Contains(viewContent, "[Custom]") {
 		t.Error("Expected '[Custom]' in view")
 	}
-	if !strings.Contains(view, "Save") {
+	if !strings.Contains(viewContent, "Save") {
 		t.Error("Expected 'Save' in view")
 	}
-	if !strings.Contains(view, "Cancel") {
+	if !strings.Contains(viewContent, "Cancel") {
 		t.Error("Expected 'Cancel' in view")
 	}
 }
@@ -159,13 +159,13 @@ func TestCustomScriptFormRenderCustom(t *testing.T) {
 	fm.config.UseBuiltin = false
 	fm.rebuildPositions()
 	fm.SetSize(78, 20)
-	view := fm.View()
+	viewContent := fm.View().Content
 
 	// Should show script paths
-	if !strings.Contains(view, "Start Script") {
+	if !strings.Contains(viewContent, "Start Script") {
 		t.Error("Expected 'Start Script' in custom mode view")
 	}
-	if !strings.Contains(view, "Stop Script") {
+	if !strings.Contains(viewContent, "Stop Script") {
 		t.Error("Expected 'Stop Script' in custom mode view")
 	}
 }
@@ -304,7 +304,7 @@ func TestEnterOnStartBrowseCreatesFileBrowser(t *testing.T) {
 	}
 
 	// Press Enter - should create file browser
-	model, cmd := fm.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, cmd := fm.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	fm = model.(*StartStopScriptFormModel)
 
 	if fm.fileBrowser == nil {
@@ -335,7 +335,7 @@ func TestEnterOnStopBrowseCreatesFileBrowser(t *testing.T) {
 	}
 
 	// Press Enter - should create file browser
-	model, cmd := fm.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, cmd := fm.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	fm = model.(*StartStopScriptFormModel)
 
 	if fm.fileBrowser == nil {
@@ -432,7 +432,7 @@ func TestStartStopScriptKeyDelegationToFileBrowser(t *testing.T) {
 	fm.fileBrowser = NewFileBrowserModel(FileTypeAll)
 
 	// Send ESC key - should be delegated to file browser
-	_, cmd := fm.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	_, cmd := fm.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 
 	if cmd == nil {
 		t.Error("Expected file browser to return a command on ESC")
@@ -459,22 +459,22 @@ func TestStartStopScriptViewShowsFileBrowserWhenActive(t *testing.T) {
 	fm.SetSize(78, 20)
 
 	// Without file browser, should show form
-	view := fm.View()
-	if view == "" {
+	viewContent := fm.View().Content
+	if viewContent == "" {
 		t.Error("Expected non-empty view")
 	}
-	if !strings.Contains(view, "Custom Start/Stop Script") {
+	if !strings.Contains(viewContent, "Custom Start/Stop Script") {
 		t.Error("Expected form content when file browser not active")
 	}
 
 	// With active file browser, should show file browser view
 	fm.fileBrowser = NewFileBrowserModel(FileTypeAll)
-	view = fm.View()
-	if view == "" {
+	viewContent = fm.View().Content
+	if viewContent == "" {
 		t.Error("Expected non-empty file browser view")
 	}
 	// File browser view shows directory contents
-	if !strings.Contains(view, "/") {
+	if !strings.Contains(viewContent, "/") {
 		t.Error("Expected file browser to show path")
 	}
 }

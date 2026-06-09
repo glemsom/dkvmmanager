@@ -6,7 +6,7 @@ import (
 	"log"
 	"os/exec"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // runLBUCommit executes lbu commit asynchronously and returns the result

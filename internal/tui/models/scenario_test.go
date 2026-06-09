@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
 )
 
@@ -27,7 +27,8 @@ func TestScenarioQuitFromMainMenu(t *testing.T) {
 func TestScenarioQuitViaCtrlC(t *testing.T) {
 	m := setupTestModelForScenarios(t)
 
-	m = sendKeys(t, m, tea.KeyCtrlC)
+	model, _ := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
+	m = model.(*MainModel)
 
 	if !m.quitting {
 		t.Error("Expected quitting=true after Ctrl+C")
@@ -56,7 +57,8 @@ func TestScenarioTabSwitching(t *testing.T) {
 	}
 
 	// Press Shift+Tab to return to Configuration
-	m = sendKeys(t, m, tea.KeyShiftTab)
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
+	m = model.(*MainModel)
 	if m.tabModel.GetActiveTab() != components.TabConfiguration {
 		t.Errorf("Expected TabConfiguration after Shift+Tab, got %d", m.tabModel.GetActiveTab())
 	}
@@ -76,7 +78,8 @@ func TestScenarioTabKeyCycling(t *testing.T) {
 		t.Error("Expected TabPower after second Tab")
 	}
 
-	m = sendKeys(t, m, tea.KeyShiftTab)
+	model, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
+	m = model.(*MainModel)
 	if m.tabModel.GetActiveTab() != components.TabConfiguration {
 		t.Error("Expected TabConfiguration after Shift+Tab")
 	}
@@ -236,7 +239,7 @@ func TestScenarioLBUCommitDryRun(t *testing.T) {
 	m = sendKeys(t, m, tea.KeyTab)
 	m.configSelectedIndex = 11
 
-	model, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
 
 	if cmd == nil {
@@ -273,8 +276,8 @@ func TestScenarioWindowSizeMsg(t *testing.T) {
 	}
 
 	// View should render without panic
-	view := m.View()
-	if view == "" {
+	viewContent := m.View().Content
+	if viewContent == "" {
 		t.Error("View should not be empty after WindowSizeMsg")
 	}
 }
