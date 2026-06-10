@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.25] - 2026-06-10
+
+### Added
+- **Persisted QEMU log per VM**: The runner now writes a persistent log to `<DataFolder>/vms/<id>/qemu.log` mirroring QEMU stdout, QEMU stderr, and start/stop script output, so log history survives view re-entry and VM exit (S1) (`internal/vm/vm_runner.go`, `internal/vm/vm_runner_test.go`)
+- **View replays persisted log on entry**: The running view now replays the persisted log when the user re-enters it, draining the runner's subscription channel so live lines continue without duplication (S2) (`internal/tui/models/vm_running.go`, `internal/vm/vm_runner.go`, `internal/vm/vm_runner_test.go`)
+- **Per-vCPU CPU% metrics**: Live per-vCPU CPU utilisation is now plumbed from QMP through the metrics snapshot and displayed in the running view (S3) (`internal/vm/metrics.go`, `internal/vm/metrics_test.go`, `internal/vm/proc.go`, `internal/vm/proc_test.go`, `internal/vm/qmp_client.go`, `internal/vm/qmp_client_test.go`, `internal/vm/vm_runner.go`, `internal/tui/models/vm_running.go`, `internal/tui/models/vm_running_test.go`)
+- **Host-side QEMU process CPU% and RSS**: The running view now shows the QEMU process's host-side CPU% and RSS, derived from `/proc/<pid>` (S4) (`internal/vm/proc.go`, `internal/vm/proc_test.go`, `internal/vm/metrics.go`, `internal/vm/metrics_test.go`, `internal/vm/vm_runner.go`, `internal/tui/models/vm_running.go`, `internal/tui/models/vm_running_test.go`)
+- **Per-disk IOPS/B/s and balloon in the running view**: Per-block IOPS and bytes/s plus the current balloon size are now part of the metrics snapshot and rendered in the running view (S5) (`internal/vm/metrics.go`, `internal/vm/metrics_test.go`, `internal/vm/qmp_client.go`, `internal/vm/qmp_client_test.go`, `internal/vm/vm_runner.go`, `internal/tui/models/vm_running.go`, `internal/tui/models/vm_running_test.go`)
+
+### Changed
+- **Domain glossary and ADR for the runner-owned data plane**: New `CONTEXT.md` glossary locks the terms Runner / Manager / QMP client / Persisted log / Log subscription / Metrics snapshot / Status poll, and ADR 0001 records the decision that the runner owns the running-VM data plane (`CONTEXT.md`, `docs/adr/0001-runner-owned-running-vm-data-plane.md`)
+
+### Fixed
+- **Start error cleanup of persisted log**: The dry-run check now runs before hugepages setup, and on `Start` errors the persisted log file is removed to avoid stale state on the next run (`internal/vm/vm_runner.go`, `internal/vm/vm_runner_test.go`)
+- **TestHandleVMSelection race with async persisted log**: Stabilised the test against the async persisted-log write so it no longer flakes (`internal/tui/models/main_test.go`)
+
 ## [0.1.24] - 2026-06-09
 
 ### Added
@@ -247,7 +263,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.24...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.25...HEAD
+[0.1.25]: https://github.com/glemsom/dkvmmanager/compare/v0.1.24...v0.1.25
 [0.1.24]: https://github.com/glemsom/dkvmmanager/compare/v0.1.23...v0.1.24
 [0.1.22]: https://github.com/glemsom/dkvmmanager/compare/v0.1.21...v0.1.22
 [0.1.21]: https://github.com/glemsom/dkvmmanager/compare/v0.1.19...v0.1.21
