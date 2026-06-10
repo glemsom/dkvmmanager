@@ -80,6 +80,8 @@ type VMRunner struct {
 	prevVCPUTime     map[int]int64 // ThreadID -> previous CPUTimeNs (absolute, in ns)
 	prevHostJiffies  uint64        // previous utime+stime for the QEMU process (raw jiffies)
 	prevSnapshotTime time.Time     // wall clock of previous snapshot
+	prevBlockStats   map[string]QMPBlockDeviceIO // Device -> previous raw counters
+	prevBlockTime    time.Time     // wall clock of previous block snapshot (delta math)
 
 	// Proc reader function (overridable for tests)
 	readThreadCPUTime       func(pid, tid int) (int64, error)
@@ -429,6 +431,28 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 		}
 	}
 
+	// S5: QMP query-blockstats and query-balloon.
+	// query-balloon uses graceful degradation inside the client (returns
+	// (0, nil) when the guest has no balloon driver), so a nil error
+	// here is the normal case. query-blockstats returns the raw counter
+	// snapshot; delta math happens below under the lock.
+	var blockStats []QMPBlockDeviceStats
+	if client != nil {
+		bs, err := client.QueryBlockStats()
+		if err != nil {
+			return m, fmt.Errorf("Snapshot: query-blockstats failed: %w", err)
+		}
+		blockStats = bs
+
+		balloon, err := client.QueryBalloon()
+		if err != nil {
+			// QueryBalloon already swallows "not activated" internally; any
+			// other error is unexpected and surfaces to the caller.
+			return m, fmt.Errorf("Snapshot: query-balloon failed: %w", err)
+		}
+		m.BalloonBytes = balloon
+	}
+
 	// All delta math + previous-state updates happen in a single critical
 	// section so per-vCPU and host deltas share the same prevSnapshotTime.
 	r.mu.Lock()
@@ -519,7 +543,55 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 	// Update prevSnapshotTime once for both vCPU and host deltas
 	r.prevSnapshotTime = now
 
-	// TODO S5: BlockDevices, BalloonBytes from QMP
+	// S5: Block device per-disk B/s and IOPS from deltas.
+	// Cold snapshot: rates are zero. Warm snapshot: (raw_counter_now -
+	// raw_counter_prev) / delta_seconds. If a counter wraps or goes
+	// backwards (e.g. QEMU reset), the rate for that device/counter is
+	// zero on this snapshot (we don't go negative).
+	if len(blockStats) > 0 {
+		var derived []BlockStat
+		for _, b := range blockStats {
+			bs := BlockStat{
+				Device:  b.Device,
+				RDBytes: b.Stats.RDBytes,
+				WRBytes: b.Stats.WRBytes,
+				RDOps:   b.Stats.RDOps,
+				WROps:   b.Stats.WROps,
+			}
+
+			// Delta math: only if we have a previous sample for this device
+			// and a positive wall-clock delta.
+			if r.prevBlockStats != nil && !r.prevBlockTime.IsZero() {
+				prev, exists := r.prevBlockStats[b.Device]
+				deltaSecs := now.Sub(r.prevBlockTime).Seconds()
+				if exists && deltaSecs > 0 {
+					if b.Stats.RDBytes >= prev.RDBytes {
+						bs.RDBps = uint64(float64(b.Stats.RDBytes-prev.RDBytes) / deltaSecs)
+					}
+					if b.Stats.WRBytes >= prev.WRBytes {
+						bs.WRBps = uint64(float64(b.Stats.WRBytes-prev.WRBytes) / deltaSecs)
+					}
+					if b.Stats.RDOps >= prev.RDOps {
+						bs.RDIOPS = uint64(float64(b.Stats.RDOps-prev.RDOps) / deltaSecs)
+					}
+					if b.Stats.WROps >= prev.WROps {
+						bs.WRIOPS = uint64(float64(b.Stats.WROps-prev.WROps) / deltaSecs)
+					}
+				}
+			}
+
+			derived = append(derived, bs)
+		}
+
+		// Update previous state for next delta math.
+		r.prevBlockStats = make(map[string]QMPBlockDeviceIO, len(blockStats))
+		for _, b := range blockStats {
+			r.prevBlockStats[b.Device] = b.Stats
+		}
+		r.prevBlockTime = now
+
+		m.BlockDevices = derived
+	}
 
 	return m, nil
 }

@@ -420,6 +420,17 @@ func (m *VMRunningModel) calculateInfoHeight() int {
 		height++
 	}
 
+	// S5: Add one line per block device for per-disk IOPS/B/s display.
+	if len(m.metrics.BlockDevices) > 0 {
+		height += len(m.metrics.BlockDevices)
+	}
+
+	// S5: Add a line for the balloon when populated (graceful degradation
+	// hides it when 0).
+	if m.metrics.BalloonBytes > 0 {
+		height++
+	}
+
 	// Add lines for PCI devices (if runner available)
 	if m.runner != nil {
 		if len(m.runner.PCIPassthroughDevices()) > 0 {
@@ -621,6 +632,37 @@ func (m *VMRunningModel) renderInfoPanel() string {
 		b.WriteString("\n")
 	}
 
+	// === Section: Per-disk Metrics (S5) ===
+	// One line per disk, abbreviated r/w B/s + IOPS to fit in the info
+	// panel. Format: "<device>: r: <B/s> · <IOPS>  w: <B/s> · <IOPS>".
+	// We render the line even when rates are zero so the user can see
+	// the disk is attached and idle.
+	if len(m.metrics.BlockDevices) > 0 {
+		for _, dev := range m.metrics.BlockDevices {
+			b.WriteString(labelStyle.Render("disk "))
+			b.WriteString(valueStyle.Render(dev.Device))
+			b.WriteString(labelStyle.Render(": "))
+			b.WriteString(labelStyle.Render("r: "))
+			b.WriteString(valueStyle.Render(formatRate(dev.RDBps)))
+			b.WriteString(labelStyle.Render(" · "))
+			b.WriteString(valueStyle.Render(fmt.Sprintf("%d IOPS", dev.RDIOPS)))
+			b.WriteString(labelStyle.Render("  w: "))
+			b.WriteString(valueStyle.Render(formatRate(dev.WRBps)))
+			b.WriteString(labelStyle.Render(" · "))
+			b.WriteString(valueStyle.Render(fmt.Sprintf("%d IOPS", dev.WRIOPS)))
+			b.WriteString("\n")
+		}
+	}
+
+	// === Section: Balloon (S5) ===
+	// Only render when BalloonBytes > 0 (graceful degradation: no balloon
+	// driver is a normal guest configuration, not a "0 B" failure).
+	if m.metrics.BalloonBytes > 0 {
+		b.WriteString(labelStyle.Render("Balloon: "))
+		b.WriteString(valueStyle.Render(formatBytes(m.metrics.BalloonBytes)))
+		b.WriteString("\n")
+	}
+
 	// === Separator line ===
 	b.WriteString(mutedStyle.Render("─── QEMU Output ───"))
 
@@ -684,6 +726,27 @@ func formatBytes(b uint64) string {
 		return fmt.Sprintf("%.1f KiB", float64(b)/float64(kib))
 	default:
 		return fmt.Sprintf("%d B", b)
+	}
+}
+
+// formatRate renders a per-second byte rate as a short human-readable string
+// (e.g. "1.2 MiB/s", "800 KiB/s"). Zero renders as "0 B/s" so an idle disk
+// is visible at a glance. Uses IEC binary units to match formatBytes.
+func formatRate(bps uint64) string {
+	const (
+		kib = 1024
+		mib = 1024 * kib
+		gib = 1024 * mib
+	)
+	switch {
+	case bps >= gib:
+		return fmt.Sprintf("%.1f GiB/s", float64(bps)/float64(gib))
+	case bps >= mib:
+		return fmt.Sprintf("%.1f MiB/s", float64(bps)/float64(mib))
+	case bps >= kib:
+		return fmt.Sprintf("%.1f KiB/s", float64(bps)/float64(kib))
+	default:
+		return fmt.Sprintf("%d B/s", bps)
 	}
 }
 

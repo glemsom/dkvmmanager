@@ -31,11 +31,23 @@ type VCPUStat struct {
 	CPUTimeNs int64 // total CPU time consumed in nanoseconds (from /proc)
 }
 
-// BlockStat holds per-block-device raw counters for a single snapshot.
+// BlockStat holds per-block-device statistics for a single snapshot.
+// Raw counters (RDBytes/WRBytes/RDOps/WROps) come from QMP query-blockstats.
+// Derived rates (RDBps/WRBps/RDIOPS/WRIOPS) are computed from deltas against
+// the previous snapshot by the runner; the view consumes the already-derived
+// numbers directly. On a cold snapshot the rate fields are zero.
 type BlockStat struct {
 	Device  string // e.g. "drive0"
-	RDBytes uint64
+	RDBytes uint64 // cumulative r/w bytes since VM start
 	WRBytes uint64
-	RDOps   uint64
+	RDOps   uint64 // cumulative r/w operation counts since VM start
 	WROps   uint64
+
+	// Derived (per-second, populated from delta math in Snapshot()).
+	// Cold snapshot leaves these at zero. Negative or wrapped counters
+	// (QEMU counter reset) also leave these at zero rather than going negative.
+	RDBps  uint64 // bytes read per second
+	WRBps  uint64 // bytes written per second
+	RDIOPS uint64 // read operations per second
+	WRIOPS uint64 // write operations per second
 }

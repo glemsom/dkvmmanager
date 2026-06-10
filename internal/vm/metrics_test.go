@@ -15,6 +15,8 @@ import (
 type mockQMPClient struct {
 	status  string
 	cpus    []VCPUInfo
+	blocks  []QMPBlockDeviceStats
+	balloon uint64
 	qError  error
 }
 
@@ -44,6 +46,20 @@ func (m *mockQMPClient) QueryCPUsFast() ([]QMPVCPUInfo, error) {
 		})
 	}
 	return out, nil
+}
+
+func (m *mockQMPClient) QueryBlockStats() ([]QMPBlockDeviceStats, error) {
+	if m.qError != nil {
+		return nil, m.qError
+	}
+	return m.blocks, nil
+}
+
+func (m *mockQMPClient) QueryBalloon() (uint64, error) {
+	if m.qError != nil {
+		return 0, m.qError
+	}
+	return m.balloon, nil
 }
 
 func (m *mockQMPClient) Close() error          { return nil }
@@ -185,6 +201,277 @@ func TestSnapshotQMPError(t *testing.T) {
 	_, err := runner.Snapshot()
 	if err == nil {
 		t.Error("expected error from Snapshot() with failing QMP")
+	}
+}
+
+// S5: Snapshot() populates BlockDevices and BalloonBytes from the QMP
+// client. The fields are populated with raw counters; the per-disk
+// B/s and IOPS math lives in the warm-snapshot test below.
+func TestSnapshotBlockAndBalloonPopulated(t *testing.T) {
+	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	cfg := &config.Config{}
+	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+
+	mock := &mockQMPClient{
+		status: "running",
+		cpus:   []VCPUInfo{{CPU: 0, ThreadID: 100}},
+		blocks: []QMPBlockDeviceStats{
+			{Device: "drive0", Stats: QMPBlockDeviceIO{
+				RDBytes: 1024, WRBytes: 2048, RDOps: 10, WROps: 20,
+			}},
+		},
+		balloon: 2147483648,
+	}
+	runner.qmpClient = mock
+
+	// PID=0 to avoid /proc reads
+	runner.mu.Lock()
+	runner.cmdProcess = nil
+	runner.mu.Unlock()
+
+	runner.readProcessRSS = func(pid int) (uint64, error) { return 0, nil }
+	runner.readProcessCPUJiffies = func(pid int) (uint64, error) { return 0, nil }
+
+	m, err := runner.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot() unexpected error: %v", err)
+	}
+
+	if len(m.BlockDevices) != 1 {
+		t.Fatalf("Expected 1 BlockDevice, got %d", len(m.BlockDevices))
+	}
+	if m.BlockDevices[0].Device != "drive0" {
+		t.Errorf("Expected device='drive0', got '%s'", m.BlockDevices[0].Device)
+	}
+	if m.BlockDevices[0].RDBytes != 1024 {
+		t.Errorf("Expected RDBytes=1024, got %d", m.BlockDevices[0].RDBytes)
+	}
+	if m.BlockDevices[0].WRBytes != 2048 {
+		t.Errorf("Expected WRBytes=2048, got %d", m.BlockDevices[0].WRBytes)
+	}
+	if m.BlockDevices[0].RDOps != 10 {
+		t.Errorf("Expected RDOps=10, got %d", m.BlockDevices[0].RDOps)
+	}
+	if m.BlockDevices[0].WROps != 20 {
+		t.Errorf("Expected WROps=20, got %d", m.BlockDevices[0].WROps)
+	}
+	if m.BalloonBytes != 2147483648 {
+		t.Errorf("Expected BalloonBytes=2147483648, got %d", m.BalloonBytes)
+	}
+}
+
+// S5: Snapshot() should be resilient when the guest has no balloon driver
+// (QueryBalloon returns 0 with no error via graceful degradation) and when
+// query-blockstats returns an empty array.
+func TestSnapshotBlockAndBalloonGracefulNoBalloon(t *testing.T) {
+	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	cfg := &config.Config{}
+	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+
+	mock := &mockQMPClient{
+		status:  "running",
+		cpus:    []VCPUInfo{{CPU: 0, ThreadID: 100}},
+		blocks:  nil, // no disks attached / empty
+		balloon: 0,    // no balloon driver
+	}
+	runner.qmpClient = mock
+
+	runner.mu.Lock()
+	runner.cmdProcess = nil
+	runner.mu.Unlock()
+
+	runner.readProcessRSS = func(pid int) (uint64, error) { return 0, nil }
+	runner.readProcessCPUJiffies = func(pid int) (uint64, error) { return 0, nil }
+
+	m, err := runner.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot() should not error on no-balloon / no-block case: %v", err)
+	}
+	if m.BalloonBytes != 0 {
+		t.Errorf("Expected BalloonBytes=0, got %d", m.BalloonBytes)
+	}
+	if len(m.BlockDevices) != 0 {
+		t.Errorf("Expected 0 BlockDevices, got %d", len(m.BlockDevices))
+	}
+}
+
+// S5: warm Snapshot() computes per-disk B/s and IOPS from deltas.
+// On the first call (cold), the B/s and IOPS fields are zero. On the second
+// call, they reflect the delta in raw counters divided by the wall-clock delta.
+func TestSnapshotBlockDelta(t *testing.T) {
+	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	cfg := &config.Config{}
+	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+
+	var blockCall int
+	mock := &mockQMPClient{
+		status: "running",
+		cpus:   []VCPUInfo{{CPU: 0, ThreadID: 100}},
+		blocks: []QMPBlockDeviceStats{
+			{Device: "drive0", Stats: QMPBlockDeviceIO{
+				RDBytes: 0, WRBytes: 0, RDOps: 0, WROps: 0,
+			}},
+		},
+	}
+	runner.qmpClient = mock
+
+	// Mutate raw counters across calls to simulate I/O activity.
+	// blockCall is incremented BEFORE the rdBytes/wrBytes/rdOps/wrOps
+	// functions are evaluated. We use blockCall-1 so the FIRST call
+	// sees "0" (cold snapshot, no delta) and the SECOND call sees the
+	// "advanced" values (warm snapshot, non-zero delta).
+	runner.qmpClient = &countingBlockClient{
+		mock: mock,
+		onCall: func() {
+			blockCall++
+		},
+		rdBytes: func() uint64 {
+			// Call 1 (cold): 0; Call 2+ (warm): 1 MiB
+			if blockCall <= 1 {
+				return 0
+			}
+			return 1024 * 1024
+		},
+		wrBytes: func() uint64 {
+			if blockCall <= 1 {
+				return 0
+			}
+			return 2 * 1024 * 1024
+		},
+		rdOps: func() uint64 {
+			if blockCall <= 1 {
+				return 0
+			}
+			return 100
+		},
+		wrOps: func() uint64 {
+			if blockCall <= 1 {
+				return 0
+			}
+			return 200
+		},
+	}
+
+	runner.mu.Lock()
+	runner.cmdProcess = nil
+	runner.mu.Unlock()
+	runner.readProcessRSS = func(pid int) (uint64, error) { return 0, nil }
+	runner.readProcessCPUJiffies = func(pid int) (uint64, error) { return 0, nil }
+
+	// Cold snapshot — deltas should be 0.
+	m1, err := runner.Snapshot()
+	if err != nil {
+		t.Fatalf("first Snapshot() error: %v", err)
+	}
+	if len(m1.BlockDevices) != 1 {
+		t.Fatalf("cold: expected 1 BlockDevice, got %d", len(m1.BlockDevices))
+	}
+	if m1.BlockDevices[0].RDBps != 0 || m1.BlockDevices[0].WRBps != 0 {
+		t.Errorf("cold: expected Bps=0, got r=%d w=%d",
+			m1.BlockDevices[0].RDBps, m1.BlockDevices[0].WRBps)
+	}
+	if m1.BlockDevices[0].RDIOPS != 0 || m1.BlockDevices[0].WRIOPS != 0 {
+		t.Errorf("cold: expected IOPS=0, got r=%d w=%d",
+			m1.BlockDevices[0].RDIOPS, m1.BlockDevices[0].WRIOPS)
+	}
+
+	// Wait a measurable wall-clock delta
+	time.Sleep(20 * time.Millisecond)
+
+	// Warm snapshot — deltas should be non-zero.
+	m2, err := runner.Snapshot()
+	if err != nil {
+		t.Fatalf("second Snapshot() error: %v", err)
+	}
+	if len(m2.BlockDevices) != 1 {
+		t.Fatalf("warm: expected 1 BlockDevice, got %d", len(m2.BlockDevices))
+	}
+	// 1 MiB read delta in 20ms wall = 50 MiB/s. Allow a wide tolerance for CI.
+	if m2.BlockDevices[0].RDBps == 0 {
+		t.Error("warm: expected non-zero RDBps after read delta")
+	}
+	if m2.BlockDevices[0].WRBps == 0 {
+		t.Error("warm: expected non-zero WRBps after write delta")
+	}
+	if m2.BlockDevices[0].RDIOPS == 0 {
+		t.Error("warm: expected non-zero RDIOPS after read ops delta")
+	}
+	if m2.BlockDevices[0].WRIOPS == 0 {
+		t.Error("warm: expected non-zero WRIOPS after write ops delta")
+	}
+}
+
+// countingBlockClient is a QMPClientInterface that delegates everything
+// to the inner mock except QueryBlockStats, which builds the array from
+// per-call functions so we can simulate counter growth across snapshots.
+type countingBlockClient struct {
+	mock   *mockQMPClient
+	onCall func()
+	rdBytes func() uint64
+	wrBytes func() uint64
+	rdOps   func() uint64
+	wrOps   func() uint64
+}
+
+func (c *countingBlockClient) QueryStatus() (string, error) { return c.mock.QueryStatus() }
+func (c *countingBlockClient) QueryCPUs() ([]VCPUInfo, error) { return c.mock.QueryCPUs() }
+func (c *countingBlockClient) QueryCPUsFast() ([]QMPVCPUInfo, error) {
+	return c.mock.QueryCPUsFast()
+}
+func (c *countingBlockClient) QueryBalloon() (uint64, error) { return c.mock.QueryBalloon() }
+func (c *countingBlockClient) Close() error { return nil }
+func (c *countingBlockClient) Quit() error { return nil }
+func (c *countingBlockClient) Events() <-chan QMPEvent { return nil }
+func (c *countingBlockClient) QueryBlockStats() ([]QMPBlockDeviceStats, error) {
+	c.onCall()
+	return []QMPBlockDeviceStats{
+		{Device: "drive0", Stats: QMPBlockDeviceIO{
+			RDBytes: c.rdBytes(),
+			WRBytes: c.wrBytes(),
+			RDOps:   c.rdOps(),
+			WROps:   c.wrOps(),
+		}},
+	}, nil
+}
+
+// S5: when the guest has no balloon driver, the QueryBalloon call inside
+// Snapshot() must be gracefully tolerated — Snapshot returns the metrics
+// with BalloonBytes=0 and no error, and other fields are still populated.
+func TestSnapshotBalloonNotActivatedGraceful(t *testing.T) {
+	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	cfg := &config.Config{}
+	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+
+	// The mock's QueryBalloon returns 0 with no error, mirroring the
+	// production "Balloon is not activated" graceful-degradation path.
+	mock := &mockQMPClient{
+		status: "running",
+		cpus:   []VCPUInfo{{CPU: 0, ThreadID: 100}},
+		blocks: []QMPBlockDeviceStats{
+			{Device: "drive0", Stats: QMPBlockDeviceIO{
+				RDBytes: 100, WRBytes: 200, RDOps: 1, WROps: 2,
+			}},
+		},
+		balloon: 0,
+	}
+	runner.qmpClient = mock
+
+	runner.mu.Lock()
+	runner.cmdProcess = nil
+	runner.mu.Unlock()
+	runner.readProcessRSS = func(pid int) (uint64, error) { return 0, nil }
+	runner.readProcessCPUJiffies = func(pid int) (uint64, error) { return 0, nil }
+
+	m, err := runner.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot() should not error when no balloon driver: %v", err)
+	}
+	if m.BalloonBytes != 0 {
+		t.Errorf("Expected BalloonBytes=0 when no balloon driver, got %d", m.BalloonBytes)
+	}
+	// Other fields are still populated
+	if len(m.BlockDevices) != 1 {
+		t.Errorf("Expected 1 BlockDevice (should be populated even without balloon), got %d", len(m.BlockDevices))
 	}
 }
 
