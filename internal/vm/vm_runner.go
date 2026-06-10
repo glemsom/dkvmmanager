@@ -51,7 +51,7 @@ type VMRunner struct {
 	runCfg     RunConfig
 	cmd        *exec.Cmd
 	cmdProcess *os.Process // Cached for race-safe access
-	qmpClient  *QMPClient
+	qmpClient  QMPClientInterface
 	socketPath string
 	logChan    chan string
 	done       chan struct{}
@@ -75,6 +75,13 @@ type VMRunner struct {
 	persistBuf  *bufio.Writer
 	persistQuit chan struct{}
 	persistWg   sync.WaitGroup
+
+	// Metrics snapshot state (for delta computation)
+	prevVCPUTime     map[int]int64 // ThreadID -> previous CPUTimeNs (absolute, in ns)
+	prevSnapshotTime time.Time     // wall clock of previous snapshot
+
+	// Proc reader function (overridable for tests)
+	readThreadCPUTime func(pid, tid int) (int64, error)
 }
 
 // NewVMRunner creates a new VM runner for the given VM with the provided RunConfig.
@@ -90,6 +97,7 @@ func NewVMRunner(vm *models.VM, cfg *config.Config, runCfg RunConfig) *VMRunner 
 		memMB:       hugepages.DefaultMemoryMB, // default, overridden by Start()
 		subscribers: make(map[chan string]struct{}),
 		stagingMax:  256,
+		readThreadCPUTime: readThreadCPUTime, // production proc reader
 	}
 	// Package-level dry-run flag (e.g. from CLI --dry-run) overrides RunConfig
 	if dryRunMode {
@@ -324,7 +332,7 @@ func (r *VMRunner) StartTime() time.Time {
 }
 
 // QMPClient returns the QMP client, or nil if not yet connected
-func (r *VMRunner) QMPClient() *QMPClient {
+func (r *VMRunner) QMPClient() QMPClientInterface {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.qmpClient
@@ -333,6 +341,17 @@ func (r *VMRunner) QMPClient() *QMPClient {
 // VM returns the VM model
 func (r *VMRunner) VM() *models.VM {
 	return r.vm
+}
+
+// PID returns the QEMU process PID, or 0 if the runner is not running.
+// Safe to call at any time.
+func (r *VMRunner) PID() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.cmdProcess == nil {
+		return 0
+	}
+	return r.cmdProcess.Pid
 }
 
 // Done returns a channel that is closed when the VM exits
@@ -362,6 +381,106 @@ func (r *VMRunner) VCpuCount() int {
 // VCPUPinning returns the vCPU pinning configuration
 func (r *VMRunner) VCPUPinning() models.VCPUPinningGlobal {
 	return r.runCfg.VCPUPinning
+}
+
+// Snapshot returns a point-in-time Metrics snapshot combining QMP-derived
+// guest metrics and host /proc-derived metrics. Per-vCPU CPU% is computed
+// from deltas against the previous snapshot. On the first call (cold
+// snapshot), per-vCPU CPU% values are zero.
+//
+// If a QMP call fails or /proc is unreadable, the affected fields are
+// zero-valued and error is the first error encountered.
+func (r *VMRunner) Snapshot() (Metrics, error) {
+	now := time.Now()
+	m := Metrics{Timestamp: now}
+
+	r.mu.Lock()
+	client := r.qmpClient
+	pid := 0
+	if r.cmdProcess != nil {
+		pid = r.cmdProcess.Pid
+	}
+	r.mu.Unlock()
+
+	// QMP: query-status
+	if client != nil {
+		status, err := client.QueryStatus()
+		if err != nil {
+			m.Status = "unknown"
+		} else {
+			m.Status = status
+		}
+	} else {
+		m.Status = "starting"
+	}
+
+	// QMP: query-cpus for vCPU thread IDs (needs client, not PID)
+	if client != nil {
+		cpus, err := client.QueryCPUs()
+		if err != nil {
+			return m, fmt.Errorf("Snapshot: query-cpus failed: %w", err)
+		}
+
+		// Build raw stats with absolute CPU times from /proc (skipped if pid==0)
+		var rawStats []VCPUStat
+		for _, cpu := range cpus {
+			var cpuTimeNs int64
+			if pid > 0 {
+				cpuTimeNs, _ = r.readThreadCPUTime(pid, cpu.ThreadID)
+			}
+			rawStats = append(rawStats, VCPUStat{
+				ThreadID:  cpu.ThreadID,
+				CPUTimeNs: cpuTimeNs,
+			})
+		}
+
+		// Compute per-vCPU CPU% from deltas
+		r.mu.Lock()
+		if r.prevVCPUTime != nil && !r.prevSnapshotTime.IsZero() {
+			deltaNs := now.Sub(r.prevSnapshotTime).Nanoseconds()
+			if deltaNs > 0 {
+				for i, s := range rawStats {
+					prev, exists := r.prevVCPUTime[s.ThreadID]
+					if exists && prev > 0 && s.CPUTimeNs > prev {
+						cpuDeltaNs := s.CPUTimeNs - prev
+						// CPU% = (delta CPU time / delta wall time) * 100
+						pct := float64(cpuDeltaNs) / float64(deltaNs) * 100.0
+						if pct > 100.0 {
+							pct = 100.0
+						}
+						// Store CPU% as fixed-point (×100 for two decimal places)
+						rawStats[i].CPUTimeNs = int64(pct * 100)
+					} else {
+						rawStats[i].CPUTimeNs = 0
+					}
+				}
+			}
+		} else {
+			// Cold snapshot: zero all CPU%
+			for i := range rawStats {
+				rawStats[i].CPUTimeNs = 0
+			}
+		}
+
+		// Update previous state (store absolute times, not deltas)
+		r.prevVCPUTime = make(map[int]int64, len(cpus))
+		for _, cpu := range cpus {
+			var absNs int64
+			if pid > 0 {
+				absNs, _ = r.readThreadCPUTime(pid, cpu.ThreadID)
+			}
+			r.prevVCPUTime[cpu.ThreadID] = absNs
+		}
+		r.prevSnapshotTime = now
+		r.mu.Unlock()
+
+		m.VCPUs = rawStats
+	}
+
+	// TODO S4: HostRSSBytes, HostCPUJiffies from /proc/<pid>
+	// TODO S5: BlockDevices, BalloonBytes from QMP
+
+	return m, nil
 }
 
 // PCIPassthroughDevices returns the PCI passthrough devices

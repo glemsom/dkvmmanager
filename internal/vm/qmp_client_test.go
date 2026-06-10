@@ -206,6 +206,25 @@ func mockQMPServer(t *testing.T) (socketPath string, cleanup func()) {
 						},
 					},
 				}
+			case "query-cpus":
+				respData = map[string]interface{}{
+					"return": []interface{}{
+						map[string]interface{}{
+							"CPU":       0,
+							"current":   true,
+							"halted":    false,
+							"thread_id": 12345,
+							"qom_path":  "/machine/unattached/device[0]",
+						},
+						map[string]interface{}{
+							"CPU":       1,
+							"current":   true,
+							"halted":    false,
+							"thread_id": 12346,
+							"qom_path":  "/machine/unattached/device[1]",
+						},
+					},
+				}
 			case "quit":
 				respData = map[string]interface{}{"return": map[string]interface{}{}}
 			default:
@@ -340,5 +359,70 @@ func TestQMPStatusResponseParsing(t *testing.T) {
 	}
 	if status.Status != "running" {
 		t.Errorf("Expected running, got %s", status.Status)
+	}
+}
+
+// TestQMPClientQueryCPUs tests the QueryCPUs method (distinct from QueryCPUsFast)
+// against the fake Unix-socket JSON server.
+func TestQMPClientQueryCPUs(t *testing.T) {
+	socketPath, cleanup := mockQMPServer(t)
+	defer cleanup()
+
+	time.Sleep(100 * time.Millisecond)
+
+	client, err := NewQMPClient(socketPath)
+	if err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+	defer client.Close()
+
+	_, err = client.Negotiate()
+	if err != nil {
+		t.Fatalf("Negotiation failed: %v", err)
+	}
+
+	cpus, err := client.QueryCPUs()
+	if err != nil {
+		t.Fatalf("QueryCPUs failed: %v", err)
+	}
+
+	if len(cpus) != 2 {
+		t.Fatalf("Expected 2 CPUs, got %d", len(cpus))
+	}
+
+	if cpus[0].ThreadID != 12345 {
+		t.Errorf("Expected thread_id=12345, got %d", cpus[0].ThreadID)
+	}
+	if cpus[1].ThreadID != 12346 {
+		t.Errorf("Expected thread_id=12346, got %d", cpus[1].ThreadID)
+	}
+	if cpus[0].CPU != 0 {
+		t.Errorf("Expected CPU index 0, got %d", cpus[0].CPU)
+	}
+}
+
+// TestQMPQueryCPUsInfoParsing tests parsing the QMP query-cpus response format
+func TestQMPQueryCPUsInfoParsing(t *testing.T) {
+	respJSON := `{"return": [{"CPU": 0, "current": true, "halted": false, "thread_id": 12345, "qom_path": "/machine/unattached/device[0]"}], "id": "cmd-1"}`
+
+	var resp QMPResponse
+	if err := json.Unmarshal([]byte(respJSON), &resp); err != nil {
+		t.Fatalf("Failed to parse response: %v", err)
+	}
+
+	var cpus []VCPUInfo
+	if err := json.Unmarshal(resp.Return, &cpus); err != nil {
+		t.Fatalf("Failed to parse vCPU info: %v", err)
+	}
+
+	if len(cpus) != 1 {
+		t.Fatalf("Expected 1 CPU, got %d", len(cpus))
+	}
+
+	if cpus[0].ThreadID != 12345 {
+		t.Errorf("Expected thread_id=12345, got %d", cpus[0].ThreadID)
+	}
+	if cpus[0].CPU != 0 {
+		t.Errorf("Expected CPU=0, got %d", cpus[0].CPU)
 	}
 }

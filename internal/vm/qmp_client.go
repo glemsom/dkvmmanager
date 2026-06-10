@@ -38,6 +38,18 @@ type QMPError struct {
 	Desc  string `json:"desc"`
 }
 
+// QMPClientInterface is the minimum interface the runner needs from a QMP
+// client. The concrete QMPClient satisfies it. The interface exists so the
+// runner can be tested with a mock QMP client (same pattern as HostDiscovery).
+type QMPClientInterface interface {
+	QueryStatus() (string, error)
+	QueryCPUs() ([]VCPUInfo, error)
+	QueryCPUsFast() ([]QMPVCPUInfo, error)
+	Close() error
+	Quit() error
+	Events() <-chan QMPEvent
+}
+
 // QMPEvent is an asynchronous event from QEMU
 type QMPEvent struct {
 	Event     string          `json:"event"`
@@ -261,6 +273,27 @@ func (c *QMPClient) QueryCPUsFast() ([]QMPVCPUInfo, error) {
 	return cpus, nil
 }
 
+// QueryCPUs returns vCPU information via the QMP query-cpus command.
+// This is distinct from QueryCPUsFast: it uses the older query-cpus command
+// which returns thread_id (snake_case) and cpu state fields.
+// The returned VCPUInfo.ThreadID is used by the runner to read per-thread
+// CPU time from /proc/<pid>/task/<tid>/stat for delta-based CPU% computation.
+func (c *QMPClient) QueryCPUs() ([]VCPUInfo, error) {
+	resp, err := c.Execute("query-cpus", nil)
+	if err != nil {
+		return nil, err
+	}
+	if resp.Error != nil {
+		return nil, fmt.Errorf("query-cpus error: %s: %s", resp.Error.Class, resp.Error.Desc)
+	}
+
+	var cpus []VCPUInfo
+	if err := json.Unmarshal(resp.Return, &cpus); err != nil {
+		return nil, fmt.Errorf("failed to parse query-cpus response: %w", err)
+	}
+	return cpus, nil
+}
+
 // QMPVCPUInfo represents vCPU information from query-cpus-fast
 type QMPVCPUInfo struct {
 	CPU      int    `json:"CPU"`
@@ -271,6 +304,18 @@ type QMPVCPUInfo struct {
 		DieID    int `json:"die-id"`
 		ThreadID int `json:"thread-id"`
 	} `json:"props"`
+}
+
+// VCPUInfo represents vCPU information from query-cpus.
+// This is the typed return from QMPClient.QueryCPUs, distinct from
+// QueryCPUsFast / QMPVCPUInfo. The QMP "query-cpus" wire format uses
+// snake_case field names.
+type VCPUInfo struct {
+	CPU      int    `json:"CPU"`
+	Current  bool   `json:"current"`
+	Halted   bool   `json:"halted"`
+	ThreadID int    `json:"thread_id"`
+	QOMPath  string `json:"qom_path"`
 }
 
 // Cont resumes a paused VM

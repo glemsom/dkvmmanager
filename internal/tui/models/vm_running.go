@@ -51,6 +51,13 @@ type VMStatusUpdateMsg struct {
 	Threads []int
 }
 
+// VMMetricsUpdateMsg is sent periodically (2 s cadence) with a full Metrics
+// snapshot. It is routed directly to VMRunningModel, bypassing the view
+// registry (same pattern as VMStatusUpdateMsg).
+type VMMetricsUpdateMsg struct {
+	Metrics vm.Metrics
+}
+
 // VMRunningModel displays a running VM with log output and status
 type VMRunningModel struct {
 	// VM info
@@ -74,6 +81,9 @@ type VMRunningModel struct {
 
 	// Status polling tracking
 	pollingSince time.Time
+
+	// Metrics snapshot (latest, updated every 2s)
+	metrics vm.Metrics
 
 	// Dimensions
 	width  int
@@ -99,6 +109,7 @@ func (m *VMRunningModel) Init() tea.Cmd {
 		m.waitForVMExit(),
 		m.pollStatus(),      // periodic (500ms)
 		m.initialStatus(),   // immediate
+		m.pollMetrics(),     // periodic (2s) — decoupled from status poll
 	)
 }
 
@@ -229,6 +240,24 @@ func (m *VMRunningModel) pollStatus() tea.Cmd {
 	})
 }
 
+// pollMetrics returns a tea.Cmd that polls VM metrics on a 2 s cadence,
+// decoupled from the 500 ms status poll. The metrics tick bypasses the
+// view registry (same pattern as VMStatusUpdateMsg).
+func (m *VMRunningModel) pollMetrics() tea.Cmd {
+	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+		if m.runner == nil {
+			return VMMetricsUpdateMsg{}
+		}
+
+		snap, err := m.runner.Snapshot()
+		if err != nil {
+			// Degraded: return empty metrics; view will show N/A
+			return VMMetricsUpdateMsg{}
+		}
+		return VMMetricsUpdateMsg{Metrics: snap}
+	})
+}
+
 // Update handles incoming messages
 func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -293,6 +322,10 @@ func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.threads = msg.Threads
 		return m, m.pollStatus()
 
+	case VMMetricsUpdateMsg:
+		m.metrics = msg.Metrics
+		return m, m.pollMetrics()
+
 	case VMStartedMsg:
 		m.runner = msg.Runner
 		m.status = "starting" // will be updated by initialStatus
@@ -302,6 +335,7 @@ func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.waitForVMExit(),
 			m.pollStatus(),
 			m.initialStatus(),
+			m.pollMetrics(),
 		)
 	}
 
@@ -374,6 +408,11 @@ func (m *VMRunningModel) calculateLayout() {
 func (m *VMRunningModel) calculateInfoHeight() int {
 	// Minimum base height
 	height := 4 // Base: status line + vCPU info + blank + separator
+
+	// Add lines for vCPU metrics (independent of runner)
+	if len(m.metrics.VCPUs) > 0 {
+		height++
+	}
 
 	// Add lines for PCI devices (if runner available)
 	if m.runner != nil {
@@ -536,6 +575,28 @@ func (m *VMRunningModel) renderInfoPanel() string {
 		b.WriteString("  ")
 		b.WriteString(labelStyle.Render("vCPUs: "))
 		b.WriteString(valueStyle.Render("N/A"))
+		b.WriteString("\n")
+	}
+
+	// === Section: Per-vCPU Metrics (runs on its own cadence, independent of runner) ===
+	if len(m.metrics.VCPUs) > 0 {
+		b.WriteString(labelStyle.Render("vCPU%: "))
+		for i, vcpu := range m.metrics.VCPUs {
+			if i > 0 {
+				b.WriteString("  ")
+			}
+			// CPUTimeNs holds CPU% * 100 (fixed-point, two decimals)
+			cpuPct := float64(vcpu.CPUTimeNs) / 100.0
+			b.WriteString(valueStyle.Render(fmt.Sprintf("#%d: %.1f%%", i, cpuPct)))
+		}
+		// Aggregate total (sum of per-vCPU percentages)
+		var totalPct float64
+		for _, vcpu := range m.metrics.VCPUs {
+			totalPct += float64(vcpu.CPUTimeNs) / 100.0
+		}
+		b.WriteString("  ")
+		b.WriteString(labelStyle.Render("total: "))
+		b.WriteString(valueStyle.Render(fmt.Sprintf("%.1f%%", totalPct)))
 		b.WriteString("\n")
 	}
 

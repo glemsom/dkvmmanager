@@ -147,7 +147,7 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// blocking channel reads. Route them directly to the fallback path instead.
 	if m.currentView == ViewVMRunning && m.vmRunningModel != nil {
 		switch msg.(type) {
-		case VMStatusUpdateMsg, VMLogMsg:
+		case VMStatusUpdateMsg, VMLogMsg, VMMetricsUpdateMsg:
 			model, cmd := m.vmRunningModel.Update(msg)
 			if vrm, ok := model.(*VMRunningModel); ok {
 				m.vmRunningModel = vrm

@@ -397,6 +397,85 @@ func TestVMRunningModelRunnerNilSafe(t *testing.T) {
 	}
 }
 
+func TestVMRunningModelMetricsUpdate(t *testing.T) {
+	m := setupRunningModel(t, "running")
+
+	// Send a metrics update with per-vCPU data
+	metricsMsg := VMMetricsUpdateMsg{
+		Metrics: vm.Metrics{
+			Status: "running",
+			VCPUs: []vm.VCPUStat{
+				{ThreadID: 100, CPUTimeNs: 5000},  // 50.00%
+				{ThreadID: 101, CPUTimeNs: 2500},  // 25.00%
+			},
+		},
+	}
+	updated, cmd := m.Update(metricsMsg)
+	m = updated.(*VMRunningModel)
+
+	if len(m.metrics.VCPUs) != 2 {
+		t.Fatalf("Expected 2 vCPUs in metrics, got %d", len(m.metrics.VCPUs))
+	}
+	if m.metrics.VCPUs[0].CPUTimeNs != 5000 {
+		t.Errorf("Expected CPUTimeNs=5000 for vCPU 0, got %d", m.metrics.VCPUs[0].CPUTimeNs)
+	}
+	if cmd == nil {
+		t.Error("Expected non-nil command (pollMetrics) after metrics update")
+	}
+}
+
+func TestVMRunningModelMetricsRendering(t *testing.T) {
+	m := setupRunningModel(t, "running")
+
+	// Set metrics with per-vCPU data
+	m.metrics = vm.Metrics{
+		Status: "running",
+		VCPUs: []vm.VCPUStat{
+			{ThreadID: 100, CPUTimeNs: 5000},  // 50.00%
+			{ThreadID: 101, CPUTimeNs: 2500},  // 25.00%
+		},
+	}
+
+	m.updateViewport()
+	viewContent := m.View().Content
+
+	// Should contain per-vCPU percentages
+	if !strings.Contains(viewContent, "50.0%") {
+		t.Error("View should contain '50.0%' for vCPU 0")
+	}
+	if !strings.Contains(viewContent, "25.0%") {
+		t.Error("View should contain '25.0%' for vCPU 1")
+	}
+	if !strings.Contains(viewContent, "75.0%") {
+		t.Error("View should contain '75.0%' for aggregate total")
+	}
+}
+
+func TestVMRunningModelMetricsEmpty(t *testing.T) {
+	m := setupRunningModel(t, "running")
+
+	// Send empty metrics (no vCPUs)
+	metricsMsg := VMMetricsUpdateMsg{
+		Metrics: vm.Metrics{Status: "running"},
+	}
+	updated, cmd := m.Update(metricsMsg)
+	m = updated.(*VMRunningModel)
+
+	if len(m.metrics.VCPUs) != 0 {
+		t.Errorf("Expected 0 vCPUs, got %d", len(m.metrics.VCPUs))
+	}
+	if cmd == nil {
+		t.Error("Expected non-nil command after metrics update")
+	}
+
+	m.updateViewport()
+	viewContent := m.View().Content
+	// Should NOT contain vCPU% label when no vCPUs
+	if strings.Contains(viewContent, "vCPU%:") {
+		t.Error("View should not contain 'vCPU%:' when no vCPU data")
+	}
+}
+
 func TestVMRunningModelSetSizeUpdatesViewport(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	m.SetSize(100, 30)
