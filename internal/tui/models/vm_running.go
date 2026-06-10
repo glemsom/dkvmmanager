@@ -51,6 +51,13 @@ type VMStatusUpdateMsg struct {
 	Threads []int
 }
 
+// VMMetricsUpdateMsg is sent periodically (2 s cadence) with a full Metrics
+// snapshot. It is routed directly to VMRunningModel, bypassing the view
+// registry (same pattern as VMStatusUpdateMsg).
+type VMMetricsUpdateMsg struct {
+	Metrics vm.Metrics
+}
+
 // VMRunningModel displays a running VM with log output and status
 type VMRunningModel struct {
 	// VM info
@@ -74,6 +81,9 @@ type VMRunningModel struct {
 
 	// Status polling tracking
 	pollingSince time.Time
+
+	// Metrics snapshot (latest, updated every 2s)
+	metrics vm.Metrics
 
 	// Dimensions
 	width  int
@@ -99,6 +109,7 @@ func (m *VMRunningModel) Init() tea.Cmd {
 		m.waitForVMExit(),
 		m.pollStatus(),      // periodic (500ms)
 		m.initialStatus(),   // immediate
+		m.pollMetrics(),     // periodic (2s) — decoupled from status poll
 	)
 }
 
@@ -229,6 +240,24 @@ func (m *VMRunningModel) pollStatus() tea.Cmd {
 	})
 }
 
+// pollMetrics returns a tea.Cmd that polls VM metrics on a 2 s cadence,
+// decoupled from the 500 ms status poll. The metrics tick bypasses the
+// view registry (same pattern as VMStatusUpdateMsg).
+func (m *VMRunningModel) pollMetrics() tea.Cmd {
+	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+		if m.runner == nil {
+			return VMMetricsUpdateMsg{}
+		}
+
+		snap, err := m.runner.Snapshot()
+		if err != nil {
+			// Degraded: return empty metrics; view will show N/A
+			return VMMetricsUpdateMsg{}
+		}
+		return VMMetricsUpdateMsg{Metrics: snap}
+	})
+}
+
 // Update handles incoming messages
 func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -293,6 +322,10 @@ func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.threads = msg.Threads
 		return m, m.pollStatus()
 
+	case VMMetricsUpdateMsg:
+		m.metrics = msg.Metrics
+		return m, m.pollMetrics()
+
 	case VMStartedMsg:
 		m.runner = msg.Runner
 		m.status = "starting" // will be updated by initialStatus
@@ -302,6 +335,7 @@ func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.waitForVMExit(),
 			m.pollStatus(),
 			m.initialStatus(),
+			m.pollMetrics(),
 		)
 	}
 
@@ -374,6 +408,28 @@ func (m *VMRunningModel) calculateLayout() {
 func (m *VMRunningModel) calculateInfoHeight() int {
 	// Minimum base height
 	height := 4 // Base: status line + vCPU info + blank + separator
+
+	// Add lines for vCPU metrics (independent of runner)
+	if len(m.metrics.VCPUs) > 0 {
+		height++
+	}
+
+	// S4: Add a line for host (QEMU process) metrics when either host
+	// field is populated. Cold snapshot (0/0) does not contribute a line.
+	if m.metrics.HostRSSBytes > 0 || m.metrics.HostCPUJiffies > 0 {
+		height++
+	}
+
+	// S5: Add one line per block device for per-disk IOPS/B/s display.
+	if len(m.metrics.BlockDevices) > 0 {
+		height += len(m.metrics.BlockDevices)
+	}
+
+	// S5: Add a line for the balloon when populated (graceful degradation
+	// hides it when 0).
+	if m.metrics.BalloonBytes > 0 {
+		height++
+	}
 
 	// Add lines for PCI devices (if runner available)
 	if m.runner != nil {
@@ -539,6 +595,74 @@ func (m *VMRunningModel) renderInfoPanel() string {
 		b.WriteString("\n")
 	}
 
+	// === Section: Per-vCPU Metrics (runs on its own cadence, independent of runner) ===
+	if len(m.metrics.VCPUs) > 0 {
+		b.WriteString(labelStyle.Render("vCPU%: "))
+		for i, vcpu := range m.metrics.VCPUs {
+			if i > 0 {
+				b.WriteString("  ")
+			}
+			// CPUTimeNs holds CPU% * 100 (fixed-point, two decimals)
+			cpuPct := float64(vcpu.CPUTimeNs) / 100.0
+			b.WriteString(valueStyle.Render(fmt.Sprintf("#%d: %.1f%%", i, cpuPct)))
+		}
+		// Aggregate total (sum of per-vCPU percentages)
+		var totalPct float64
+		for _, vcpu := range m.metrics.VCPUs {
+			totalPct += float64(vcpu.CPUTimeNs) / 100.0
+		}
+		b.WriteString("  ")
+		b.WriteString(labelStyle.Render("total: "))
+		b.WriteString(valueStyle.Render(fmt.Sprintf("%.1f%%", totalPct)))
+		b.WriteString("\n")
+	}
+
+	// === Section: Host (QEMU process) Metrics (S4) ===
+	// Only render when at least one host field is populated, so the cold
+	// snapshot (PID=0 or /proc unreadable) doesn't show a "Host: 0% 0 B" line.
+	if m.metrics.HostRSSBytes > 0 || m.metrics.HostCPUJiffies > 0 {
+		b.WriteString(labelStyle.Render("Host: "))
+		// HostCPUJiffies holds CPU% * 100 (consistent with vCPU convention).
+		hostCPUPct := float64(m.metrics.HostCPUJiffies) / 100.0
+		b.WriteString(labelStyle.Render("CPU "))
+		b.WriteString(valueStyle.Render(fmt.Sprintf("%.1f%%", hostCPUPct)))
+		b.WriteString("  ")
+		b.WriteString(labelStyle.Render("RSS "))
+		b.WriteString(valueStyle.Render(formatBytes(m.metrics.HostRSSBytes)))
+		b.WriteString("\n")
+	}
+
+	// === Section: Per-disk Metrics (S5) ===
+	// One line per disk, abbreviated r/w B/s + IOPS to fit in the info
+	// panel. Format: "<device>: r: <B/s> · <IOPS>  w: <B/s> · <IOPS>".
+	// We render the line even when rates are zero so the user can see
+	// the disk is attached and idle.
+	if len(m.metrics.BlockDevices) > 0 {
+		for _, dev := range m.metrics.BlockDevices {
+			b.WriteString(labelStyle.Render("disk "))
+			b.WriteString(valueStyle.Render(dev.Device))
+			b.WriteString(labelStyle.Render(": "))
+			b.WriteString(labelStyle.Render("r: "))
+			b.WriteString(valueStyle.Render(formatRate(dev.RDBps)))
+			b.WriteString(labelStyle.Render(" · "))
+			b.WriteString(valueStyle.Render(fmt.Sprintf("%d IOPS", dev.RDIOPS)))
+			b.WriteString(labelStyle.Render("  w: "))
+			b.WriteString(valueStyle.Render(formatRate(dev.WRBps)))
+			b.WriteString(labelStyle.Render(" · "))
+			b.WriteString(valueStyle.Render(fmt.Sprintf("%d IOPS", dev.WRIOPS)))
+			b.WriteString("\n")
+		}
+	}
+
+	// === Section: Balloon (S5) ===
+	// Only render when BalloonBytes > 0 (graceful degradation: no balloon
+	// driver is a normal guest configuration, not a "0 B" failure).
+	if m.metrics.BalloonBytes > 0 {
+		b.WriteString(labelStyle.Render("Balloon: "))
+		b.WriteString(valueStyle.Render(formatBytes(m.metrics.BalloonBytes)))
+		b.WriteString("\n")
+	}
+
 	// === Separator line ===
 	b.WriteString(mutedStyle.Render("─── QEMU Output ───"))
 
@@ -583,6 +707,48 @@ func (m *VMRunningModel) renderLogContent() string {
 
 // FileBrowserActive always returns false; VMRunning has no sub-file-browser.
 func (m *VMRunningModel) FileBrowserActive() bool { return false }
+
+// formatBytes renders a byte count as a human-readable string with IEC
+// binary units (KiB, MiB, GiB). Zero renders as "0 B" so the cold
+// snapshot case never shows a misleading "0.0 B".
+func formatBytes(b uint64) string {
+	const (
+		kib = 1024
+		mib = 1024 * kib
+		gib = 1024 * mib
+	)
+	switch {
+	case b >= gib:
+		return fmt.Sprintf("%.1f GiB", float64(b)/float64(gib))
+	case b >= mib:
+		return fmt.Sprintf("%.1f MiB", float64(b)/float64(mib))
+	case b >= kib:
+		return fmt.Sprintf("%.1f KiB", float64(b)/float64(kib))
+	default:
+		return fmt.Sprintf("%d B", b)
+	}
+}
+
+// formatRate renders a per-second byte rate as a short human-readable string
+// (e.g. "1.2 MiB/s", "800 KiB/s"). Zero renders as "0 B/s" so an idle disk
+// is visible at a glance. Uses IEC binary units to match formatBytes.
+func formatRate(bps uint64) string {
+	const (
+		kib = 1024
+		mib = 1024 * kib
+		gib = 1024 * mib
+	)
+	switch {
+	case bps >= gib:
+		return fmt.Sprintf("%.1f GiB/s", float64(bps)/float64(gib))
+	case bps >= mib:
+		return fmt.Sprintf("%.1f MiB/s", float64(bps)/float64(mib))
+	case bps >= kib:
+		return fmt.Sprintf("%.1f KiB/s", float64(bps)/float64(kib))
+	default:
+		return fmt.Sprintf("%d B/s", bps)
+	}
+}
 
 // SetSize updates the model dimensions
 func (m *VMRunningModel) SetSize(w, h int) {

@@ -206,6 +206,60 @@ func mockQMPServer(t *testing.T) (socketPath string, cleanup func()) {
 						},
 					},
 				}
+			case "query-cpus":
+				respData = map[string]interface{}{
+					"return": []interface{}{
+						map[string]interface{}{
+							"CPU":       0,
+							"current":   true,
+							"halted":    false,
+							"thread_id": 12345,
+							"qom_path":  "/machine/unattached/device[0]",
+						},
+						map[string]interface{}{
+							"CPU":       1,
+							"current":   true,
+							"halted":    false,
+							"thread_id": 12346,
+							"qom_path":  "/machine/unattached/device[1]",
+						},
+					},
+				}
+			case "query-balloon":
+				respData = map[string]interface{}{
+					"return": map[string]interface{}{
+						"actual":     2147483648,
+						"mem_period": 0,
+						"max":        2147483648,
+					},
+				}
+			case "query-blockstats":
+				respData = map[string]interface{}{
+					"return": []interface{}{
+						map[string]interface{}{
+							"device":    "drive0",
+							"node-name": "#block0",
+							"stats": map[string]interface{}{
+								"rd_bytes":      4096,
+								"wr_bytes":      8192,
+								"rd_operations": 40,
+								"wr_operations": 80,
+							},
+							"parent": nil,
+						},
+						map[string]interface{}{
+							"device":    "drive1",
+							"node-name": "#block1",
+							"stats": map[string]interface{}{
+								"rd_bytes":      0,
+								"wr_bytes":      0,
+								"rd_operations": 0,
+								"wr_operations": 0,
+							},
+							"parent": nil,
+						},
+					},
+				}
 			case "quit":
 				respData = map[string]interface{}{"return": map[string]interface{}{}}
 			default:
@@ -340,5 +394,313 @@ func TestQMPStatusResponseParsing(t *testing.T) {
 	}
 	if status.Status != "running" {
 		t.Errorf("Expected running, got %s", status.Status)
+	}
+}
+
+// TestQMPClientQueryBalloon tests QueryBalloon against the fake Unix-socket server.
+// The fake server returns actual=2147483648; the test asserts the typed
+// return value matches.
+func TestQMPClientQueryBalloon(t *testing.T) {
+	socketPath, cleanup := mockQMPServer(t)
+	defer cleanup()
+
+	time.Sleep(100 * time.Millisecond)
+
+	client, err := NewQMPClient(socketPath)
+	if err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+	defer client.Close()
+
+	_, err = client.Negotiate()
+	if err != nil {
+		t.Fatalf("Negotiation failed: %v", err)
+	}
+
+	actual, err := client.QueryBalloon()
+	if err != nil {
+		t.Fatalf("QueryBalloon failed: %v", err)
+	}
+	if actual != 2147483648 {
+		t.Errorf("Expected actual=2147483648, got %d", actual)
+	}
+}
+
+// TestQMPClientQueryBalloonGracefulDegradation tests that when the guest has
+// no balloon driver, the server returns a "GenericError: Balloon is not
+// activated" error and the client returns (0, nil) — no error surfaced.
+func TestQMPClientQueryBalloonGracefulDegradation(t *testing.T) {
+	// Custom fake server that returns the "not activated" error.
+	dir := t.TempDir()
+	socketPath := filepath.Join(dir, "test-qmp.sock")
+	listener, err := net.Listen("unix", socketPath)
+	if err != nil {
+		t.Fatalf("Failed to create mock QMP server: %v", err)
+	}
+	defer listener.Close()
+
+	go func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		reader := bufio.NewReader(conn)
+
+		// Greeting
+		greeting := `{"QMP": {"version": {"qemu": {"major": 8, "minor": 2, "micro": 0}, "package": ""}, "capabilities": []}}` + "\n"
+		conn.Write([]byte(greeting))
+
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				return
+			}
+			line = strings.TrimSpace(line)
+
+			var cmd map[string]interface{}
+			if err := json.Unmarshal([]byte(line), &cmd); err != nil {
+				continue
+			}
+			execute, _ := cmd["execute"].(string)
+			id, _ := cmd["id"].(string)
+
+			var respData map[string]interface{}
+			switch execute {
+			case "qmp_capabilities":
+				respData = map[string]interface{}{"return": map[string]interface{}{}}
+			case "query-balloon":
+				// Simulate no-balloon-driver error.
+				respData = map[string]interface{}{
+					"error": map[string]interface{}{
+						"class": "GenericError",
+						"desc":  "Balloon is not activated",
+					},
+				}
+			default:
+				respData = map[string]interface{}{"return": map[string]interface{}{}}
+			}
+			if id != "" {
+				respData["id"] = id
+			}
+			respBytes, _ := json.Marshal(respData)
+			conn.Write(append(respBytes, '\n'))
+		}
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+
+	client, err := NewQMPClient(socketPath)
+	if err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+	defer client.Close()
+	_, err = client.Negotiate()
+	if err != nil {
+		t.Fatalf("Negotiation failed: %v", err)
+	}
+
+	actual, err := client.QueryBalloon()
+	if err != nil {
+		t.Fatalf("QueryBalloon should NOT surface 'not activated' as error: %v", err)
+	}
+	if actual != 0 {
+		t.Errorf("Expected actual=0 when no balloon driver, got %d", actual)
+	}
+}
+
+// TestQMPClientQueryBlockStats tests QueryBlockStats against the fake
+// Unix-socket server. Asserts that r/w bytes and op counts are typed correctly.
+func TestQMPClientQueryBlockStats(t *testing.T) {
+	socketPath, cleanup := mockQMPServer(t)
+	defer cleanup()
+
+	time.Sleep(100 * time.Millisecond)
+
+	client, err := NewQMPClient(socketPath)
+	if err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+	defer client.Close()
+
+	_, err = client.Negotiate()
+	if err != nil {
+		t.Fatalf("Negotiation failed: %v", err)
+	}
+
+	stats, err := client.QueryBlockStats()
+	if err != nil {
+		t.Fatalf("QueryBlockStats failed: %v", err)
+	}
+
+	if len(stats) != 2 {
+		t.Fatalf("Expected 2 devices, got %d", len(stats))
+	}
+
+	if stats[0].Device != "drive0" {
+		t.Errorf("Expected device[0]='drive0', got '%s'", stats[0].Device)
+	}
+	if stats[0].Stats.RDBytes != 4096 {
+		t.Errorf("Expected rd_bytes=4096, got %d", stats[0].Stats.RDBytes)
+	}
+	if stats[0].Stats.WRBytes != 8192 {
+		t.Errorf("Expected wr_bytes=8192, got %d", stats[0].Stats.WRBytes)
+	}
+	if stats[0].Stats.RDOps != 40 {
+		t.Errorf("Expected rd_operations=40, got %d", stats[0].Stats.RDOps)
+	}
+	if stats[0].Stats.WROps != 80 {
+		t.Errorf("Expected wr_operations=80, got %d", stats[0].Stats.WROps)
+	}
+	if stats[1].Device != "drive1" {
+		t.Errorf("Expected device[1]='drive1', got '%s'", stats[1].Device)
+	}
+}
+
+// TestQMPClientQueryCPUs tests the QueryCPUs method (distinct from QueryCPUsFast)
+// against the fake Unix-socket JSON server.
+func TestQMPClientQueryCPUs(t *testing.T) {
+	socketPath, cleanup := mockQMPServer(t)
+	defer cleanup()
+
+	time.Sleep(100 * time.Millisecond)
+
+	client, err := NewQMPClient(socketPath)
+	if err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+	defer client.Close()
+
+	_, err = client.Negotiate()
+	if err != nil {
+		t.Fatalf("Negotiation failed: %v", err)
+	}
+
+	cpus, err := client.QueryCPUs()
+	if err != nil {
+		t.Fatalf("QueryCPUs failed: %v", err)
+	}
+
+	if len(cpus) != 2 {
+		t.Fatalf("Expected 2 CPUs, got %d", len(cpus))
+	}
+
+	if cpus[0].ThreadID != 12345 {
+		t.Errorf("Expected thread_id=12345, got %d", cpus[0].ThreadID)
+	}
+	if cpus[1].ThreadID != 12346 {
+		t.Errorf("Expected thread_id=12346, got %d", cpus[1].ThreadID)
+	}
+	if cpus[0].CPU != 0 {
+		t.Errorf("Expected CPU index 0, got %d", cpus[0].CPU)
+	}
+}
+
+// TestQMPBalloonResponseParsing tests parsing the QMP query-balloon response format.
+// The wire format is {"return": {"actual": <bytes>, "mem_period": <seconds>, "max": <bytes>}}.
+func TestQMPBalloonResponseParsing(t *testing.T) {
+	respJSON := `{"return": {"actual": 2147483648, "mem_period": 0, "max": 2147483648}, "id": "cmd-1"}`
+
+	var resp QMPResponse
+	if err := json.Unmarshal([]byte(respJSON), &resp); err != nil {
+		t.Fatalf("Failed to parse response: %v", err)
+	}
+
+	var balloon BalloonInfo
+	if err := json.Unmarshal(resp.Return, &balloon); err != nil {
+		t.Fatalf("Failed to parse balloon info: %v", err)
+	}
+
+	if balloon.Actual != 2147483648 {
+		t.Errorf("Expected actual=2147483648, got %d", balloon.Actual)
+	}
+	if balloon.Max != 2147483648 {
+		t.Errorf("Expected max=2147483648, got %d", balloon.Max)
+	}
+}
+
+// TestQMPBlockStatsResponseParsing tests parsing the QMP query-blockstats
+// response format. The wire format is an array of devices, each with a
+// "device" name and a "stats" sub-object containing rd_bytes/wr_bytes/rd_operations/wr_operations.
+func TestQMPBlockStatsResponseParsing(t *testing.T) {
+	respJSON := `{"return": [
+		{
+			"device": "drive0",
+			"node-name": "#block0",
+			"stats": {
+				"rd_bytes": 1024,
+				"wr_bytes": 2048,
+				"rd_operations": 10,
+				"wr_operations": 20
+			},
+			"parent": null
+		},
+		{
+			"device": "drive1",
+			"node-name": "#block1",
+			"stats": {
+				"rd_bytes": 0,
+				"wr_bytes": 0,
+				"rd_operations": 0,
+				"wr_operations": 0
+			},
+			"parent": null
+		}
+	], "id": "cmd-1"}`
+
+	var resp QMPResponse
+	if err := json.Unmarshal([]byte(respJSON), &resp); err != nil {
+		t.Fatalf("Failed to parse response: %v", err)
+	}
+
+	var stats []QMPBlockDeviceStats
+	if err := json.Unmarshal(resp.Return, &stats); err != nil {
+		t.Fatalf("Failed to parse block stats: %v", err)
+	}
+
+	if len(stats) != 2 {
+		t.Fatalf("Expected 2 devices, got %d", len(stats))
+	}
+
+	if stats[0].Device != "drive0" {
+		t.Errorf("Expected device[0]='drive0', got '%s'", stats[0].Device)
+	}
+	if stats[0].Stats.RDBytes != 1024 {
+		t.Errorf("Expected rd_bytes=1024, got %d", stats[0].Stats.RDBytes)
+	}
+	if stats[0].Stats.WRBytes != 2048 {
+		t.Errorf("Expected wr_bytes=2048, got %d", stats[0].Stats.WRBytes)
+	}
+	if stats[0].Stats.RDOps != 10 {
+		t.Errorf("Expected rd_operations=10, got %d", stats[0].Stats.RDOps)
+	}
+	if stats[0].Stats.WROps != 20 {
+		t.Errorf("Expected wr_operations=20, got %d", stats[0].Stats.WROps)
+	}
+}
+
+// TestQMPQueryCPUsInfoParsing tests parsing the QMP query-cpus response format
+func TestQMPQueryCPUsInfoParsing(t *testing.T) {
+	respJSON := `{"return": [{"CPU": 0, "current": true, "halted": false, "thread_id": 12345, "qom_path": "/machine/unattached/device[0]"}], "id": "cmd-1"}`
+
+	var resp QMPResponse
+	if err := json.Unmarshal([]byte(respJSON), &resp); err != nil {
+		t.Fatalf("Failed to parse response: %v", err)
+	}
+
+	var cpus []VCPUInfo
+	if err := json.Unmarshal(resp.Return, &cpus); err != nil {
+		t.Fatalf("Failed to parse vCPU info: %v", err)
+	}
+
+	if len(cpus) != 1 {
+		t.Fatalf("Expected 1 CPU, got %d", len(cpus))
+	}
+
+	if cpus[0].ThreadID != 12345 {
+		t.Errorf("Expected thread_id=12345, got %d", cpus[0].ThreadID)
+	}
+	if cpus[0].CPU != 0 {
+		t.Errorf("Expected CPU=0, got %d", cpus[0].CPU)
 	}
 }

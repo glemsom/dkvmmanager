@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 )
@@ -36,6 +37,20 @@ type QMPResponse struct {
 type QMPError struct {
 	Class string `json:"class"`
 	Desc  string `json:"desc"`
+}
+
+// QMPClientInterface is the minimum interface the runner needs from a QMP
+// client. The concrete QMPClient satisfies it. The interface exists so the
+// runner can be tested with a mock QMP client (same pattern as HostDiscovery).
+type QMPClientInterface interface {
+	QueryStatus() (string, error)
+	QueryCPUs() ([]VCPUInfo, error)
+	QueryCPUsFast() ([]QMPVCPUInfo, error)
+	QueryBlockStats() ([]QMPBlockDeviceStats, error)
+	QueryBalloon() (uint64, error)
+	Close() error
+	Quit() error
+	Events() <-chan QMPEvent
 }
 
 // QMPEvent is an asynchronous event from QEMU
@@ -261,6 +276,27 @@ func (c *QMPClient) QueryCPUsFast() ([]QMPVCPUInfo, error) {
 	return cpus, nil
 }
 
+// QueryCPUs returns vCPU information via the QMP query-cpus command.
+// This is distinct from QueryCPUsFast: it uses the older query-cpus command
+// which returns thread_id (snake_case) and cpu state fields.
+// The returned VCPUInfo.ThreadID is used by the runner to read per-thread
+// CPU time from /proc/<pid>/task/<tid>/stat for delta-based CPU% computation.
+func (c *QMPClient) QueryCPUs() ([]VCPUInfo, error) {
+	resp, err := c.Execute("query-cpus", nil)
+	if err != nil {
+		return nil, err
+	}
+	if resp.Error != nil {
+		return nil, fmt.Errorf("query-cpus error: %s: %s", resp.Error.Class, resp.Error.Desc)
+	}
+
+	var cpus []VCPUInfo
+	if err := json.Unmarshal(resp.Return, &cpus); err != nil {
+		return nil, fmt.Errorf("failed to parse query-cpus response: %w", err)
+	}
+	return cpus, nil
+}
+
 // QMPVCPUInfo represents vCPU information from query-cpus-fast
 type QMPVCPUInfo struct {
 	CPU      int    `json:"CPU"`
@@ -271,6 +307,95 @@ type QMPVCPUInfo struct {
 		DieID    int `json:"die-id"`
 		ThreadID int `json:"thread-id"`
 	} `json:"props"`
+}
+
+// VCPUInfo represents vCPU information from query-cpus.
+// This is the typed return from QMPClient.QueryCPUs, distinct from
+// QueryCPUsFast / QMPVCPUInfo. The QMP "query-cpus" wire format uses
+// snake_case field names.
+type VCPUInfo struct {
+	CPU      int    `json:"CPU"`
+	Current  bool   `json:"current"`
+	Halted   bool   `json:"halted"`
+	ThreadID int    `json:"thread_id"`
+	QOMPath  string `json:"qom_path"`
+}
+
+// BalloonInfo is the typed response from QMP query-balloon.
+// "actual" is the current balloon size in bytes; "max" is the upper
+// bound the guest is allowed to inflate to.
+type BalloonInfo struct {
+	Actual    uint64 `json:"actual"`
+	MemPeriod int64  `json:"mem_period"`
+	Max       uint64 `json:"max"`
+}
+
+// QMPBlockDeviceStats is one element of the query-blockstats return
+// array. The QMP wire format nests the counters under "stats".
+type QMPBlockDeviceStats struct {
+	Device  string             `json:"device"`
+	NodeName string            `json:"node-name"`
+	Stats   QMPBlockDeviceIO   `json:"stats"`
+}
+
+// QMPBlockDeviceIO is the per-device I/O counter object inside
+// query-blockstats. All counters are cumulative since VM start; the
+// runner computes B/s and IOPS from deltas across successive snapshots.
+type QMPBlockDeviceIO struct {
+	RDBytes uint64 `json:"rd_bytes"`
+	WRBytes uint64 `json:"wr_bytes"`
+	RDOps   uint64 `json:"rd_operations"`
+	WROps   uint64 `json:"wr_operations"`
+}
+
+// QueryBalloon returns the current balloon size in bytes via query-balloon.
+// The QMP response shape is {"return": {"actual": N, "mem_period": ..., "max": N}}.
+//
+// Graceful degradation: when the guest has no balloon driver, QEMU replies with
+// a "GenericError: Balloon is not activated" error. We treat that specific case
+// as a successful no-op (returns 0 with no error) because the absence of a
+// balloon is a normal guest configuration, not a failure.
+func (c *QMPClient) QueryBalloon() (uint64, error) {
+	resp, err := c.Execute("query-balloon", nil)
+	if err != nil {
+		return 0, err
+	}
+	if resp.Error != nil {
+		// Graceful degradation: "Balloon is not activated" is a normal
+		// configuration, not a failure. Return 0 with no error.
+		if resp.Error.Class == "GenericError" &&
+			strings.Contains(resp.Error.Desc, "not activated") {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("query-balloon error: %s: %s", resp.Error.Class, resp.Error.Desc)
+	}
+
+	var info BalloonInfo
+	if err := json.Unmarshal(resp.Return, &info); err != nil {
+		return 0, fmt.Errorf("failed to parse query-balloon response: %w", err)
+	}
+	return info.Actual, nil
+}
+
+// QueryBlockStats returns per-block-device I/O counters via query-blockstats.
+// Each element carries r/w bytes and r/w operation counts since VM start;
+// the runner computes B/s and IOPS from deltas across successive snapshots.
+//
+// The QMP response shape is {"return": [{"device": "...", "stats": {...}}, ...]}.
+func (c *QMPClient) QueryBlockStats() ([]QMPBlockDeviceStats, error) {
+	resp, err := c.Execute("query-blockstats", nil)
+	if err != nil {
+		return nil, err
+	}
+	if resp.Error != nil {
+		return nil, fmt.Errorf("query-blockstats error: %s: %s", resp.Error.Class, resp.Error.Desc)
+	}
+
+	var stats []QMPBlockDeviceStats
+	if err := json.Unmarshal(resp.Return, &stats); err != nil {
+		return nil, fmt.Errorf("failed to parse query-blockstats response: %w", err)
+	}
+	return stats, nil
 }
 
 // Cont resumes a paused VM
