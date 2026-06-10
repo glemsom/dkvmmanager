@@ -414,6 +414,12 @@ func (m *VMRunningModel) calculateInfoHeight() int {
 		height++
 	}
 
+	// S4: Add a line for host (QEMU process) metrics when either host
+	// field is populated. Cold snapshot (0/0) does not contribute a line.
+	if m.metrics.HostRSSBytes > 0 || m.metrics.HostCPUJiffies > 0 {
+		height++
+	}
+
 	// Add lines for PCI devices (if runner available)
 	if m.runner != nil {
 		if len(m.runner.PCIPassthroughDevices()) > 0 {
@@ -600,6 +606,21 @@ func (m *VMRunningModel) renderInfoPanel() string {
 		b.WriteString("\n")
 	}
 
+	// === Section: Host (QEMU process) Metrics (S4) ===
+	// Only render when at least one host field is populated, so the cold
+	// snapshot (PID=0 or /proc unreadable) doesn't show a "Host: 0% 0 B" line.
+	if m.metrics.HostRSSBytes > 0 || m.metrics.HostCPUJiffies > 0 {
+		b.WriteString(labelStyle.Render("Host: "))
+		// HostCPUJiffies holds CPU% * 100 (consistent with vCPU convention).
+		hostCPUPct := float64(m.metrics.HostCPUJiffies) / 100.0
+		b.WriteString(labelStyle.Render("CPU "))
+		b.WriteString(valueStyle.Render(fmt.Sprintf("%.1f%%", hostCPUPct)))
+		b.WriteString("  ")
+		b.WriteString(labelStyle.Render("RSS "))
+		b.WriteString(valueStyle.Render(formatBytes(m.metrics.HostRSSBytes)))
+		b.WriteString("\n")
+	}
+
 	// === Separator line ===
 	b.WriteString(mutedStyle.Render("─── QEMU Output ───"))
 
@@ -644,6 +665,27 @@ func (m *VMRunningModel) renderLogContent() string {
 
 // FileBrowserActive always returns false; VMRunning has no sub-file-browser.
 func (m *VMRunningModel) FileBrowserActive() bool { return false }
+
+// formatBytes renders a byte count as a human-readable string with IEC
+// binary units (KiB, MiB, GiB). Zero renders as "0 B" so the cold
+// snapshot case never shows a misleading "0.0 B".
+func formatBytes(b uint64) string {
+	const (
+		kib = 1024
+		mib = 1024 * kib
+		gib = 1024 * mib
+	)
+	switch {
+	case b >= gib:
+		return fmt.Sprintf("%.1f GiB", float64(b)/float64(gib))
+	case b >= mib:
+		return fmt.Sprintf("%.1f MiB", float64(b)/float64(mib))
+	case b >= kib:
+		return fmt.Sprintf("%.1f KiB", float64(b)/float64(kib))
+	default:
+		return fmt.Sprintf("%d B", b)
+	}
+}
 
 // SetSize updates the model dimensions
 func (m *VMRunningModel) SetSize(w, h int) {

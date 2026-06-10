@@ -476,6 +476,104 @@ func TestVMRunningModelMetricsEmpty(t *testing.T) {
 	}
 }
 
+// S4: a VMMetricsUpdateMsg carrying host CPU% and RSS is stored on the model
+// and triggers another pollMetrics() tick.
+func TestVMRunningModelHostMetricsUpdate(t *testing.T) {
+	m := setupRunningModel(t, "running")
+
+	metricsMsg := VMMetricsUpdateMsg{
+		Metrics: vm.Metrics{
+			Status:        "running",
+			HostRSSBytes:  100 * 1024 * 1024, // 100 MiB
+			HostCPUJiffies: 520,               // 5.20%
+		},
+	}
+	updated, cmd := m.Update(metricsMsg)
+	m = updated.(*VMRunningModel)
+
+	if m.metrics.HostRSSBytes != 100*1024*1024 {
+		t.Errorf("Expected HostRSSBytes=%d, got %d", 100*1024*1024, m.metrics.HostRSSBytes)
+	}
+	if m.metrics.HostCPUJiffies != 520 {
+		t.Errorf("Expected HostCPUJiffies=520, got %d", m.metrics.HostCPUJiffies)
+	}
+	if cmd == nil {
+		t.Error("Expected non-nil command (pollMetrics) after host metrics update")
+	}
+}
+
+// S4: the rendered view contains the host CPU% and RSS strings, in
+// human-readable units, alongside the per-vCPU guest metrics.
+func TestVMRunningModelHostMetricsRendering(t *testing.T) {
+	m := setupRunningModel(t, "running")
+
+	// 5.20% host CPU (HostCPUJiffies=520 → 520/100=5.20)
+	// 100 MiB RSS = 100 * 1024 * 1024 bytes
+	m.metrics = vm.Metrics{
+		Status:         "running",
+		HostRSSBytes:   100 * 1024 * 1024,
+		HostCPUJiffies: 520,
+	}
+
+	m.updateViewport()
+	viewContent := m.View().Content
+
+	if !strings.Contains(viewContent, "Host:") {
+		t.Error("View should contain 'Host:' label for host metrics")
+	}
+	if !strings.Contains(viewContent, "5.2%") {
+		t.Error("View should contain '5.2%' for host CPU")
+	}
+	if !strings.Contains(viewContent, "100") {
+		t.Error("View should contain '100' for host RSS value")
+	}
+	if !strings.Contains(viewContent, "MiB") {
+		t.Error("View should contain 'MiB' unit for host RSS")
+	}
+}
+
+// S4: when host fields are zero (cold snapshot, PID=0, or /proc unreadable),
+// the view should NOT render the Host: line.
+func TestVMRunningModelHostMetricsEmpty(t *testing.T) {
+	m := setupRunningModel(t, "running")
+
+	// No host data
+	m.metrics = vm.Metrics{Status: "running"}
+
+	m.updateViewport()
+	viewContent := m.View().Content
+
+	if strings.Contains(viewContent, "Host:") {
+		t.Error("View should not contain 'Host:' when no host data")
+	}
+}
+
+// S4: formatBytes covers B, KiB, MiB, and GiB boundaries.
+func TestFormatBytes(t *testing.T) {
+	cases := []struct {
+		name string
+		in   uint64
+		want string
+	}{
+		{"zero bytes", 0, "0 B"},
+		{"bytes", 512, "512 B"},
+		{"kib boundary", 1024, "1.0 KiB"},
+		{"kib non-boundary", 1536, "1.5 KiB"},
+		{"mib boundary", 1024 * 1024, "1.0 MiB"},
+		{"mib non-boundary", 100 * 1024 * 1024, "100.0 MiB"},
+		{"gib boundary", 1024 * 1024 * 1024, "1.0 GiB"},
+		{"gib non-boundary", 2 * 1024 * 1024 * 1024, "2.0 GiB"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := formatBytes(tc.in)
+			if got != tc.want {
+				t.Errorf("formatBytes(%d) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestVMRunningModelSetSizeUpdatesViewport(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	m.SetSize(100, 30)

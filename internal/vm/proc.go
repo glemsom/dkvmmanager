@@ -28,6 +28,46 @@ func readProcessCPUJiffies(pid int) (uint64, error) {
 	return readStatCPUJiffies(path)
 }
 
+// readProcessRSS reads VmRSS (resident memory size) for a process from
+// /proc/<pid>/status. Returns the size in bytes.
+//
+// VmRSS appears in /proc/<pid>/status as e.g. "VmRSS:	  12345 kB".
+// On error (missing file, malformed line, no VmRSS), returns a wrapped error
+// so the caller can decide to log or ignore.
+func readProcessRSS(pid int) (uint64, error) {
+	path := fmt.Sprintf("/proc/%d/status", pid)
+	return readStatusRSS(path)
+}
+
+// readStatusRSS parses the VmRSS line from a /proc/<pid>/status file.
+// Returns the RSS in bytes (kB value × 1024).
+func readStatusRSS(path string) (uint64, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read %s: %w", path, err)
+	}
+
+	for _, line := range strings.Split(string(data), "\n") {
+		if !strings.HasPrefix(line, "VmRSS:") {
+			continue
+		}
+		fields := strings.Fields(line)
+		// fields[0] = "VmRSS:"
+		// fields[1] = numeric value in kB
+		// fields[2] = "kB" unit
+		if len(fields) < 3 {
+			return 0, fmt.Errorf("malformed VmRSS line in %s: %q", path, line)
+		}
+		kb, err := strconv.ParseUint(fields[1], 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("failed to parse VmRSS value in %s: %w", path, err)
+		}
+		return kb * 1024, nil
+	}
+
+	return 0, fmt.Errorf("VmRSS line not found in %s", path)
+}
+
 // readStatCPUTime reads /proc stat file and returns utime+stime in nanoseconds.
 func readStatCPUTime(path string) (int64, error) {
 	jiffies, err := readStatCPUJiffies(path)

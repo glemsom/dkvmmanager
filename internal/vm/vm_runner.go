@@ -78,10 +78,13 @@ type VMRunner struct {
 
 	// Metrics snapshot state (for delta computation)
 	prevVCPUTime     map[int]int64 // ThreadID -> previous CPUTimeNs (absolute, in ns)
+	prevHostJiffies  uint64        // previous utime+stime for the QEMU process (raw jiffies)
 	prevSnapshotTime time.Time     // wall clock of previous snapshot
 
 	// Proc reader function (overridable for tests)
-	readThreadCPUTime func(pid, tid int) (int64, error)
+	readThreadCPUTime       func(pid, tid int) (int64, error)
+	readProcessRSS          func(pid int) (uint64, error)
+	readProcessCPUJiffies   func(pid int) (uint64, error)
 }
 
 // NewVMRunner creates a new VM runner for the given VM with the provided RunConfig.
@@ -97,7 +100,9 @@ func NewVMRunner(vm *models.VM, cfg *config.Config, runCfg RunConfig) *VMRunner 
 		memMB:       hugepages.DefaultMemoryMB, // default, overridden by Start()
 		subscribers: make(map[chan string]struct{}),
 		stagingMax:  256,
-		readThreadCPUTime: readThreadCPUTime, // production proc reader
+		readThreadCPUTime:     readThreadCPUTime,     // production per-thread proc reader
+		readProcessRSS:        readProcessRSS,        // production per-process RSS reader
+		readProcessCPUJiffies: readProcessCPUJiffies, // production per-process CPU jiffies reader
 	}
 	// Package-level dry-run flag (e.g. from CLI --dry-run) overrides RunConfig
 	if dryRunMode {
@@ -384,9 +389,9 @@ func (r *VMRunner) VCPUPinning() models.VCPUPinningGlobal {
 }
 
 // Snapshot returns a point-in-time Metrics snapshot combining QMP-derived
-// guest metrics and host /proc-derived metrics. Per-vCPU CPU% is computed
-// from deltas against the previous snapshot. On the first call (cold
-// snapshot), per-vCPU CPU% values are zero.
+// guest metrics and host /proc-derived metrics. Per-vCPU CPU% and host CPU%
+// are computed from deltas against the previous snapshot. On the first call
+// (cold snapshot), CPU% values are zero.
 //
 // If a QMP call fails or /proc is unreadable, the affected fields are
 // zero-valued and error is the first error encountered.
@@ -415,12 +420,22 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 	}
 
 	// QMP: query-cpus for vCPU thread IDs (needs client, not PID)
+	var cpus []VCPUInfo
 	if client != nil {
-		cpus, err := client.QueryCPUs()
+		var err error
+		cpus, err = client.QueryCPUs()
 		if err != nil {
 			return m, fmt.Errorf("Snapshot: query-cpus failed: %w", err)
 		}
+	}
 
+	// All delta math + previous-state updates happen in a single critical
+	// section so per-vCPU and host deltas share the same prevSnapshotTime.
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// vCPU delta computation
+	if len(cpus) > 0 {
 		// Build raw stats with absolute CPU times from /proc (skipped if pid==0)
 		var rawStats []VCPUStat
 		for _, cpu := range cpus {
@@ -434,8 +449,6 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 			})
 		}
 
-		// Compute per-vCPU CPU% from deltas
-		r.mu.Lock()
 		if r.prevVCPUTime != nil && !r.prevSnapshotTime.IsZero() {
 			deltaNs := now.Sub(r.prevSnapshotTime).Nanoseconds()
 			if deltaNs > 0 {
@@ -471,13 +484,41 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 			}
 			r.prevVCPUTime[cpu.ThreadID] = absNs
 		}
-		r.prevSnapshotTime = now
-		r.mu.Unlock()
 
 		m.VCPUs = rawStats
 	}
 
-	// TODO S4: HostRSSBytes, HostCPUJiffies from /proc/<pid>
+	// S4: Host metrics from /proc/<pid> (graceful degradation).
+	// PID=0 means the process isn't started yet — skip /proc reads entirely.
+	// If /proc is unreadable (e.g. process exited mid-snapshot), populate
+	// zero values and surface no error — the caller decides how to render.
+	if pid > 0 {
+		if rss, err := r.readProcessRSS(pid); err == nil {
+			m.HostRSSBytes = rss
+		}
+		if jiffies, err := r.readProcessCPUJiffies(pid); err == nil {
+			// Compute host CPU% from deltas (consistent with per-vCPU convention:
+			// store CPU% * 100 as fixed-point in the same field).
+			if r.prevHostJiffies != 0 && !r.prevSnapshotTime.IsZero() {
+				deltaNs := now.Sub(r.prevSnapshotTime).Nanoseconds()
+				if deltaNs > 0 && jiffies >= r.prevHostJiffies {
+					jiffyDelta := jiffies - r.prevHostJiffies
+					nsDelta := jiffyDelta * uint64(nsPerJiffy)
+					pct := float64(nsDelta) / float64(deltaNs) * 100.0
+					if pct > 100.0 {
+						pct = 100.0
+					}
+					m.HostCPUJiffies = uint64(pct * 100) // CPU% × 100
+				}
+			}
+			// Store the absolute jiffies for the next delta computation
+			r.prevHostJiffies = jiffies
+		}
+	}
+
+	// Update prevSnapshotTime once for both vCPU and host deltas
+	r.prevSnapshotTime = now
+
 	// TODO S5: BlockDevices, BalloonBytes from QMP
 
 	return m, nil
