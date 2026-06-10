@@ -4,10 +4,29 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
 	"github.com/glemsom/dkvmmanager/internal/models"
 )
+
+// hasFilesRecursive returns true if dir or any of its subdirectories
+// contain at least one regular file.
+func hasFilesRecursive(dir string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			return true
+		}
+		if hasFilesRecursive(filepath.Join(dir, entry.Name())) {
+			return true
+		}
+	}
+	return false
+}
 
 // setupTestModel creates a MainModel with a temporary config directory
 func setupTestModel(t *testing.T) *MainModel {
@@ -74,6 +93,36 @@ func setupTestModelWithVMs(t *testing.T) *MainModel {
 
 	// Rebuild menu to include VMs
 	m.rebuildMenuList()
+
+	// Cleanup: tests that trigger the async VM start (e.g. TestHandleVMSelection
+	// calling handleVMSelection → startVMCommand) launch a goroutine that
+	// creates vms/<id>/qemu.log via the runner's persist log. The t.TempDir
+	// RemoveAll cleanup fails with "directory not empty" if those files are
+	// present, making the test flaky. We register this cleanup *after* t.TempDir
+	// is called so it runs first (LIFO) and we can remove the vms tree before
+	// the temp dir is torn down.
+	//
+	// We can't tell from the cleanup whether the test triggered the async
+	// start, and the goroutine may not have created the file yet when this
+	// runs. A short poll handles both cases: for tests that didn't trigger a
+	// start, the deadline passes and we return promptly; for tests that did,
+	// we detect the file (or the deadline acts as a backstop if the goroutine
+	// is unusually slow), then give the persist log loop a moment to finish
+	// and close the file before we remove the directory.
+	t.Cleanup(func() {
+		vmsDir := filepath.Join(tmpDir, "vms")
+		deadline := time.Now().Add(200 * time.Millisecond)
+		for time.Now().Before(deadline) {
+			if hasFilesRecursive(vmsDir) {
+				// Give the persist log loop a moment to finish writing
+				// and close the file before we tear the directory down.
+				time.Sleep(200 * time.Millisecond)
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		os.RemoveAll(vmsDir)
+	})
 
 	return m
 }
