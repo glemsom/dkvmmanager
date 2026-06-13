@@ -200,6 +200,8 @@ func DetailPanelStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
 		BorderForeground(Colors.Muted).
+		BorderBackground(Colors.Background).
+		Background(Colors.Background).
 		Padding(0, 1)
 }
 
@@ -207,6 +209,7 @@ func DetailPanelStyle() lipgloss.Style {
 func DetailHeaderStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(Colors.Primary).
+		Background(Colors.Background).
 		Bold(true)
 }
 
@@ -214,6 +217,7 @@ func DetailHeaderStyle() lipgloss.Style {
 func DetailSectionStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(Colors.Primary).
+		Background(Colors.Background).
 		Bold(true).
 		Padding(0, 1, 0, 1)
 }
@@ -221,13 +225,15 @@ func DetailSectionStyle() lipgloss.Style {
 // DetailValueStyle returns the style for property values in detail view
 func DetailValueStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(Colors.Foreground)
+		Foreground(Colors.Foreground).
+		Background(Colors.Background)
 }
 
 // DetailLabelStyle returns the style for property labels in detail view
 func DetailLabelStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(Colors.Muted)
+		Foreground(Colors.Muted).
+		Background(Colors.Background)
 }
 
 // ScrollbarStyle returns the style for scrollbar

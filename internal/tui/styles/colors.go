@@ -147,26 +147,28 @@ var ModeIcons = map[string]string{
 }
 
 // RunningStatusStyle returns the style for running status
+// Uses inverted badge pattern: colored background + dark foreground for high contrast
 func RunningStatusStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(StatusColors.Running).
-		Background(Colors.SuccessDim).
+		Foreground(Colors.Background).
+		Background(StatusColors.Running).
 		Bold(true)
 }
 
 // StoppedStatusStyle returns the style for stopped status
 func StoppedStatusStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(StatusColors.Stopped).
+		Foreground(Colors.ForegroundDim).
 		Background(Colors.Background).
 		Bold(true)
 }
 
 // ErrorStatusStyle returns the style for error status
+// Uses inverted badge pattern: colored background + dark foreground for high contrast
 func ErrorStatusStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(StatusColors.Error).
-		Background(Colors.ErrorDim).
+		Foreground(Colors.Background).
+		Background(StatusColors.Error).
 		Bold(true)
 }
 
@@ -174,6 +176,7 @@ func ErrorStatusStyle() lipgloss.Style {
 func TitleStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(Colors.Primary).
+		Background(Colors.Background).
 		Bold(true).
 		MarginBottom(1)
 }
@@ -216,6 +219,7 @@ func MutedTextStyle() lipgloss.Style {
 func HeaderStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(Colors.Primary).
+		Background(Colors.Background).
 		Bold(true).
 		MarginBottom(1)
 }

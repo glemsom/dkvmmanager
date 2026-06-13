@@ -14,11 +14,11 @@ func TestColorPalette(t *testing.T) {
 		color    color.Color
 		expected string
 	}{
-		{"Primary", Colors.Primary, "4"},
-		{"Secondary", Colors.Secondary, "5"},
-		{"Success", Colors.Success, "2"},
-		{"Warning", Colors.Warning, "3"},
-		{"Error", Colors.Error, "1"},
+		{"Primary", Colors.Primary, "6"},
+		{"Secondary", Colors.Secondary, "13"},
+		{"Success", Colors.Success, "10"},
+		{"Warning", Colors.Warning, "11"},
+		{"Error", Colors.Error, "9"},
 		{"Muted", Colors.Muted, "8"},
 		{"Background", Colors.Background, "0"},
 		{"Border", Colors.Border, "8"},
@@ -39,9 +39,9 @@ func TestStatusColors(t *testing.T) {
 		color    color.Color
 		expected string
 	}{
-		{"Running", StatusColors.Running, "2"},
+		{"Running", StatusColors.Running, "10"},
 		{"Stopped", StatusColors.Stopped, "8"},
-		{"Error", StatusColors.Error, "1"},
+		{"Error", StatusColors.Error, "9"},
 	}
 
 	for _, tt := range tests {
@@ -249,8 +249,9 @@ func TestRunningStatusStyle(t *testing.T) {
 		t.Error("RunningStatusStyle() should be bold")
 	}
 
-	if style.GetForeground() != StatusColors.Running {
-		t.Errorf("RunningStatusStyle() foreground = %v, want %v", style.GetForeground(), StatusColors.Running)
+	// Inverted badge: background = status color, foreground = Background color
+	if style.GetBackground() != StatusColors.Running {
+		t.Errorf("RunningStatusStyle() background = %v, want %v", style.GetBackground(), StatusColors.Running)
 	}
 }
 
@@ -261,8 +262,8 @@ func TestStoppedStatusStyle(t *testing.T) {
 		t.Error("StoppedStatusStyle() should be bold")
 	}
 
-	if style.GetForeground() != StatusColors.Stopped {
-		t.Errorf("StoppedStatusStyle() foreground = %v, want %v", style.GetForeground(), StatusColors.Stopped)
+	if style.GetForeground() != Colors.ForegroundDim {
+		t.Errorf("StoppedStatusStyle() foreground = %v, want %v", style.GetForeground(), Colors.ForegroundDim)
 	}
 }
 
@@ -273,8 +274,9 @@ func TestErrorStatusStyle(t *testing.T) {
 		t.Error("ErrorStatusStyle() should be bold")
 	}
 
-	if style.GetForeground() != StatusColors.Error {
-		t.Errorf("ErrorStatusStyle() foreground = %v, want %v", style.GetForeground(), StatusColors.Error)
+	// Inverted badge: background = status color, foreground = Background color
+	if style.GetBackground() != StatusColors.Error {
+		t.Errorf("ErrorStatusStyle() background = %v, want %v", style.GetBackground(), StatusColors.Error)
 	}
 }
 

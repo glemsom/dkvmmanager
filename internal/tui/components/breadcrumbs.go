@@ -107,16 +107,19 @@ func (b *Breadcrumbs) Render() string {
 			if b.focused {
 				style = lipgloss.NewStyle().
 					Foreground(styles.Colors.Primary).
+					Background(styles.Colors.Background).
 					Underline(true)
 			} else {
 				style = lipgloss.NewStyle().
 					Foreground(styles.Colors.Foreground).
+					Background(styles.Colors.Background).
 					Underline(true)
 			}
 
 			parts = append(parts, style.Render(item.Label))
 			parts = append(parts, lipgloss.NewStyle().
 				Foreground(styles.Colors.ForegroundDim).
+				Background(styles.Colors.Background).
 				Render(" > "))
 		} else {
 			// Current location (bold, secondary color)
@@ -124,10 +127,12 @@ func (b *Breadcrumbs) Render() string {
 			if b.focused {
 				style = lipgloss.NewStyle().
 					Foreground(styles.Colors.Secondary).
+					Background(styles.Colors.Background).
 					Bold(true)
 			} else {
 				style = lipgloss.NewStyle().
 					Foreground(styles.Colors.Foreground).
+					Background(styles.Colors.Background).
 					Bold(true)
 			}
 
