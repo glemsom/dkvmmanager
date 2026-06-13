@@ -116,18 +116,23 @@ func (m *MainModel) renderActiveContentWithWidth(width int) string {
 
 	switch m.tabModel.GetActiveTab() {
 	case components.TabVMs:
-		return m.renderVMsTab()
+		return m.renderVMsTabWithWidth(width)
 	case components.TabConfiguration:
 		return m.renderConfigTabWithWidth(width)
 	case components.TabPower:
 		return m.renderPowerTabWithWidth(width)
 	default:
-		return m.renderVMsTab()
+		return m.renderVMsTabWithWidth(width)
 	}
 }
 
 
+// renderVMsTab is a backward-compatibility alias that uses the effective width.
 func (m *MainModel) renderVMsTab() string {
+	return m.renderVMsTabWithWidth(m.effectiveWidth())
+}
+
+func (m *MainModel) renderVMsTabWithWidth(width int) string {
 	if len(m.menuItems) == 0 {
 		emptyStyle := lipgloss.NewStyle().
 			Foreground(styles.Colors.Muted).
@@ -138,7 +143,7 @@ func (m *MainModel) renderVMsTab() string {
 		// Wrap in a panel to match the bordered list view when VMs are present.
 		// LayeredPanelStyle adds border (2) + padding horizontal (4) = 6 chars
 		// and border (2) + padding vertical (2) = 4 lines.
-		contentWidth := m.windowWidth - 4
+		contentWidth := width - 4
 		contentHeight := m.contentHeight() - 2
 		innerHeight := contentHeight - 4
 		currentLines := strings.Count(content, "\n") + 1
@@ -153,13 +158,14 @@ func (m *MainModel) renderVMsTab() string {
 	}
 
 	if m.windowWidth < 80 {
-		m.menuList.SetSize(m.windowWidth-4, m.contentHeight()-2)
+		listWidth := max(1, m.windowWidth-4)
+		m.menuList.SetSize(listWidth, m.contentHeight()-2)
 		return m.menuList.View()
 	}
 
 	// Reserve 4 chars total margin to prevent right border from being
 	// clipped by terminal auto-wrap (matches Config/Power tab approach).
-	availableWidth := m.windowWidth - 4
+	availableWidth := width - 4
 	leftWidth := max(30, int(float64(availableWidth)*0.4))
 	rightWidth := availableWidth - leftWidth - 2
 	height := m.contentHeight() - 2
