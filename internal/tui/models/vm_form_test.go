@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -192,5 +193,67 @@ func TestNetworkModeToggle(t *testing.T) {
 	m.toggleValue("networkMode")
 	if m.networkMode != "nat" {
 		t.Errorf("Expected mode 'nat' after second toggle, got %q", m.networkMode)
+	}
+}
+
+func TestRemoveListAtMultiDigitIndex(t *testing.T) {
+	tests := []struct {
+		name     string
+		key      string
+		disks    []string
+		wantRemoved string // the value that should be removed
+	}{
+		{
+			name:        "index 0 (single digit)",
+			key:         "hardDisks_0",
+			disks:       []string{"disk0", "disk1", "disk2"},
+			wantRemoved: "disk0",
+		},
+		{
+			name:        "index 10 (multi-digit)",
+			key:         "hardDisks_10",
+			disks:       []string{"disk0", "disk1", "disk2", "disk3", "disk4", "disk5", "disk6", "disk7", "disk8", "disk9", "disk10", "disk11"},
+			wantRemoved: "disk10",
+		},
+		{
+			name:        "index 42 (multi-digit not ending in 0)",
+			key:         "hardDisks_42",
+			disks: func() []string {
+				d := make([]string, 43)
+				for i := 0; i < 43; i++ {
+					d[i] = fmt.Sprintf("disk%d", i)
+				}
+				return d
+			}(),
+			wantRemoved: "disk42",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := setupTestForm(t)
+			m.hardDisks = make([]string, len(tt.disks))
+			copy(m.hardDisks, tt.disks)
+
+			// Need at least 2 items or removeListAt won't actually remove (it resets to empty)
+			if len(m.hardDisks) <= 1 {
+				m.hardDisks = append(m.hardDisks, "extra")
+			}
+
+			m.removeListAt("hardDisks", tt.key)
+
+			// Check that the removed value is no longer present
+			for _, d := range m.hardDisks {
+				if d == tt.wantRemoved {
+					t.Errorf("Value %q should have been removed but was found in hardDisks: %v", tt.wantRemoved, m.hardDisks)
+				}
+			}
+
+			// Verify length decreased by 1
+			wantLen := len(tt.disks) - 1
+			if len(m.hardDisks) != wantLen {
+				t.Errorf("Expected hardDisks length %d, got %d. hardDisks: %v", wantLen, len(m.hardDisks), m.hardDisks)
+			}
+		})
 	}
 }

@@ -131,15 +131,16 @@ func TestSnapshotWarmSnapshot(t *testing.T) {
 	runner.cmdProcess, _ = os.FindProcess(1) // init process PID always exists
 	runner.mu.Unlock()
 
-	// Mock proc reader: returns increasing CPU times
-	var callCount int
-	var mu sync.Mutex
+	// Mock proc reader: returns increasing CPU times per snapshot.
+	// Uses a snapshot counter rather than call-count to avoid coupling
+	// to how many times readThreadCPUTime is called per snapshot.
+	var snapshotCount int
+	var muSnap sync.Mutex
 	runner.readThreadCPUTime = func(pid, tid int) (int64, error) {
-		mu.Lock()
-		callCount++
-		c := callCount
-		mu.Unlock()
-		if c <= 2 {
+		muSnap.Lock()
+		s := snapshotCount
+		muSnap.Unlock()
+		if s == 0 {
 			return 100_000_000, nil // 100ms in ns (first snapshot)
 		}
 		return 200_000_000, nil // 200ms in ns (second snapshot)
@@ -150,6 +151,11 @@ func TestSnapshotWarmSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first Snapshot() error: %v", err)
 	}
+
+	// Advance snapshot counter so the warm snapshot sees higher CPU time.
+	muSnap.Lock()
+	snapshotCount++
+	muSnap.Unlock()
 
 	// Wait a bit so delta time is measurable
 	time.Sleep(10 * time.Millisecond)
@@ -673,5 +679,105 @@ func TestSnapshotHostCPUDelta(t *testing.T) {
 	// And it should be clamped to 100% max (= 10000 fixed-point)
 	if m.HostCPUJiffies > 10000 {
 		t.Errorf("warm snapshot: expected HostCPUJiffies <= 10000 (100%%), got %d", m.HostCPUJiffies)
+	}
+}
+
+// Issue #66: Snapshot() must call readThreadCPUTime exactly once per vCPU
+// per snapshot call, not twice (double /proc read bug).
+func TestSnapshotReadThreadCPUTimeCalledOncePerVCPU(t *testing.T) {
+	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	cfg := &config.Config{}
+	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+
+	mock := &mockQMPClient{
+		status: "running",
+		cpus: []VCPUInfo{
+			{CPU: 0, ThreadID: 100},
+			{CPU: 1, ThreadID: 101},
+		},
+	}
+	runner.qmpClient = mock
+
+	runner.mu.Lock()
+	runner.cmdProcess, _ = os.FindProcess(os.Getpid())
+	runner.mu.Unlock()
+
+	var callCount int
+	var muCallCount sync.Mutex
+	runner.readThreadCPUTime = func(pid, tid int) (int64, error) {
+		muCallCount.Lock()
+		callCount++
+		muCallCount.Unlock()
+		return int64(tid) * 10000000, nil
+	}
+
+	// One snapshot — callCount should be 2 (one per vCPU), not 4.
+	_, err := runner.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot() unexpected error: %v", err)
+	}
+
+	muCallCount.Lock()
+	got := callCount
+	muCallCount.Unlock()
+
+	if got != 2 {
+		t.Errorf("expected readThreadCPUTime called 2 times (once per vCPU), got %d — double read bug", got)
+	}
+
+	// Second snapshot should also call it 2 times (total 4, not 8)
+	_, err = runner.Snapshot()
+	if err != nil {
+		t.Fatalf("second Snapshot() unexpected error: %v", err)
+	}
+
+	muCallCount.Lock()
+	got = callCount
+	muCallCount.Unlock()
+
+	if got != 4 {
+		t.Errorf("expected readThreadCPUTime called 4 times across two snapshots (2 per snap), got %d — double read bug", got)
+	}
+}
+
+// Issue #66: Snapshot() with no PID (process not started) should not call
+// readThreadCPUTime at all, and should not double-read.
+func TestSnapshotReadThreadCPUTimeNotCalledWhenNoPID(t *testing.T) {
+	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	cfg := &config.Config{}
+	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+
+	mock := &mockQMPClient{
+		status: "running",
+		cpus: []VCPUInfo{
+			{CPU: 0, ThreadID: 100},
+		},
+	}
+	runner.qmpClient = mock
+
+	runner.mu.Lock()
+	runner.cmdProcess = nil // PID=0 — no /proc reading
+	runner.mu.Unlock()
+
+	var callCount int
+	var muCallCount sync.Mutex
+	runner.readThreadCPUTime = func(pid, tid int) (int64, error) {
+		muCallCount.Lock()
+		callCount++
+		muCallCount.Unlock()
+		return 0, nil
+	}
+
+	_, err := runner.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot() unexpected error: %v", err)
+	}
+
+	muCallCount.Lock()
+	got := callCount
+	muCallCount.Unlock()
+
+	if got != 0 {
+		t.Errorf("expected readThreadCPUTime not called when PID=0, got %d calls", got)
 	}
 }

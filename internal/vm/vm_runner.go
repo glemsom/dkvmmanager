@@ -473,6 +473,13 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 			})
 		}
 
+		// Save absolute CPU times before delta computation overwrites them,
+		// so we can update prevVCPUTime without a second /proc read.
+		absVCPUTimes := make(map[int]int64, len(rawStats))
+		for _, s := range rawStats {
+			absVCPUTimes[s.ThreadID] = s.CPUTimeNs
+		}
+
 		if r.prevVCPUTime != nil && !r.prevSnapshotTime.IsZero() {
 			deltaNs := now.Sub(r.prevSnapshotTime).Nanoseconds()
 			if deltaNs > 0 {
@@ -499,15 +506,8 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 			}
 		}
 
-		// Update previous state (store absolute times, not deltas)
-		r.prevVCPUTime = make(map[int]int64, len(cpus))
-		for _, cpu := range cpus {
-			var absNs int64
-			if pid > 0 {
-				absNs, _ = r.readThreadCPUTime(pid, cpu.ThreadID)
-			}
-			r.prevVCPUTime[cpu.ThreadID] = absNs
-		}
+		// Update previous state using saved absolute values (no second /proc read)
+		r.prevVCPUTime = absVCPUTimes
 
 		m.VCPUs = rawStats
 	}
