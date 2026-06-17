@@ -951,28 +951,28 @@ func (r *VMRunner) Start() error {
 		log.Printf("[DEBUG] QEMU command: %s %s", r.cfg.QEMUPath, strings.Join(args, " "))
 	}
 
-	// Create command
-	r.cmd = exec.Command(r.cfg.QEMUPath, args...)
+	// Create command (use local variable to avoid data race on r.cmd)
+	cmd := exec.Command(r.cfg.QEMUPath, args...)
 
 	// Set up stdout pipe
-	stdout, err := r.cmd.StdoutPipe()
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 
 	// Set up stderr pipe
-	stderr, err := r.cmd.StderrPipe()
+	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
 
 	// Start QEMU
-	if err := r.cmd.Start(); err != nil {
+	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start QEMU: %w", err)
 	}
 
 	if debugMode {
-		log.Printf("[DEBUG] QEMU process started: PID=%d, socket=%s", r.cmd.Process.Pid, r.socketPath)
+		log.Printf("[DEBUG] QEMU process started: PID=%d, socket=%s", cmd.Process.Pid, r.socketPath)
 	}
 
 	// TPM: mark as started so defer doesn't clean up
@@ -981,8 +981,9 @@ func (r *VMRunner) Start() error {
 	}
 
 	r.mu.Lock()
+	r.cmd = cmd
 	r.running = true
-	r.cmdProcess = r.cmd.Process
+	r.cmdProcess = cmd.Process
 	r.startTime = time.Now()
 	r.mu.Unlock()
 
