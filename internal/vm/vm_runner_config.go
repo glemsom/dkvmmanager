@@ -19,8 +19,8 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 	args = append(args,
 		"-name", fmt.Sprintf("%s,debug-threads=on", r.vm.Name),
 		"-nodefaults", "-no-user-config",
-		"-accel", "accel=kvm,kernel-irqchip=split",
-		"-machine", "q35,mem-merge=off,vmport=off,dump-guest-core=off",
+		"-accel", "kvm,kernel-irqchip=split",
+		"-machine", "q35,mem-merge=off,vmport=off,dump-guest-core=off,memory-backend=mem",
 	)
 
 	// QMP socket
@@ -47,7 +47,6 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 	}
 
 	args = append(args,
-		"-mem-prealloc",
 		"-overcommit", overcommitArg,
 		"-rtc", fmt.Sprintf("base=%s,clock=vm,driftfix=slew", rtcBase),
 		"-serial", "none",
@@ -90,10 +89,9 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 		)
 	}
 
-	// Hugepages
+	// Hugepages — memory-backend=mem is merged into the main -machine line above
 	args = append(args,
 		"-object", fmt.Sprintf("memory-backend-memfd,id=mem,size=%dM,hugetlb=on,hugetlbsize=2M,prealloc=on", r.memMB),
-		"-machine", "memory-backend=mem",
 	)
 
 	// Disable S3/S4 sleep states

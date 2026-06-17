@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
@@ -100,10 +101,9 @@ func TestBuildQEMUArgs(t *testing.T) {
 		value string
 	}{
 		{"VM name", "-name"},
-		{"KVM accel", "accel=kvm"},
 		{"Q35 machine", "q35"},
 		{"QMP socket", "-qmp"},
-		{"Memory prealloc", "-mem-prealloc"},
+		{"Memory prealloc via backend", "prealloc=on"},
 		{"Bridge networking", "bridge"},
 		{"virtio-net", "virtio-net-pci"},
 		{"scsi controller", "virtio-scsi-pci"},
@@ -121,6 +121,25 @@ func TestBuildQEMUArgs(t *testing.T) {
 		if !containsString(argStr, check.value) {
 			t.Errorf("Missing %s: expected '%s' in args", check.name, check.value)
 		}
+	}
+
+	// Specific assertions for the three issues in #64
+	// 1. No redundant accel= in -accel
+	if containsString(argStr, "accel=kvm") {
+		t.Error("Redundant 'accel=' prefix present in -accel argument (should be just 'kvm,kernel-irqchip=split')")
+	}
+	// 2. No global -mem-prealloc (backend has prealloc=on)
+	if containsString(argStr, "-mem-prealloc") {
+		t.Error("Global -mem-prealloc present (should be removed; memory backend has prealloc=on)")
+	}
+	// 3. Single -machine line: merge memory-backend=mem into the main -machine arg
+	if !containsString(argStr, "memory-backend=mem") {
+		t.Error("Missing memory-backend=mem (should be merged into single -machine line)")
+	}
+	// Count -machine occurrences — should be exactly 1 after merge
+	machineCount := strings.Count(argStr, " -machine ")
+	if machineCount != 1 {
+		t.Errorf("Expected exactly 1 '-machine' arg, got %d (should be merged into single -machine line)", machineCount)
 	}
 }
 
