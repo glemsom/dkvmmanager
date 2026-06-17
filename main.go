@@ -19,6 +19,10 @@ var (
 	dryRun         = flag.Bool("dry-run", false, "Dry-run mode: show QEMU command without launching")
 	testRun        = flag.String("test", "", "Run test scenario and exit (main_menu, vm_create)")
 	skipMountCheck = flag.Bool("skip-mount-check", false, "Skip mount point check (for testing without actual mount)")
+
+	// debugLogFile holds the debug log file returned by tea.LogToFile when
+	// debug mode is enabled. It is closed on shutdown via closeDebugLog.
+	debugLogFile *os.File
 )
 
 func main() {
@@ -38,6 +42,7 @@ func main() {
 		} else {
 			log.Println("[DEBUG] Debug mode enabled")
 		}
+		defer closeDebugLog()
 	}
 
 	// Run the TUI application with debug options
@@ -60,9 +65,20 @@ func setupDebugLog() error {
 	candidates = append(candidates, "/tmp/debug.log")
 
 	for _, path := range candidates {
-		if _, err := tea.LogToFile(path, "dkvmmanager"); err == nil {
+		f, err := tea.LogToFile(path, "dkvmmanager")
+		if err == nil {
+			debugLogFile = f
 			return nil
 		}
 	}
 	return fmt.Errorf("all log file paths failed")
+}
+
+// closeDebugLog closes the debug log file (if open) and clears the reference.
+// Safe to call multiple times (idempotent).
+func closeDebugLog() {
+	if debugLogFile != nil {
+		debugLogFile.Close()
+		debugLogFile = nil
+	}
 }
