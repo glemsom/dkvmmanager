@@ -11,11 +11,14 @@ import (
 
 func TestComputeAPICID(t *testing.T) {
 	// 2 dies, 8 cores/die, 2 threads
-	// Formula: apic-id = (die-id × maxCoresPerDie × threads) + (guest-core-id × threads) + thread-id
+	// Formula: apic-id = (socket-id × dies × cores-per-die × threads) +
+	//                     (die-id × cores-per-die × threads) +
+	//                     (guest-core-id × threads) + thread-id
 
 	tests := []struct {
 		name           string
 		socketID       int
+		numDies        int
 		dieID          int
 		guestCoreID    int
 		threadID       int
@@ -23,25 +26,35 @@ func TestComputeAPICID(t *testing.T) {
 		threadsPerCore int
 		expected       int
 	}{
-		{"die0 core0 thread0", 0, 0, 0, 0, 8, 2, 0},
-		{"die0 core0 thread1", 0, 0, 0, 1, 8, 2, 1},
-		{"die0 core1 thread0", 0, 0, 1, 0, 8, 2, 2},
-		{"die0 core1 thread1", 0, 0, 1, 1, 8, 2, 3},
-		{"die0 core7 thread0", 0, 0, 7, 0, 8, 2, 14},
-		{"die0 core7 thread1", 0, 0, 7, 1, 8, 2, 15},
-		{"die1 core0 thread0", 0, 1, 0, 0, 8, 2, 16},
-		{"die1 core0 thread1", 0, 1, 0, 1, 8, 2, 17},
-		{"die1 core5 thread0", 0, 1, 5, 0, 8, 2, 26},
-		{"die1 core5 thread1", 0, 1, 5, 1, 8, 2, 27},
-		{"die1 core7 thread1", 0, 1, 7, 1, 8, 2, 31},
+		{"die0 core0 thread0 (2 dies)", 0, 2, 0, 0, 0, 8, 2, 0},
+		{"die0 core0 thread1 (2 dies)", 0, 2, 0, 0, 1, 8, 2, 1},
+		{"die0 core1 thread0 (2 dies)", 0, 2, 0, 1, 0, 8, 2, 2},
+		{"die0 core1 thread1 (2 dies)", 0, 2, 0, 1, 1, 8, 2, 3},
+		{"die0 core7 thread0 (2 dies)", 0, 2, 0, 7, 0, 8, 2, 14},
+		{"die0 core7 thread1 (2 dies)", 0, 2, 0, 7, 1, 8, 2, 15},
+		{"die1 core0 thread0 (2 dies)", 0, 2, 1, 0, 0, 8, 2, 16},
+		{"die1 core0 thread1 (2 dies)", 0, 2, 1, 0, 1, 8, 2, 17},
+		{"die1 core5 thread0 (2 dies)", 0, 2, 1, 5, 0, 8, 2, 26},
+		{"die1 core5 thread1 (2 dies)", 0, 2, 1, 5, 1, 8, 2, 27},
+		{"die1 core7 thread1 (2 dies)", 0, 2, 1, 7, 1, 8, 2, 31},
+		// Multi-socket test: verifies the dies factor in the first term (issue #65 fix).
+		// With socketID=1, numDies=2, maxCoresPerDie=8, threadsPerCore=2:
+		// first term = 1 * 2 * 8 * 2 = 32
+		// Without the dies factor it would be only 1 * 8 * 2 = 16.
+		{"socket1 die0 core0 thread0", 1, 2, 0, 0, 0, 8, 2, 32},
+		{"socket1 die0 core0 thread1", 1, 2, 0, 0, 1, 8, 2, 33},
+		{"socket1 die0 core1 thread0", 1, 2, 0, 1, 0, 8, 2, 34},
+		{"socket1 die1 core0 thread0", 1, 2, 1, 0, 0, 8, 2, 48},
+		{"socket1 die1 core0 thread1", 1, 2, 1, 0, 1, 8, 2, 49},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := computeAPICID(tt.socketID, tt.dieID, tt.guestCoreID, tt.threadID,
+			result := computeAPICID(tt.socketID, tt.numDies, tt.dieID, tt.guestCoreID, tt.threadID,
 				tt.maxCoresPerDie, tt.threadsPerCore)
 			if result != tt.expected {
-				t.Errorf("computeAPICID() = %d, want %d", result, tt.expected)
+				t.Errorf("computeAPICID() = %d, want %d (socketID=%d, numDies=%d, dieID=%d, guestCore=%d, thread=%d, maxCoresPerDie=%d, threadsPerCore=%d)",
+					result, tt.expected, tt.socketID, tt.numDies, tt.dieID, tt.guestCoreID, tt.threadID, tt.maxCoresPerDie, tt.threadsPerCore)
 			}
 		})
 	}

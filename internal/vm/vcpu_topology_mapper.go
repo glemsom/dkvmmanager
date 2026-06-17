@@ -23,8 +23,8 @@ type vCPUDevice struct {
 // CPU (which is auto-created by -smp 1 and must NOT be declared as -device).
 //
 // The algorithm:
-//  1. Builds a per-die map of selected host CPUs
-//  2. For each die, collects unique core IDs from selected CPUs and sorts them
+//  1. Resolves each selected CPU's topology via CPUIndexToTopology
+//  2. For each die, collects unique host core IDs from selected CPUs and sorts them
 //  3. Builds a mapping: hostCoreID → guestCoreID (sequential within each die, starting at 0)
 //  4. For each selected host CPU, computes guestCoreID, threadID, and apicID
 //  5. The first CPU (lowest APIC ID, always 0) is returned separately
@@ -41,33 +41,26 @@ func GenerateAsymmetricCPUDevices(
 		return nil, 0, fmt.Errorf("host topology has no dies")
 	}
 
-	// Build a lookup: hostCPU ID → (die, core, threadID)
+	// Resolve each selected CPU's topology coordinates using the shared helper.
 	type cpuLocation struct {
 		dieID    int
 		hostCore int
-		threadID int // 0 or 1 within the core
+		threadID int
 	}
-	cpuLocMap := make(map[int]cpuLocation)
-	for _, die := range hostTopo.Dies {
-		for _, core := range die.CoreDetails {
-			for tid, cpuID := range core.Threads {
-				cpuLocMap[cpuID] = cpuLocation{
-					dieID:    die.ID,
-					hostCore: core.ID,
-					threadID: tid,
-				}
-			}
-		}
-	}
-
-	// Validate all selected CPUs exist in the host topology
+	cpuLocMap := make(map[int]cpuLocation, len(selectedCPUs))
 	for _, cpu := range selectedCPUs {
-		if _, ok := cpuLocMap[cpu]; !ok {
+		dieID, coreID, threadID, err := CPUIndexToTopology(cpu, hostTopo)
+		if err != nil {
 			return nil, 0, fmt.Errorf("selected CPU %d not found in host topology", cpu)
 		}
+		cpuLocMap[cpu] = cpuLocation{
+			dieID:    dieID,
+			hostCore: coreID,
+			threadID: threadID,
+		}
 	}
 
-	// Verify that the first selected CPU (die=0, core=0, thread=0) is present —
+	// Verify that (die=0, core=0, thread=0) is present —
 	// this is required because -smp 1 auto-creates it.
 	hasDie0Core0Thread0 := false
 	for _, cpu := range selectedCPUs {
@@ -83,7 +76,7 @@ func GenerateAsymmetricCPUDevices(
 	}
 
 	// For each die, collect unique host core IDs from selected CPUs and sort them.
-	// This creates the hostCoreID → guestCoreID mapping.
+	// This creates the hostCoreID → guestCoreID mapping (sequential among selected).
 	type dieCoreInfo struct {
 		dieID            int
 		selectedHostCores []int // sorted unique host core IDs on this die
@@ -102,7 +95,6 @@ func GenerateAsymmetricCPUDevices(
 	// Sort and deduplicate host core IDs per die
 	for _, info := range dieCoreMap {
 		sort.Ints(info.selectedHostCores)
-		// Deduplicate
 		uniq := info.selectedHostCores[:0]
 		for i, c := range info.selectedHostCores {
 			if i == 0 || c != info.selectedHostCores[i-1] {
@@ -113,7 +105,6 @@ func GenerateAsymmetricCPUDevices(
 	}
 
 	// Compute maxCoresPerDie = maximum core count across all dies
-	// This is used for the APIC ID formula and -smp cores= parameter.
 	maxCoresPerDie := 0
 	for _, die := range hostTopo.Dies {
 		if die.Cores > maxCoresPerDie {
@@ -135,6 +126,11 @@ func GenerateAsymmetricCPUDevices(
 		threadsPerCore = 1
 	}
 
+	numDies := len(hostTopo.Dies)
+	if numDies == 0 {
+		numDies = 1
+	}
+
 	// Build the list of vCPU devices
 	var devices []vCPUDevice
 	for _, hostCPU := range selectedCPUs {
@@ -153,8 +149,8 @@ func GenerateAsymmetricCPUDevices(
 			return nil, 0, fmt.Errorf("internal error: host core %d on die %d not found in mapping", loc.hostCore, loc.dieID)
 		}
 
-		// Compute APIC ID using QEMU's formula
-		apicID := computeAPICID(0, loc.dieID, guestCoreID, loc.threadID, maxCoresPerDie, threadsPerCore)
+		// Compute APIC ID using QEMU's formula (now includes dies factor, see issue #65)
+		apicID := computeAPICID(0 /* socketID */, numDies, loc.dieID, guestCoreID, loc.threadID, maxCoresPerDie, threadsPerCore)
 
 		devices = append(devices, vCPUDevice{
 			apicID:    apicID,
@@ -194,14 +190,14 @@ func GenerateAsymmetricCPUDevices(
 //
 // Formula (x86, QEMU 10.1.5):
 //
-//	apic-id = (socket-id × dies × cores_per_die × threads) +
-//	          (die-id × cores_per_die × threads) +
+//	apic-id = (socket-id × dies × cores-per-die × threads) +
+//	          (die-id × cores-per-die × threads) +
 //	          (guest-core-id × threads) +
 //	          thread-id
 //
-// Where cores_per_die is the maximum cores across all dies.
-func computeAPICID(socketID, dieID, guestCoreID, threadID, maxCoresPerDie, threadsPerCore int) int {
-	return (socketID * maxCoresPerDie * threadsPerCore) +
+// Where cores-per-die is the maximum cores across all dies.
+func computeAPICID(socketID, numDies, dieID, guestCoreID, threadID, maxCoresPerDie, threadsPerCore int) int {
+	return (socketID * numDies * maxCoresPerDie * threadsPerCore) +
 		(dieID * maxCoresPerDie * threadsPerCore) +
 		(guestCoreID * threadsPerCore) +
 		threadID
