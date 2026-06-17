@@ -217,9 +217,21 @@ func (m *VMFormModel) removeListItemByPos(pos form.FocusPos) {
 }
 
 func (m *VMFormModel) removeListAt(fieldName, key string) {
+	// Find the last underscore to split field name from index
+	lastUnderscore := -1
+	for i := len(key) - 1; i >= 0; i-- {
+		if key[i] == '_' {
+			lastUnderscore = i
+			break
+		}
+	}
+
+	// Parse index from digits after the underscore (left-to-right)
 	var idx int
-	for i := len(key) - 1; i >= 0 && key[i] >= '0' && key[i] <= '9'; i-- {
-		idx = idx*10 + int(key[i]-'0')
+	if lastUnderscore >= 0 {
+		for i := lastUnderscore + 1; i < len(key) && key[i] >= '0' && key[i] <= '9'; i++ {
+			idx = idx*10 + int(key[i]-'0')
+		}
 	}
 
 	switch fieldName {
