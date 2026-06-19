@@ -2,10 +2,8 @@
 
 TUI-based VM management for KVM/QEMU.
 
-## Build
-
+## Test
 ```bash
-make build   # via Docker (golang:1.26-alpine)
 make test
 
 # Run tests directly:
@@ -16,6 +14,11 @@ docker run --rm -w /build -v $(pwd):/build -e GOCACHE=/tmp/go-cache \
 ```
 
 > `go test -race` needs CGO — use a non-alpine image with `CGO_ENABLED=1`.
+
+## Build
+
+```bash
+make build   # via Docker (golang:1.26-alpine)
 
 ## Project layout
 
