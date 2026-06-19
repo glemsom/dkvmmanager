@@ -118,16 +118,16 @@ func StatusIndicator(status string) string {
 	switch status {
 	case "running":
 		color = StatusColors.Running
-		symbol = "●"
+		symbol = statusSymbol(status)
 	case "stopped":
 		color = StatusColors.Stopped
-		symbol = "○"
+		symbol = statusSymbol(status)
 	case "error":
 		color = StatusColors.Error
-		symbol = "●"
+		symbol = statusSymbol(status)
 	default:
 		color = Colors.Muted
-		symbol = "○"
+		symbol = statusSymbol("unknown")
 	}
 
 	return lipgloss.NewStyle().

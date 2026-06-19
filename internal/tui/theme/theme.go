@@ -118,5 +118,15 @@ func init() {
 		// instead so muted/dim text remains visible.
 		DefaultTheme.Muted = lipgloss.Color("7")
 		DefaultTheme.ForegroundDim = lipgloss.Color("7")
+
+		// Remap bright ANSI colors (9-15) to their base equivalents (1-7)
+		// because vgacon degrades bright codes unpredictably.
+		// Dim variants (which already use base colors) are safe — they are
+		// used only as background tints and not currently referenced in styles.
+		DefaultTheme.Error = lipgloss.Color("1")       // bright red (9) → red (1)
+		DefaultTheme.Success = lipgloss.Color("2")      // bright green (10) → green (2)
+		DefaultTheme.Warning = lipgloss.Color("3")      // bright yellow (11) → yellow (3)
+		DefaultTheme.Secondary = lipgloss.Color("5")    // bright magenta (13) → magenta (5)
+		DefaultTheme.PrimaryDim = lipgloss.Color("4")   // bright cyan (14) → blue (4); avoids collision with Primary=6 (dark cyan)
 	}
 }

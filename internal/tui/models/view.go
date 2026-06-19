@@ -215,11 +215,11 @@ func renderVMDetail(vm *models.VM, width, height int) string {
 		b.WriteString("\n")
 	} else {
 		for _, disk := range vm.HardDisks {
-			b.WriteString(valueStyle.Render("  ● " + disk))
+			b.WriteString(valueStyle.Render("  " + styles.DiskBullet() + " " + disk))
 			b.WriteString("\n")
 		}
 		for _, cd := range vm.CDROMs {
-			b.WriteString(valueStyle.Render("  ◑ " + cd))
+			b.WriteString(valueStyle.Render("  " + styles.CDROMBullet() + " " + cd))
 			b.WriteString("\n")
 		}
 	}

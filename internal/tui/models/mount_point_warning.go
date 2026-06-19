@@ -91,7 +91,7 @@ func (m *MountPointWarningModel) View() tea.View {
 		Foreground(styles.Colors.Warning).
 		Bold(true).
 		Padding(0, 1).
-		Render("⚠ Mount Point Warning")
+		Render(styles.GetModeIcon("Error") + " Mount Point Warning")
 
 	warningStyle := lipgloss.NewStyle().
 		Foreground(styles.Colors.Warning).
