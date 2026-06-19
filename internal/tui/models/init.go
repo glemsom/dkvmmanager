@@ -243,8 +243,8 @@ func buildConfigListAdapter(reg *ViewRegistry) []list.Item {
 // buildPowerListAdapter creates the power menu list items
 func buildPowerListAdapter() []list.Item {
 	items := []MenuItem{
-		{Title: "Reboot system", Type: "INT_POWER_REBOOT"},
 		{Title: "Power off system", Type: "INT_POWER_OFF"},
+		{Title: "Reboot system", Type: "INT_POWER_REBOOT"},
 	}
 	listItems := make([]list.Item, len(items))
 	for i, item := range items {

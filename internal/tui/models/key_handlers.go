@@ -419,11 +419,11 @@ func (m *MainModel) handlePowerSelection() (tea.Model, tea.Cmd) {
 	selectedIndex := m.powerList.Index()
 	switch selectedIndex {
 	case 0:
-		// Reboot system
-		return m, runReboot()
-	case 1:
 		// Power off system
 		return m, runPowerOff()
+	case 1:
+		// Reboot system
+		return m, runReboot()
 	}
 	return m, nil
 }
