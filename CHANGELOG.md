@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.28] - 2026-06-19
+
+### Added
+- **ASCII fallback for TERM=linux (vgacon)**: VM card borders, panel borders, status symbols, mode icons, and disk/CDROM bullets now fall back to ASCII on the Linux console where Unicode glyphs may not render (`internal/tui/styles/ascii_fallback.go`, `internal/tui/styles/ascii_fallback_test.go`, `internal/tui/components/vm_cards.go`, `internal/tui/components/statusbar.go`, `internal/tui/styles/colors.go`, `internal/tui/styles/styles.go`)
+
+### Fixed
+- **Invisible muted text on Linux console**: ANSI color 8 (bright black) renders as black on TERM=linux; fall back to ANSI 7 (light gray) for muted/dim text (`internal/tui/theme/theme.go`)
+- **ASCII fallback for Unicode symbols in status bar**: Mode indicator and running/stopped status now use ASCII fallback on TERM=linux (`internal/tui/components/statusbar.go`, `internal/tui/styles/colors.go`)
+- **Corrected colorprofile import path in test file**: Fixed `test_lipgloss2.go` import path for colorprofile (`test_lipgloss2.go`)
+
+### Changed
+- **Power menu reordered**: Power off listed before Reboot for safety-first ordering (`internal/tui/models/init.go`, `internal/tui/models/key_handlers.go`)
+
 ## [0.1.25] - 2026-06-10
 
 ### Added
@@ -263,7 +276,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.25...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.28...HEAD
+[0.1.28]: https://github.com/glemsom/dkvmmanager/compare/v0.1.25...v0.1.28
 [0.1.25]: https://github.com/glemsom/dkvmmanager/compare/v0.1.24...v0.1.25
 [0.1.24]: https://github.com/glemsom/dkvmmanager/compare/v0.1.23...v0.1.24
 [0.1.22]: https://github.com/glemsom/dkvmmanager/compare/v0.1.21...v0.1.22
