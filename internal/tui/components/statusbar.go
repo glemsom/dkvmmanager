@@ -119,10 +119,7 @@ func (s *StatusBar) renderModeIndicator() string {
 		color = styles.Colors.Muted // Gray
 	}
 
-	icon := styles.ModeIcons[s.mode]
-	if icon == "" {
-		icon = "◌"
-	}
+	icon := styles.GetModeIcon(s.mode)
 
 	iconRendered := lipgloss.NewStyle().
 		Foreground(color).
@@ -142,12 +139,12 @@ func (s *StatusBar) renderRightSection() string {
 		if s.running > 0 {
 			runningIcon := lipgloss.NewStyle().
 				Foreground(styles.StatusColors.Running).
-				Render("▶")
+				Render(styles.GetModeIcon("Running"))
 			status = fmt.Sprintf("%s Running", runningIcon)
 		} else {
 			stoppedIcon := lipgloss.NewStyle().
 				Foreground(styles.StatusColors.Stopped).
-				Render("■")
+				Render(styles.GetModeIcon("Stopped"))
 			status = fmt.Sprintf("%s Stopped", stoppedIcon)
 		}
 		parts = append(parts, status)
