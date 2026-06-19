@@ -2,11 +2,20 @@ package styles
 
 import (
 	"image/color"
+	"os"
 	"strings"
 	"testing"
 
 	"charm.land/lipgloss/v2"
 )
+
+func mutedColorExpected() string {
+	term := os.Getenv("TERM")
+	if term == "linux" || strings.HasPrefix(term, "linux-") {
+		return "7"
+	}
+	return "8"
+}
 
 func TestColorPalette(t *testing.T) {
 	tests := []struct {
@@ -19,7 +28,7 @@ func TestColorPalette(t *testing.T) {
 		{"Success", Colors.Success, "10"},
 		{"Warning", Colors.Warning, "11"},
 		{"Error", Colors.Error, "9"},
-		{"Muted", Colors.Muted, "8"},
+		{"Muted", Colors.Muted, mutedColorExpected()},
 		{"Background", Colors.Background, "0"},
 		{"Border", Colors.Border, "8"},
 	}
@@ -40,7 +49,7 @@ func TestStatusColors(t *testing.T) {
 		expected string
 	}{
 		{"Running", StatusColors.Running, "10"},
-		{"Stopped", StatusColors.Stopped, "8"},
+		{"Stopped", StatusColors.Stopped, mutedColorExpected()},
 		{"Error", StatusColors.Error, "9"},
 	}
 

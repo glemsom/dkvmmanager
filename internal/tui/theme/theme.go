@@ -2,6 +2,8 @@ package theme
 
 import (
 	"image/color"
+	"os"
+	"strings"
 
 	"charm.land/lipgloss/v2"
 )
@@ -98,6 +100,23 @@ func NewLightTheme() Theme {
 		HoverBackground: lipgloss.Color("7"),  // Light gray — distinct hover highlight
 	}
 }
-
 // DefaultTheme returns the default theme (dark).
 var DefaultTheme = NewDarkTheme()
+
+// isTERMLinux reports whether the terminal is the Linux console (TERM=linux),
+// which only supports 8 ANSI colors. Codes 8-15 (bright variants) often render
+// as black, making text invisible on dark backgrounds.
+func isTERMLinux() bool {
+	term := os.Getenv("TERM")
+	return term == "linux" || strings.HasPrefix(term, "linux-")
+}
+
+func init() {
+	if isTERMLinux() {
+		// On the Linux console (8 colors), ANSI 8 (bright black) renders
+		// indistinguishable from ANSI 0 (black).  Use ANSI 7 (light gray)
+		// instead so muted/dim text remains visible.
+		DefaultTheme.Muted = lipgloss.Color("7")
+		DefaultTheme.ForegroundDim = lipgloss.Color("7")
+	}
+}

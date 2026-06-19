@@ -160,6 +160,7 @@ func (t *TabModel) RenderTabs(width int) string {
 			contentRow += lipgloss.NewStyle().
 				Foreground(styles.Colors.Muted).
 				Background(styles.Colors.Background).
+				Faint(true).
 				Render(tabName)
 		}
 
