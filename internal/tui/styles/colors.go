@@ -25,7 +25,7 @@ var StatusColors = struct {
 // LayeredPanelStyle returns a styled panel with normal border effect
 func LayeredPanelStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
+		Border(NormalBorder()).
 		BorderForeground(Colors.Border).
 		BorderBackground(Colors.Background).
 		Background(Colors.Background).
@@ -35,7 +35,7 @@ func LayeredPanelStyle() lipgloss.Style {
 // ActiveLayeredPanelStyle returns a styled panel with active normal border
 func ActiveLayeredPanelStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
+		Border(NormalBorder()).
 		BorderForeground(Colors.Primary).   // Outer border = accent
 		BorderBackground(Colors.Border).    // Inner = border color
 		Background(Colors.FocusedBackground).
@@ -45,7 +45,7 @@ func ActiveLayeredPanelStyle() lipgloss.Style {
 // PanelWithTitleStyle returns a styled panel with a title
 func PanelWithTitleStyle(title string) lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
+		Border(NormalBorder()).
 		BorderForeground(Colors.Primary).
 		Background(Colors.Background).
 		Padding(1, 2).
@@ -234,14 +234,14 @@ func FooterStyle() lipgloss.Style {
 // BorderStyle returns the style for borders
 func BorderStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
+		Border(RoundedBorder()).
 		BorderForeground(Colors.Border)
 }
 
 // ActiveBorderStyle returns the style for active/focused borders
 func ActiveBorderStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
+		Border(RoundedBorder()).
 		BorderForeground(Colors.Primary)
 }
 

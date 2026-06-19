@@ -69,7 +69,7 @@ func BadgeStyle() lipgloss.Style {
 func TagStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(Colors.Primary).
-		Border(lipgloss.NormalBorder()).
+		Border(NormalBorder()).
 		BorderForeground(Colors.Primary).
 		Padding(0, 1)
 }
@@ -95,7 +95,7 @@ func ProgressBarFillStyle() lipgloss.Style {
 // InputStyle returns the style for input fields
 func InputStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
+		Border(NormalBorder()).
 		BorderForeground(Colors.Border).
 		Padding(0, 1)
 }
@@ -103,7 +103,7 @@ func InputStyle() lipgloss.Style {
 // InputFocusedStyle returns the style for focused input fields
 func InputFocusedStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
+		Border(NormalBorder()).
 		BorderForeground(Colors.Primary).
 		Padding(0, 1)
 }
@@ -111,7 +111,7 @@ func InputFocusedStyle() lipgloss.Style {
 // InputErrorStyle returns the style for input fields with errors
 func InputErrorStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
+		Border(NormalBorder()).
 		BorderForeground(Colors.Error).
 		Padding(0, 1)
 }
@@ -145,7 +145,7 @@ func TooltipStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(Colors.Foreground).
 		Background(Colors.Background).
-		Border(lipgloss.RoundedBorder()).
+		Border(RoundedBorder()).
 		BorderForeground(Colors.Border).
 		Padding(1, 2)
 }
@@ -153,7 +153,7 @@ func TooltipStyle() lipgloss.Style {
 // ModalStyle returns the style for modal dialogs
 func ModalStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
+		Border(RoundedBorder()).
 		BorderForeground(Colors.Primary).
 		Background(Colors.Background).
 		Padding(1, 2)
@@ -162,7 +162,7 @@ func ModalStyle() lipgloss.Style {
 // NotificationStyle returns the style for notifications
 func NotificationStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
+		Border(RoundedBorder()).
 		BorderForeground(Colors.Primary).
 		Background(Colors.Background).
 		Padding(1, 2)
@@ -171,7 +171,7 @@ func NotificationStyle() lipgloss.Style {
 // ErrorNotificationStyle returns the style for error notifications
 func ErrorNotificationStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
+		Border(RoundedBorder()).
 		BorderForeground(Colors.Error).
 		Background(Colors.Background).
 		Padding(1, 2)
@@ -180,7 +180,7 @@ func ErrorNotificationStyle() lipgloss.Style {
 // SuccessNotificationStyle returns the style for success notifications
 func SuccessNotificationStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
+		Border(RoundedBorder()).
 		BorderForeground(Colors.Success).
 		Background(Colors.Background).
 		Padding(1, 2)
@@ -189,7 +189,7 @@ func SuccessNotificationStyle() lipgloss.Style {
 // WarningNotificationStyle returns the style for warning notifications
 func WarningNotificationStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
+		Border(RoundedBorder()).
 		BorderForeground(Colors.Warning).
 		Background(Colors.Background).
 		Padding(1, 2)
@@ -198,7 +198,7 @@ func WarningNotificationStyle() lipgloss.Style {
 // DetailPanelStyle returns the style for the VM detail panel
 func DetailPanelStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
+		Border(NormalBorder()).
 		BorderForeground(Colors.Muted).
 		BorderBackground(Colors.Background).
 		Background(Colors.Background).

@@ -96,6 +96,9 @@ func (c *VMCardView) renderCard(vm models.VM, selected bool) string {
 		borderColor = styles.Colors.Muted
 	}
 
+	// Use ASCII fallback on TERM=linux (vgacon can't render Unicode box-drawing)
+	topLeft, topRight, bottomLeft, bottomRight, horiz, vert := cardBorderChars()
+
 	// Top border with title
 	title := vm.Name
 	titlePadded := " " + title + " "
@@ -104,11 +107,11 @@ func (c *VMCardView) renderCard(vm models.VM, selected bool) string {
 		remaining = 0
 	}
 	topBorder := lipgloss.NewStyle().Foreground(borderColor).
-		Render("╭─") +
+		Render(topLeft+horiz) +
 		lipgloss.NewStyle().Foreground(borderColor).Bold(true).
 			Render(titlePadded) +
 		lipgloss.NewStyle().Foreground(borderColor).
-			Render(strings.Repeat("─", remaining)+"╮")
+			Render(strings.Repeat(horiz, remaining)+topRight)
 
 	// Status line
 	statusIcon := styles.StatusIndicator("stopped")
@@ -138,10 +141,10 @@ func (c *VMCardView) renderCard(vm models.VM, selected bool) string {
 		Render(infoLine)
 
 	sideStyle := lipgloss.NewStyle().Foreground(borderColor)
-	body := sideStyle.Render("│") + infoPadded + sideStyle.Render("│")
+	body := sideStyle.Render(vert) + infoPadded + sideStyle.Render(vert)
 
 	// Bottom border
-	bottomBorder := sideStyle.Render("╰" + strings.Repeat("─", cardWidth) + "╯")
+	bottomBorder := sideStyle.Render(bottomLeft + strings.Repeat(horiz, cardWidth) + bottomRight)
 
 	card := topBorder + "\n" + body + "\n" + bottomBorder
 
@@ -153,6 +156,15 @@ func (c *VMCardView) renderCard(vm models.VM, selected bool) string {
 	}
 
 	return card
+}
+
+// cardBorderChars returns border characters for VM card rendering.
+// Uses ASCII fallback on TERM=linux (vgacon) where Unicode box-drawing may not render.
+func cardBorderChars() (topLeft, topRight, bottomLeft, bottomRight, horiz, vert string) {
+	if styles.IsTermLinux() {
+		return "+", "+", "+", "+", "-", "|"
+	}
+	return "╭", "╮", "╰", "╯", "─", "│"
 }
 
 // SelectedVM returns the currently selected VM
