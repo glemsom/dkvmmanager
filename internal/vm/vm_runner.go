@@ -421,13 +421,15 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 		m.Status = "starting"
 	}
 
-	// QMP: query-cpus for vCPU thread IDs (needs client, not PID)
-	var cpus []VCPUInfo
+	// QMP: query-cpus-fast for vCPU thread IDs (needs client, not PID)
+	// Uses QueryCPUsFast which is supported on all QEMU >= 2.5; avoids the
+	// deprecated query-cpus command which is removed in QEMU 7.1+.
+	var cpus []QMPVCPUInfo
 	if client != nil {
 		var err error
-		cpus, err = client.QueryCPUs()
+		cpus, err = client.QueryCPUsFast()
 		if err != nil {
-			return m, fmt.Errorf("Snapshot: query-cpus failed: %w", err)
+			return m, fmt.Errorf("Snapshot: query-cpus-fast failed: %w", err)
 		}
 	}
 

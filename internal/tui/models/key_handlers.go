@@ -104,10 +104,11 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.vmRunningModel.status = "starting" // will be updated by initialStatus
 			m.vmRunningModel.pollingSince = time.Now()
 			return m, tea.Batch(
-				m.vmRunningModel.waitForLog(),
+				m.vmRunningModel.seedAndSubscribe(),
 				m.vmRunningModel.waitForVMExit(),
 				m.vmRunningModel.pollStatus(),
 				m.vmRunningModel.initialStatus(),
+				m.vmRunningModel.pollMetrics(),
 			)
 		}
 		return m, nil
