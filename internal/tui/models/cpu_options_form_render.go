@@ -16,6 +16,7 @@ var (
 	cpuOptFocusStyle   = styles.FormFocusStyle()
 	cpuOptInputStyle   = styles.FormInputStyle()
 	cpuOptErrorStyle   = styles.ErrorTextStyle()
+	cpuOptWarnStyle    = styles.WarningTextStyle()
 	cpuOptMutedStyle   = styles.FormMutedStyle()
 	cpuOptSaveStyle    = styles.FormSaveStyle()
 	cpuOptSectionStyle = styles.DetailSectionStyle()
@@ -31,6 +32,10 @@ func (m *CPUOptionsFormModel) RenderHeader() string {
 // RenderFooter returns the form footer.
 func (m *CPUOptionsFormModel) RenderFooter() string {
 	var parts []string
+	if m.scanErr != nil {
+		parts = append(parts, "")
+		parts = append(parts, cpuOptWarnStyle.Render(fmt.Sprintf("Warning: CPU topology scan failed: %s", m.scanErr)))
+	}
 	if m.statusMessage != "" {
 		parts = append(parts, "")
 		parts = append(parts, cpuOptErrorStyle.Render(m.statusMessage))
@@ -83,6 +88,12 @@ func (m *CPUOptionsFormModel) renderAllLines() []string {
 	// Header
 	lines = append(lines, cpuOptFocusStyle.Render("CPU Options"))
 	lines = append(lines, "")
+
+	if m.scanErr != nil {
+		lines = append(lines, cpuOptWarnStyle.Render(fmt.Sprintf("Warning: CPU topology scan failed: %s", m.scanErr)))
+		lines = append(lines, cpuOptWarnStyle.Render("Per-die L3 cache override unavailable."))
+		lines = append(lines, "")
+	}
 
 	// Render all positions (including section headers)
 	for i, pos := range m.positions {

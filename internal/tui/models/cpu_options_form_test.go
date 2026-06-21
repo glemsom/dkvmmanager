@@ -322,20 +322,12 @@ func TestCPUOptionsFormWithL3CacheSizeDie(t *testing.T) {
 	// The form scans topology at runtime, so we mock it by creating a form and
 	// directly providing hostTopo.
 
-	f := &CPUOptionsFormModel{
-		repo:          repo,
-		options:       &models.CPUOptions{},
-		hostTopo: models.HostCPUTopology{
-			Dies: []models.CPUDie{
-				{ID: 0, L3CacheKB: 32768},
-				{ID: 1, L3CacheKB: 98304},
-			},
+	f := NewCPUOptionsFormModelWithTopo(repo, models.HostCPUTopology{
+		Dies: []models.CPUDie{
+			{ID: 0, L3CacheKB: 32768},
+			{ID: 1, L3CacheKB: 98304},
 		},
-		scanErr:       nil,
-		cursorOffsets: make(map[string]int),
-		errors:        make(map[string]string),
-	}
-	f.positions = f.BuildPositions()
+	}, nil)
 
 	// Find die L3 cache fields
 	var die0Idx, die1Idx int = -1, -1

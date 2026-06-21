@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/glemsom/dkvmmanager/internal/models"
@@ -366,8 +367,13 @@ func (r *VMRunner) buildCPUOptsString() string {
 	if opts.L3Cache {
 		flags = append(flags, "+l3-cache")
 	}
-	for dieIdx, size := range opts.L3CacheSizeDie {
-		if size != "" {
+	dieIndices := make([]int, 0, len(opts.L3CacheSizeDie))
+	for dieIdx := range opts.L3CacheSizeDie {
+		dieIndices = append(dieIndices, dieIdx)
+	}
+	sort.Ints(dieIndices)
+	for _, dieIdx := range dieIndices {
+		if size := opts.L3CacheSizeDie[dieIdx]; size != "" {
 			flags = append(flags, fmt.Sprintf("l3-cache-size-die%d=%s", dieIdx, size))
 		}
 	}

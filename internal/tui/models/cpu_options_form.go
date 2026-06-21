@@ -73,6 +73,25 @@ func NewCPUOptionsFormModel(repo *vm.Repository) *CPUOptionsFormModel {
 	return m
 }
 
+// NewCPUOptionsFormModelWithTopo creates a form with explicit host topology (for testing).
+// Skips the host CPU scan and uses the provided topology data instead.
+func NewCPUOptionsFormModelWithTopo(repo *vm.Repository, hostTopo models.HostCPUTopology, scanErr error) *CPUOptionsFormModel {
+	var opts models.CPUOptions
+	repo.GetConfig("cpu_options", &opts)
+
+	m := &CPUOptionsFormModel{
+		repo:          repo,
+		options:       &opts,
+		hostTopo:      hostTopo,
+		scanErr:       scanErr,
+		cursorOffsets: make(map[string]int),
+		errors:        make(map[string]string),
+	}
+	m.positions = m.BuildPositions()
+	m.focusIndex = 1
+	return m
+}
+
 // getBoolField returns a boolean field value by name using reflection.
 func (m *CPUOptionsFormModel) getBoolField(name string) bool {
 	v := reflect.ValueOf(m.options).Elem().FieldByName(name)
