@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.30] - 2026-06-21
+
+### Fixed
+- **Data race in dry-run path**: Removed redundant `persistBuf.Flush()` call in dry-run path to fix a data race ([#76](https://github.com/glemsom/dkvmmanager/issues/76)) (`internal/vm/vm_runner.go`)
+- **Straight borders for TERM=linux**: Replaced rounded borders with straight box-drawing characters (CP437-compatible) for Linux console support, fixing '+' fallback rendering on VGA console ([#74](https://github.com/glemsom/dkvmmanager/issues/74)) (`internal/tui/components/vm_cards.go`, `internal/tui/components/vm_details.go`, `internal/tui/styles/ascii_fallback.go`, `internal/tui/styles/colors.go`, `internal/tui/styles/styles.go`)
+
+## [0.1.29] - 2026-06-20
+
+### Fixed
+- **VM metrics disappear after QMP connects**: Fixed `Snapshot()` to use `query-cpus-fast` instead of deprecated `query-cpus` (removed in QEMU 7.1+), preventing early return that dropped all metrics including host RSS/CPU (`internal/vm/vm_runner.go`, `internal/tui/models/key_handlers.go`)
+
 ## [0.1.28] - 2026-06-19
 
 ### Added
@@ -276,7 +287,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.28...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.30...HEAD
+[0.1.30]: https://github.com/glemsom/dkvmmanager/compare/v0.1.29...v0.1.30
+[0.1.29]: https://github.com/glemsom/dkvmmanager/compare/v0.1.28...v0.1.29
 [0.1.28]: https://github.com/glemsom/dkvmmanager/compare/v0.1.25...v0.1.28
 [0.1.25]: https://github.com/glemsom/dkvmmanager/compare/v0.1.24...v0.1.25
 [0.1.24]: https://github.com/glemsom/dkvmmanager/compare/v0.1.23...v0.1.24
