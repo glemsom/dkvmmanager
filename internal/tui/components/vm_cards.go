@@ -96,7 +96,7 @@ func (c *VMCardView) renderCard(vm models.VM, selected bool) string {
 		borderColor = styles.Colors.Muted
 	}
 
-	// Use ASCII fallback on TERM=linux (vgacon can't render Unicode box-drawing)
+	// Straight box-drawing (┌┐└┘─│) works on TERM=linux (CP437) and all modern terminals.
 	topLeft, topRight, bottomLeft, bottomRight, horiz, vert := cardBorderChars()
 
 	// Top border with title
@@ -158,13 +158,10 @@ func (c *VMCardView) renderCard(vm models.VM, selected bool) string {
 	return card
 }
 
-// cardBorderChars returns border characters for VM card rendering.
-// Uses ASCII fallback on TERM=linux (vgacon) where Unicode box-drawing may not render.
+// cardBorderChars returns straight border characters for VM card rendering.
+// NormalBorder (┌┐└┘├┤─│) characters are in CP437 and work on all terminals.
 func cardBorderChars() (topLeft, topRight, bottomLeft, bottomRight, horiz, vert string) {
-	if styles.IsTermLinux() {
-		return "+", "+", "+", "+", "-", "|"
-	}
-	return "╭", "╮", "╰", "╯", "─", "│"
+	return "┌", "┐", "└", "┘", "─", "│"
 }
 
 // SelectedVM returns the currently selected VM

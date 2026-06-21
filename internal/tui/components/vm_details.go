@@ -218,7 +218,7 @@ func (p *VMDetailsPanel) renderActionBar(width int) string {
 
 	borderColor := styles.Colors.Muted
 	actionBar := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
+		Border(lipgloss.NormalBorder()).
 		BorderForeground(borderColor).
 		Padding(1, 2).
 		Width(width).
