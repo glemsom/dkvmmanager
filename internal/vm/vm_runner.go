@@ -878,11 +878,9 @@ func (r *VMRunner) Start() error {
 		r.logChan <- "[DRY-RUN] Filtered QEMU command (no passthrough):"
 		r.logChan <- filteredCmd
 
-		// Flush the persisted log so the file is available to the caller
-		// but keep the channels open for the view to consume.
-		if r.persistBuf != nil {
-			_ = r.persistBuf.Flush()
-		}
+		// No explicit flush needed: writePersistLine (called by persistLogLoop)
+		// flushes every line. The subscriber channel ordering guarantees the
+		// file is up-to-date once the caller receives all lines.
 		return nil
 	}
 
