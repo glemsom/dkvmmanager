@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.31] - 2026-06-21
+
 ### Added
 - **Per-die L3 cache size override**: New `L3CacheSizeDie` CPU option to set
   `l3-cache-size-die<N>=<size>` QEMU flags for asymmetric AMD V-cache CPUs
@@ -28,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Version mismatch**: Synced `internal/version/version.go` with `VERSION` file
   and added `make bump-version` target + documentation to prevent future drift.
   (`internal/version/version.go`, `Makefile`, `CONTRIBUTING.md`)
+- **Force CPUID 0x80000026 toggle was dead**: The `ForceCPUID0x80000026` CPU
+  option was modeled and exposed in the TUI as 'Force AMD CPUID' but
+  `buildCPUOptsString()` never emitted the corresponding QEMU property.
+  Fixed to append `x-force-cpuid-0x80000026=on` to `-cpu host,...`.
+  ([#78](https://github.com/glemsom/dkvmmanager/issues/78))
+  (`internal/vm/vm_runner_config.go`)
+
 ## [0.1.30] - 2026-06-21
 
 ### Fixed
@@ -307,7 +316,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.30...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.31...HEAD
+[0.1.31]: https://github.com/glemsom/dkvmmanager/compare/v0.1.30...v0.1.31
 [0.1.30]: https://github.com/glemsom/dkvmmanager/compare/v0.1.29...v0.1.30
 [0.1.29]: https://github.com/glemsom/dkvmmanager/compare/v0.1.28...v0.1.29
 [0.1.28]: https://github.com/glemsom/dkvmmanager/compare/v0.1.25...v0.1.28
