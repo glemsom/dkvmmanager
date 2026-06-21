@@ -281,6 +281,7 @@ func (m *CPUOptionsFormModel) toggleValue(fieldName string) {
 
 // getTextValue returns the text value for a field (uses reflection).
 // Special-cases L3CacheSizeDie<N> to read from the L3CacheSizeDie map.
+// Special-cases L3CacheAssocDie<N> to read from the L3CacheAssocDie map.
 func (m *CPUOptionsFormModel) getTextValue(fieldName string) string {
 	if dieIdx := parseL3CacheSizeDieField(fieldName); dieIdx >= 0 {
 		if m.options.L3CacheSizeDie == nil {
@@ -288,11 +289,22 @@ func (m *CPUOptionsFormModel) getTextValue(fieldName string) string {
 		}
 		return m.options.L3CacheSizeDie[dieIdx]
 	}
+	if dieIdx := parseL3CacheAssocDieField(fieldName); dieIdx >= 0 {
+		if m.options.L3CacheAssocDie == nil {
+			return ""
+		}
+		val := m.options.L3CacheAssocDie[dieIdx]
+		if val == 0 {
+			return ""
+		}
+		return strconv.Itoa(val)
+	}
 	return m.getStringField(fieldName)
 }
 
 // setTextValue sets the text value for a field (uses reflection).
 // Special-cases L3CacheSizeDie<N> to write to the L3CacheSizeDie map.
+// Special-cases L3CacheAssocDie<N> to write to the L3CacheAssocDie map.
 func (m *CPUOptionsFormModel) setTextValue(fieldName string, val string) {
 	if dieIdx := parseL3CacheSizeDieField(fieldName); dieIdx >= 0 {
 		if m.options.L3CacheSizeDie == nil {
@@ -305,6 +317,20 @@ func (m *CPUOptionsFormModel) setTextValue(fieldName string, val string) {
 		}
 		return
 	}
+	if dieIdx := parseL3CacheAssocDieField(fieldName); dieIdx >= 0 {
+		if m.options.L3CacheAssocDie == nil {
+			m.options.L3CacheAssocDie = make(map[int]int)
+		}
+		if val == "" {
+			delete(m.options.L3CacheAssocDie, dieIdx)
+		} else {
+			n, err := strconv.Atoi(val)
+			if err == nil && n > 0 {
+				m.options.L3CacheAssocDie[dieIdx] = n
+			}
+		}
+		return
+	}
 	m.setStringField(fieldName, val)
 }
 
@@ -314,6 +340,22 @@ func parseL3CacheSizeDieField(name string) int {
 		return -1
 	}
 	suffix := strings.TrimPrefix(name, "L3CacheSizeDie")
+	if suffix == "" {
+		return -1
+	}
+	idx, err := strconv.Atoi(suffix)
+	if err != nil {
+		return -1
+	}
+	return idx
+}
+
+// parseL3CacheAssocDieField extracts die index from "L3CacheAssocDie<N>" or returns -1.
+func parseL3CacheAssocDieField(name string) int {
+	if !strings.HasPrefix(name, "L3CacheAssocDie") {
+		return -1
+	}
+	suffix := strings.TrimPrefix(name, "L3CacheAssocDie")
 	if suffix == "" {
 		return -1
 	}

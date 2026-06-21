@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `internal/tui/models/cpu_options_form.go`,
   `internal/tui/models/cpu_options_form_navigation.go`,
   `internal/tui/models/cpu_options_form_render.go`)
+- **Per-die L3 cache associativity override**: New `L3CacheAssocDie` CPU option
+  to set `l3-cache-assoc-die<N>=<value>` QEMU flags for asymmetric AMD V-cache
+  CPUs (9950X3D, EPYC). The CPU options form now shows per-die L3 cache
+  associativity text fields alongside the size fields.
+  ([#80](https://github.com/glemsom/dkvmmanager/issues/80))
 
 ### Fixed
 - **Version mismatch**: Synced `internal/version/version.go` with `VERSION` file

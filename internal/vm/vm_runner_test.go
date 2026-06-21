@@ -1175,6 +1175,42 @@ func TestBuildCPUOptsStringWithL3CacheSizeDieEmpty(t *testing.T) {
 	}
 }
 
+func TestBuildCPUOptsStringWithL3CacheAssocDie(t *testing.T) {
+	runner := &VMRunner{
+		vm:     &models.VM{Name: "test"},
+		runCfg: RunConfig{CPUOptions: models.CPUOptions{
+			L3CacheAssocDie: map[int]int{
+				0: 8,
+				1: 12,
+			},
+		}},
+	}
+
+	result := runner.buildCPUOptsString()
+
+	if !containsString(result, "l3-cache-assoc-die0=8") {
+		t.Errorf("Expected l3-cache-assoc-die0=8 flag, got: %s", result)
+	}
+	if !containsString(result, "l3-cache-assoc-die1=12") {
+		t.Errorf("Expected l3-cache-assoc-die1=12 flag, got: %s", result)
+	}
+}
+
+func TestBuildCPUOptsStringWithL3CacheAssocDieEmpty(t *testing.T) {
+	runner := &VMRunner{
+		vm:     &models.VM{Name: "test"},
+		runCfg: RunConfig{CPUOptions: models.CPUOptions{
+			L3CacheAssocDie: map[int]int{},
+		}},
+	}
+
+	result := runner.buildCPUOptsString()
+
+	if containsString(result, "l3-cache-assoc-die") {
+		t.Errorf("Expected no l3-cache-assoc-die flags for empty map, got: %s", result)
+	}
+}
+
 func TestBuildQEMUArgsWithHostTopology(t *testing.T) {
 	dir := t.TempDir()
 	vmDir := filepath.Join(dir, "vms", "1")

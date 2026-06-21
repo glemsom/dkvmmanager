@@ -377,6 +377,16 @@ func (r *VMRunner) buildCPUOptsString() string {
 			flags = append(flags, fmt.Sprintf("l3-cache-size-die%d=%s", dieIdx, size))
 		}
 	}
+	dieIndices = make([]int, 0, len(opts.L3CacheAssocDie))
+	for dieIdx := range opts.L3CacheAssocDie {
+		dieIndices = append(dieIndices, dieIdx)
+	}
+	sort.Ints(dieIndices)
+	for _, dieIdx := range dieIndices {
+		if assoc := opts.L3CacheAssocDie[dieIdx]; assoc > 0 {
+			flags = append(flags, fmt.Sprintf("l3-cache-assoc-die%d=%d", dieIdx, assoc))
+		}
+	}
 	if opts.X2APIC {
 		flags = append(flags, "+x2apic")
 	}
