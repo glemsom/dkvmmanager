@@ -1124,6 +1124,21 @@ func TestBuildCPUOptsStringEmpty(t *testing.T) {
 	}
 }
 
+func TestBuildCPUOptsStringWithForceCPUID(t *testing.T) {
+	runner := &VMRunner{
+		vm:     &models.VM{Name: "test"},
+		runCfg: RunConfig{CPUOptions: models.CPUOptions{
+			ForceCPUID0x80000026: true,
+		}},
+	}
+
+	result := runner.buildCPUOptsString()
+
+	if !containsString(result, "x-force-cpuid-0x80000026=on") {
+		t.Errorf("Expected x-force-cpuid-0x80000026=on flag, got: %s", result)
+	}
+}
+
 func TestBuildQEMUArgsWithHostTopology(t *testing.T) {
 	dir := t.TempDir()
 	vmDir := filepath.Join(dir, "vms", "1")

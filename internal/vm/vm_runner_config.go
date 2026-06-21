@@ -375,6 +375,9 @@ func (r *VMRunner) buildCPUOptsString() string {
 	if opts.InvTSC {
 		flags = append(flags, "+invtsc")
 	}
+	if opts.ForceCPUID0x80000026 {
+		flags = append(flags, "x-force-cpuid-0x80000026=on")
+	}
 
 	return strings.Join(flags, ",")
 }
