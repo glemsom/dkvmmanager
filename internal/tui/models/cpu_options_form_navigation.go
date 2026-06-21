@@ -114,7 +114,7 @@ func (m *CPUOptionsFormModel) BuildPositions() []form.FocusPos {
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "L3Cache"},
 	})
 
-	// Per-die L3 cache size override fields
+	// Per-die L3 cache override fields
 	if m.scanErr == nil && len(m.hostTopo.Dies) > 0 {
 		positions = append(positions, form.FocusPos{
 			Kind: form.FocusHeader, Label: "== Per-Die L3 Cache Override ==", Key: "header_l3_die",
@@ -128,6 +128,12 @@ func (m *CPUOptionsFormModel) BuildPositions() []form.FocusPos {
 			positions = append(positions, form.FocusPos{
 				Kind: form.FocusText, Label: label, Key: fieldKey,
 				Data: cpuOptFocusData{kind: int(form.FocusText), fieldName: fieldKey},
+			})
+			assocLabel := fmt.Sprintf("Die %d L3 cache associativity (e.g. 12)", die.ID)
+			assocKey := fmt.Sprintf("L3CacheAssocDie%d", die.ID)
+			positions = append(positions, form.FocusPos{
+				Kind: form.FocusText, Label: assocLabel, Key: assocKey,
+				Data: cpuOptFocusData{kind: int(form.FocusText), fieldName: assocKey},
 			})
 		}
 	}

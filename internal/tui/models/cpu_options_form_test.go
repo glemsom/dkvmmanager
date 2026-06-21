@@ -388,6 +388,72 @@ func TestCPUOptionsFormWithL3CacheSizeDie(t *testing.T) {
 	}
 }
 
+// TestCPUOptionsFormWithL3CacheAssocDie tests per-die L3 cache associativity fields in form
+func TestCPUOptionsFormWithL3CacheAssocDie(t *testing.T) {
+	vmManager := createTestVMManager(t)
+	repo := vmManager.Repository()
+
+	f := NewCPUOptionsFormModelWithTopo(repo, models.HostCPUTopology{
+		Dies: []models.CPUDie{
+			{ID: 0, L3CacheKB: 32768},
+			{ID: 1, L3CacheKB: 98304},
+		},
+	}, nil)
+
+	// Find die L3 cache associativity fields
+	var die0Idx, die1Idx int = -1, -1
+	for i, p := range f.positions {
+		if p.Key == "L3CacheAssocDie0" {
+			die0Idx = i
+		}
+		if p.Key == "L3CacheAssocDie1" {
+			die1Idx = i
+		}
+	}
+
+	if die0Idx < 0 {
+		t.Error("Expected L3CacheAssocDie0 field in positions")
+	}
+	if die1Idx < 0 {
+		t.Error("Expected L3CacheAssocDie1 field in positions")
+	}
+
+	if die0Idx >= 0 {
+		// Check it's a text field
+		if f.positions[die0Idx].Kind != form.FocusText {
+			t.Errorf("L3CacheAssocDie0 kind = %d, want FocusText", f.positions[die0Idx].Kind)
+		}
+		// Check label mentions die
+		label := f.positions[die0Idx].Label
+		if !strings.Contains(label, "Die 0") {
+			t.Errorf("L3CacheAssocDie0 label = %q, should mention Die 0", label)
+		}
+	}
+
+	// Test editing die 0 L3 cache associativity
+	f.focusIndex = die0Idx
+	f.handleCharInput("8")
+	if f.getTextValue("L3CacheAssocDie0") != "8" {
+		t.Errorf("After typing '8', L3CacheAssocDie0 = %q, want 8", f.getTextValue("L3CacheAssocDie0"))
+	}
+
+	// Verify it's stored in the map
+	if f.options.L3CacheAssocDie[0] != 8 {
+		t.Errorf("L3CacheAssocDie[0] = %d, want 8", f.options.L3CacheAssocDie[0])
+	}
+
+	// Test clearing by backspace
+	f.focusIndex = die0Idx
+	f.handleBackspaceKey()
+	if f.getTextValue("L3CacheAssocDie0") != "" {
+		t.Errorf("After backspace, L3CacheAssocDie0 = %q, want empty", f.getTextValue("L3CacheAssocDie0"))
+	}
+	// Entry should be deleted from map, not just empty string
+	if _, exists := f.options.L3CacheAssocDie[0]; exists {
+		t.Errorf("L3CacheAssocDie[0] should be deleted after clearing")
+	}
+}
+
 // createTestVMManager creates a temporary VM manager for testing
 func createTestVMManager(t *testing.T) *vm.Manager {
 	t.Helper()

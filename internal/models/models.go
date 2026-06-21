@@ -142,6 +142,7 @@ type CPUOptions struct {
 	TopoExt                bool   `json:"topoext" yaml:"topoext"`
 	L3Cache                bool              `json:"l3_cache" yaml:"l3_cache"`
 	L3CacheSizeDie        map[int]string    `json:"l3_cache_size_die" yaml:"l3_cache_size_die"`
+	L3CacheAssocDie       map[int]int       `json:"l3_cache_assoc_die" yaml:"l3_cache_assoc_die"`
 	X2APIC                 bool   `json:"x2apic" yaml:"x2apic"`
 	Migratable             bool   `json:"migratable" yaml:"migratable"`
 	InvTSC                 bool   `json:"invtsc" yaml:"invtsc"`

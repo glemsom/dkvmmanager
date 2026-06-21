@@ -242,7 +242,11 @@ func (m *CPUOptionsFormModel) fieldLabel(name string) string {
 	}
 	// Handle dynamic L3CacheSizeDie<N> fields
 	if dieIdx := parseL3CacheSizeDieField(name); dieIdx >= 0 {
-		return fmt.Sprintf("Die %d L3 cache override", dieIdx)
+		return fmt.Sprintf("Die %d L3 cache size override", dieIdx)
+	}
+	// Handle dynamic L3CacheAssocDie<N> fields
+	if dieIdx := parseL3CacheAssocDieField(name); dieIdx >= 0 {
+		return fmt.Sprintf("Die %d L3 cache associativity override", dieIdx)
 	}
 	return name
 }
