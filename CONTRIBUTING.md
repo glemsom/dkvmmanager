@@ -156,6 +156,11 @@ opens a **Release PR** containing:
 Maintainers review the Release PR, verify changelog accuracy, and merge when
 ready.
 
+> **Important:** `release-please` only updates the `VERSION` file. The Go
+> constant `version.Version` in `internal/version/version.go` must be synced
+> manually. Use `make bump-version NEW_VERSION=<version>` to update both files
+> atomically, or run `make test` (which catches mismatches) before merging.
+
 ### GoReleaser
 
 Merging the Release PR creates a version tag (e.g. `v0.1.0`), which triggers

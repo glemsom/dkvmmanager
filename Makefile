@@ -6,6 +6,9 @@
 # ============================================================================
 
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+# Canonical version source is VERSION file at repo root.
+# When bumping via release-please, update both VERSION and
+# internal/version/version.go. The bump-version target does both.
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
@@ -113,6 +116,13 @@ test: generate-mod ## Run go vet and all tests (COVER=1 for coverage, TEST_FLAGS
 		'
 
 .PHONY: run-dry
+.PHONY: bump-version
+bump-version: ## Bump version in VERSION and internal/version/version.go (usage: make bump-version NEW_VERSION=0.1.31)
+	@if [ -z "$(NEW_VERSION)" ]; then echo "Usage: make bump-version NEW_VERSION=0.1.31"; exit 1; fi
+	@printf '%s' "$(NEW_VERSION)" > VERSION
+	@sed -i 's/var Version = ".*"/var Version = "$(NEW_VERSION)"/' internal/version/version.go
+	@echo "Version bumped to $(NEW_VERSION) in VERSION and internal/version/version.go"
+	@echo "Commit with: git commit -m 'chore: bump v0.x.x → v$(NEW_VERSION)'"
 run-dry: build ## Build and run in dry-run mode (shows QEMU args without launching)
 	@./$(OUTPUT) -dry-run
 
