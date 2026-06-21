@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Per-die L3 cache size override**: New `L3CacheSizeDie` CPU option to set
+  `l3-cache-size-die<N>=<size>` QEMU flags for asymmetric AMD V-cache CPUs
+  (9950X3D, EPYC). The CPU options form now shows per-die L3 cache size
+  text fields with detected sizes from the host topology scanner.
+  ([#79](https://github.com/glemsom/dkvmmanager/issues/79))
+  (`internal/models/models.go`, `internal/vm/vm_runner_config.go`,
+  `internal/tui/models/cpu_options_form.go`,
+  `internal/tui/models/cpu_options_form_navigation.go`,
+  `internal/tui/models/cpu_options_form_render.go`)
+
 ### Fixed
 - **Version mismatch**: Synced `internal/version/version.go` with `VERSION` file
   and added `make bump-version` target + documentation to prevent future drift.

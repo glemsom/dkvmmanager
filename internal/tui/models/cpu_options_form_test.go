@@ -3,12 +3,14 @@ package models
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/config"
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/fields"
+	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
@@ -308,6 +310,81 @@ func TestCPUOptionsPositionsCount(t *testing.T) {
 	expectedCount := 29
 	if len(form.positions) != expectedCount {
 		t.Errorf("Expected %d positions, got %d", expectedCount, len(form.positions))
+	}
+}
+
+// TestCPUOptionsFormWithL3CacheSizeDie tests per-die L3 cache size fields in form
+func TestCPUOptionsFormWithL3CacheSizeDie(t *testing.T) {
+	vmManager := createTestVMManager(t)
+	repo := vmManager.Repository()
+
+	// Save host topology with 2 dies so the form shows per-die L3 fields
+	// The form scans topology at runtime, so we mock it by creating a form and
+	// directly providing hostTopo.
+
+	f := NewCPUOptionsFormModelWithTopo(repo, models.HostCPUTopology{
+		Dies: []models.CPUDie{
+			{ID: 0, L3CacheKB: 32768},
+			{ID: 1, L3CacheKB: 98304},
+		},
+	}, nil)
+
+	// Find die L3 cache fields
+	var die0Idx, die1Idx int = -1, -1
+	for i, p := range f.positions {
+		if p.Key == "L3CacheSizeDie0" {
+			die0Idx = i
+		}
+		if p.Key == "L3CacheSizeDie1" {
+			die1Idx = i
+		}
+	}
+
+	if die0Idx < 0 {
+		t.Error("Expected L3CacheSizeDie0 field in positions")
+	}
+	if die1Idx < 0 {
+		t.Error("Expected L3CacheSizeDie1 field in positions")
+	}
+
+	if die0Idx >= 0 {
+		// Check it's a text field
+		if f.positions[die0Idx].Kind != form.FocusText {
+			t.Errorf("L3CacheSizeDie0 kind = %d, want FocusText", f.positions[die0Idx].Kind)
+		}
+		// Check label mentions detected size
+		label := f.positions[die0Idx].Label
+		if !strings.Contains(label, "Die 0") || !strings.Contains(label, "32M") {
+			t.Errorf("L3CacheSizeDie0 label = %q, should mention Die 0 and 32M", label)
+		}
+	}
+
+	// Test editing die 0 L3 cache size (one char at a time)
+	f.focusIndex = die0Idx
+	f.handleCharInput("3")
+	f.handleCharInput("2")
+	f.handleCharInput("M")
+	if f.getTextValue("L3CacheSizeDie0") != "32M" {
+		t.Errorf("After typing '32M', L3CacheSizeDie0 = %q, want 32M", f.getTextValue("L3CacheSizeDie0"))
+	}
+
+	// Verify it's stored in the map
+	if f.options.L3CacheSizeDie[0] != "32M" {
+		t.Errorf("L3CacheSizeDie[0] = %q, want 32M", f.options.L3CacheSizeDie[0])
+	}
+
+	// Test empty clears from map
+	f.focusIndex = die0Idx
+	// Clear the field
+	for i := 0; i < 3; i++ {
+		f.handleBackspaceKey()
+	}
+	if f.getTextValue("L3CacheSizeDie0") != "" {
+		t.Errorf("After clearing, L3CacheSizeDie0 = %q, want empty", f.getTextValue("L3CacheSizeDie0"))
+	}
+	// Entry should be deleted from map, not just empty string
+	if _, exists := f.options.L3CacheSizeDie[0]; exists {
+		t.Errorf("L3CacheSizeDie[0] should be deleted after clearing")
 	}
 }
 
