@@ -38,28 +38,31 @@ func (m *MainModel) view() string {
 	// 5. Status bar
 	statusBarView := m.statusBar.Render(effectiveW)
 
-	// Assemble
-	var parts []string
-	parts = append(parts, header)
-	parts = append(parts, "")
-	parts = append(parts, tabBar)
+	// Assemble chrome (header + blank + tabs + breadcrumbs)
+	var chromeParts []string
+	chromeParts = append(chromeParts, header)
+	chromeParts = append(chromeParts, "")
+	chromeParts = append(chromeParts, tabBar)
 	if breadcrumbsView != "" {
-		parts = append(parts, breadcrumbsView)
+		chromeParts = append(chromeParts, breadcrumbsView)
 	}
-	parts = append(parts, content)
-	parts = append(parts, statusBarView)
+	chromeStr := strings.Join(chromeParts, "\n")
 
-	output := strings.Join(parts, "\n")
-
-	// Modal backdrop dim: when a sub-view is active (except VMRunning which
-	// has its own full display), apply faint styling to the entire output
-	// to create a dialog overlay effect.
+	// Modal backdrop: when a sub-view is active (except VMRunning which
+	// has its own full display), dim only the chrome so the form content
+	// remains at full brightness.
 	if m.isSubViewActive() && m.currentView != ViewVMRunning {
-		output = lipgloss.NewStyle().Faint(true).Render(output)
+		chromeStr = lipgloss.NewStyle().Faint(true).Render(chromeStr)
 	}
 
-	// Apply full-screen background, padded to terminal dimensions
-	output = styles.PadToScreen(output, effectiveW, effectiveH)
+	// Combine chrome + content
+	output := chromeStr + "\n" + content
+
+	// Pad to full screen dimensions, leaving room for status bar at bottom
+	output = styles.PadToScreen(output, effectiveW, effectiveH-1)
+
+	// Status bar at the very bottom (styled independently, never dimmed)
+	output += "\n" + statusBarView
 
 	return output
 }
