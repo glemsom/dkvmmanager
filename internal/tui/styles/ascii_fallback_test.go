@@ -105,11 +105,11 @@ func TestBorderStyle_Ascii(t *testing.T) {
 	t.Setenv("TERM", "linux")
 	style := BorderStyle()
 	rendered := style.Render("Test")
-	if !strings.Contains(rendered, "+") {
-		t.Errorf("BorderStyle() with TERM=linux should use ASCII border with '+', got: %q", rendered)
+	if !strings.Contains(rendered, "┌") {
+		t.Errorf("BorderStyle() with TERM=linux should use NormalBorder with '┌', got: %q", rendered)
 	}
 	if strings.Contains(rendered, "╭") || strings.Contains(rendered, "╮") {
-		t.Errorf("BorderStyle() with TERM=linux should NOT use Unicode border chars, got: %q", rendered)
+		t.Errorf("BorderStyle() with TERM=linux should NOT use RoundedBorder chars, got: %q", rendered)
 	}
 }
 
@@ -117,8 +117,8 @@ func TestBorderStyle_Unicode(t *testing.T) {
 	t.Setenv("TERM", "xterm-256color")
 	style := BorderStyle()
 	rendered := style.Render("Test")
-	if !strings.Contains(rendered, "╭") {
-		t.Errorf("BorderStyle() with TERM=xterm-256color should use Unicode border, got: %q", rendered)
+	if !strings.Contains(rendered, "┌") {
+		t.Errorf("BorderStyle() with TERM=xterm-256color should use NormalBorder with '┌', got: %q", rendered)
 	}
 }
 
@@ -126,11 +126,11 @@ func TestActiveBorderStyle_Ascii(t *testing.T) {
 	t.Setenv("TERM", "linux")
 	style := ActiveBorderStyle()
 	rendered := style.Render("Test")
-	if !strings.Contains(rendered, "+") {
-		t.Errorf("ActiveBorderStyle() with TERM=linux should use ASCII border with '+', got: %q", rendered)
+	if !strings.Contains(rendered, "┌") {
+		t.Errorf("ActiveBorderStyle() with TERM=linux should use NormalBorder with '┌', got: %q", rendered)
 	}
 	if strings.Contains(rendered, "╭") || strings.Contains(rendered, "╮") {
-		t.Errorf("ActiveBorderStyle() with TERM=linux should NOT use Unicode border chars, got: %q", rendered)
+		t.Errorf("ActiveBorderStyle() with TERM=linux should NOT use RoundedBorder chars, got: %q", rendered)
 	}
 }
 
@@ -138,8 +138,8 @@ func TestActiveBorderStyle_Unicode(t *testing.T) {
 	t.Setenv("TERM", "xterm-256color")
 	style := ActiveBorderStyle()
 	rendered := style.Render("Test")
-	if !strings.Contains(rendered, "╭") {
-		t.Errorf("ActiveBorderStyle() with TERM=xterm-256color should use Unicode border, got: %q", rendered)
+	if !strings.Contains(rendered, "┌") {
+		t.Errorf("ActiveBorderStyle() with TERM=xterm-256color should use NormalBorder with '┌', got: %q", rendered)
 	}
 }
 
@@ -147,8 +147,8 @@ func TestInputStyle_Ascii(t *testing.T) {
 	t.Setenv("TERM", "linux")
 	style := InputStyle()
 	rendered := style.Render("Test")
-	if !strings.Contains(rendered, "+") {
-		t.Errorf("InputStyle() with TERM=linux should use ASCII border with '+', got: %q", rendered)
+	if !strings.Contains(rendered, "┌") {
+		t.Errorf("InputStyle() with TERM=linux should use NormalBorder with '┌', got: %q", rendered)
 	}
 }
 
@@ -165,8 +165,8 @@ func TestTooltipStyle_Ascii(t *testing.T) {
 	t.Setenv("TERM", "linux")
 	style := TooltipStyle()
 	rendered := style.Render("Test")
-	if !strings.Contains(rendered, "+") {
-		t.Errorf("TooltipStyle() with TERM=linux should use ASCII border with '+', got: %q", rendered)
+	if !strings.Contains(rendered, "┌") {
+		t.Errorf("TooltipStyle() with TERM=linux should use NormalBorder with '┌', got: %q", rendered)
 	}
 }
 
@@ -174,8 +174,8 @@ func TestTooltipStyle_Unicode(t *testing.T) {
 	t.Setenv("TERM", "xterm-256color")
 	style := TooltipStyle()
 	rendered := style.Render("Test")
-	if !strings.Contains(rendered, "╭") {
-		t.Errorf("TooltipStyle() with TERM=xterm-256color should use RoundedBorder, got: %q", rendered)
+	if !strings.Contains(rendered, "┌") {
+		t.Errorf("TooltipStyle() with TERM=xterm-256color should use NormalBorder with '┌', got: %q", rendered)
 	}
 }
 
@@ -183,7 +183,7 @@ func TestModalStyle_Ascii(t *testing.T) {
 	t.Setenv("TERM", "linux")
 	style := ModalStyle()
 	rendered := style.Render("Test")
-	if !strings.Contains(rendered, "+") {
-		t.Errorf("ModalStyle() with TERM=linux should use ASCII border with '+', got: %q", rendered)
+	if !strings.Contains(rendered, "┌") {
+		t.Errorf("ModalStyle() with TERM=linux should use NormalBorder with '┌', got: %q", rendered)
 	}
 }

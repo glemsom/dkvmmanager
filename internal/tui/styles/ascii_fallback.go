@@ -86,26 +86,21 @@ func GetModeIcon(mode string) string {
 	return "◌"
 }
 
-// NormalBorder returns NormalBorder on capable terminals, ASCII fallback on TERM=linux.
+// NormalBorder returns NormalBorder.
+// Straight box-drawing (┌┐└┘├┤─│) works on all terminals including TERM=linux (CP437).
 func NormalBorder() lipgloss.Border {
-	if IsTermLinux() {
-		return lipgloss.ASCIIBorder()
-	}
 	return lipgloss.NormalBorder()
 }
 
-// RoundedBorder returns RoundedBorder on capable terminals, ASCII fallback on TERM=linux.
+// RoundedBorder returns NormalBorder.
+// Previously returned RoundedBorder (╭╮╰╯), but those arcs are not in CP437
+// and don't render on TERM=linux. Straight borders work everywhere.
 func RoundedBorder() lipgloss.Border {
-	if IsTermLinux() {
-		return lipgloss.ASCIIBorder()
-	}
-	return lipgloss.RoundedBorder()
+	return lipgloss.NormalBorder()
 }
 
-// GetBorder returns the given border on capable terminals, ASCII fallback on TERM=linux.
+// GetBorder returns the given border unchanged.
+// Straight box-drawing works on all terminals, no fallback needed.
 func GetBorder(b lipgloss.Border) lipgloss.Border {
-	if IsTermLinux() {
-		return lipgloss.ASCIIBorder()
-	}
 	return b
 }

@@ -234,14 +234,14 @@ func FooterStyle() lipgloss.Style {
 // BorderStyle returns the style for borders
 func BorderStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(RoundedBorder()).
+		Border(NormalBorder()).
 		BorderForeground(Colors.Border)
 }
 
 // ActiveBorderStyle returns the style for active/focused borders
 func ActiveBorderStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Border(RoundedBorder()).
+		Border(NormalBorder()).
 		BorderForeground(Colors.Primary)
 }
 
