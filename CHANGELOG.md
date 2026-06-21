@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Version mismatch**: Synced `internal/version/version.go` with `VERSION` file
+  and added `make bump-version` target + documentation to prevent future drift.
+  (`internal/version/version.go`, `Makefile`, `CONTRIBUTING.md`)
 ## [0.1.30] - 2026-06-21
 
 ### Fixed
