@@ -2,6 +2,7 @@
 package models
 
 import (
+	"fmt"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -227,6 +228,10 @@ func (m *CPUOptionsFormModel) fieldLabel(name string) string {
 	}
 	if lbl, ok := labels[name]; ok {
 		return lbl
+	}
+	// Handle dynamic L3CacheSizeDie<N> fields
+	if dieIdx := parseL3CacheSizeDieField(name); dieIdx >= 0 {
+		return fmt.Sprintf("Die %d L3 cache override", dieIdx)
 	}
 	return name
 }

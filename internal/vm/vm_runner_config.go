@@ -366,6 +366,11 @@ func (r *VMRunner) buildCPUOptsString() string {
 	if opts.L3Cache {
 		flags = append(flags, "+l3-cache")
 	}
+	for dieIdx, size := range opts.L3CacheSizeDie {
+		if size != "" {
+			flags = append(flags, fmt.Sprintf("l3-cache-size-die%d=%s", dieIdx, size))
+		}
+	}
 	if opts.X2APIC {
 		flags = append(flags, "+x2apic")
 	}

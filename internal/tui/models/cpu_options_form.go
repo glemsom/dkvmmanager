@@ -3,6 +3,7 @@ package models
 
 import (
 	"reflect"
+	"strconv"
 	"strings"
 
 	"charm.land/bubbles/v2/viewport"
@@ -18,6 +19,10 @@ import (
 type CPUOptionsFormModel struct {
 	repo    *vm.Repository
 	options *models.CPUOptions
+
+	// Host topology data (for per-die L3 cache override)
+	hostTopo models.HostCPUTopology
+	scanErr  error
 
 	// Focus state
 	positions  []form.FocusPos
@@ -49,9 +54,16 @@ type CPUOptionsFormModel struct {
 func NewCPUOptionsFormModel(repo *vm.Repository) *CPUOptionsFormModel {
 	var opts models.CPUOptions
 	repo.GetConfig("cpu_options", &opts)
+
+	// Scan host topology for per-die L3 cache info
+	scanner := vm.NewCPUScanner()
+	hostTopo, scanErr := scanner.ScanTopology()
+
 	m := &CPUOptionsFormModel{
 		repo:          repo,
 		options:       &opts,
+		hostTopo:      hostTopo,
+		scanErr:       scanErr,
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
 	}
@@ -249,13 +261,48 @@ func (m *CPUOptionsFormModel) toggleValue(fieldName string) {
 }
 
 // getTextValue returns the text value for a field (uses reflection).
+// Special-cases L3CacheSizeDie<N> to read from the L3CacheSizeDie map.
 func (m *CPUOptionsFormModel) getTextValue(fieldName string) string {
+	if dieIdx := parseL3CacheSizeDieField(fieldName); dieIdx >= 0 {
+		if m.options.L3CacheSizeDie == nil {
+			return ""
+		}
+		return m.options.L3CacheSizeDie[dieIdx]
+	}
 	return m.getStringField(fieldName)
 }
 
 // setTextValue sets the text value for a field (uses reflection).
+// Special-cases L3CacheSizeDie<N> to write to the L3CacheSizeDie map.
 func (m *CPUOptionsFormModel) setTextValue(fieldName string, val string) {
+	if dieIdx := parseL3CacheSizeDieField(fieldName); dieIdx >= 0 {
+		if m.options.L3CacheSizeDie == nil {
+			m.options.L3CacheSizeDie = make(map[int]string)
+		}
+		if val == "" {
+			delete(m.options.L3CacheSizeDie, dieIdx)
+		} else {
+			m.options.L3CacheSizeDie[dieIdx] = val
+		}
+		return
+	}
 	m.setStringField(fieldName, val)
+}
+
+// parseL3CacheSizeDieField extracts die index from "L3CacheSizeDie<N>" or returns -1.
+func parseL3CacheSizeDieField(name string) int {
+	if !strings.HasPrefix(name, "L3CacheSizeDie") {
+		return -1
+	}
+	suffix := strings.TrimPrefix(name, "L3CacheSizeDie")
+	if suffix == "" {
+		return -1
+	}
+	idx, err := strconv.Atoi(suffix)
+	if err != nil {
+		return -1
+	}
+	return idx
 }
 
 // getFieldKind returns the field kind for a given field name from the registry.

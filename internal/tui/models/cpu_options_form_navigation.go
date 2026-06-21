@@ -2,6 +2,8 @@
 package models
 
 import (
+	"fmt"
+
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
@@ -111,6 +113,24 @@ func (m *CPUOptionsFormModel) BuildPositions() []form.FocusPos {
 		Kind: form.FocusToggle, Label: "Expose host L3 cache info", Key: "L3Cache",
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "L3Cache"},
 	})
+
+	// Per-die L3 cache size override fields
+	if m.scanErr == nil && len(m.hostTopo.Dies) > 0 {
+		positions = append(positions, form.FocusPos{
+			Kind: form.FocusHeader, Label: "== Per-Die L3 Cache Override ==", Key: "header_l3_die",
+		})
+		for _, die := range m.hostTopo.Dies {
+			label := fmt.Sprintf("Die %d L3 cache size (e.g. 32M, 96M)", die.ID)
+			if die.L3CacheKB > 0 {
+				label += fmt.Sprintf(" — detected: %s", formatCacheSize(die.L3CacheKB))
+			}
+			fieldKey := fmt.Sprintf("L3CacheSizeDie%d", die.ID)
+			positions = append(positions, form.FocusPos{
+				Kind: form.FocusText, Label: label, Key: fieldKey,
+				Data: cpuOptFocusData{kind: int(form.FocusText), fieldName: fieldKey},
+			})
+		}
+	}
 	positions = append(positions, form.FocusPos{
 		Kind: form.FocusToggle, Label: "x2APIC mode (>255 vCPUs)", Key: "X2APIC",
 		Data: cpuOptFocusData{kind: int(form.FocusToggle), fieldName: "X2APIC"},

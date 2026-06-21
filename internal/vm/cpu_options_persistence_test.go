@@ -90,6 +90,11 @@ func TestSaveAndLoadCPUOptions(t *testing.T) {
 	if loaded.HVFrequency {
 		t.Errorf("HVFrequency = %v, want false", loaded.HVFrequency)
 	}
+
+	// L3CacheSizeDie defaults to nil/empty
+	if len(loaded.L3CacheSizeDie) != 0 {
+		t.Errorf("L3CacheSizeDie default len = %d, want 0", len(loaded.L3CacheSizeDie))
+	}
 }
 
 func TestCPUOptionsRoundTrip(t *testing.T) {

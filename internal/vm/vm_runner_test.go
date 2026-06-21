@@ -1139,6 +1139,42 @@ func TestBuildCPUOptsStringWithForceCPUID(t *testing.T) {
 	}
 }
 
+func TestBuildCPUOptsStringWithL3CacheSizeDie(t *testing.T) {
+	runner := &VMRunner{
+		vm:     &models.VM{Name: "test"},
+		runCfg: RunConfig{CPUOptions: models.CPUOptions{
+			L3CacheSizeDie: map[int]string{
+				0: "32M",
+				1: "96M",
+			},
+		}},
+	}
+
+	result := runner.buildCPUOptsString()
+
+	if !containsString(result, "l3-cache-size-die0=32M") {
+		t.Errorf("Expected l3-cache-size-die0=32M flag, got: %s", result)
+	}
+	if !containsString(result, "l3-cache-size-die1=96M") {
+		t.Errorf("Expected l3-cache-size-die1=96M flag, got: %s", result)
+	}
+}
+
+func TestBuildCPUOptsStringWithL3CacheSizeDieEmpty(t *testing.T) {
+	runner := &VMRunner{
+		vm:     &models.VM{Name: "test"},
+		runCfg: RunConfig{CPUOptions: models.CPUOptions{
+			L3CacheSizeDie: map[int]string{},
+		}},
+	}
+
+	result := runner.buildCPUOptsString()
+
+	if containsString(result, "l3-cache-size-die") {
+		t.Errorf("Expected no l3-cache-size-die flags for empty map, got: %s", result)
+	}
+}
+
 func TestBuildQEMUArgsWithHostTopology(t *testing.T) {
 	dir := t.TempDir()
 	vmDir := filepath.Join(dir, "vms", "1")
