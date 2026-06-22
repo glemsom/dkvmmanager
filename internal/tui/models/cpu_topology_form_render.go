@@ -54,7 +54,7 @@ func (m *CPUTopologyFormModel) renderAllLines() []string {
 		lines = append(lines, "")
 		saveText := cpuTopoMutedStyle.Render("[Space/Enter] Save    [ESC] Cancel")
 		if len(m.positions) > 0 && m.positions[m.focusIndex].Kind == form.FocusButton {
-			saveText = cpuTopoSaveStyle.Render("[Enter] Save") + "    " + cpuTopoMutedStyle.Render("[ESC] Cancel")
+			saveText = cpuTopoSaveStyle.Render("[Space/Enter] Save") + "    " + cpuTopoMutedStyle.Render("[ESC] Cancel")
 		}
 		lines = append(lines, saveText)
 		return lines
@@ -107,7 +107,7 @@ func (m *CPUTopologyFormModel) renderAllLines() []string {
 				lines = append(lines, cpuTopoErrorStyle.Render("Warning: No cores reserved for host — system may become unresponsive"))
 			}
 			lines = append(lines, "")
-			saveText := cpuTopoMutedStyle.Render("[Enter] Save    [ESC] Cancel")
+			saveText := cpuTopoMutedStyle.Render("[Space/Enter] Save    [ESC] Cancel")
 			if focused {
 				saveText = cpuTopoSaveStyle.Render("[Space/Enter] Save") + "    " + cpuTopoMutedStyle.Render("[ESC] Cancel")
 			}
@@ -121,7 +121,7 @@ func (m *CPUTopologyFormModel) renderAllLines() []string {
 	}
 
 	lines = append(lines, "")
-	lines = append(lines, cpuTopoMutedStyle.Render("Tab Navigate  PgUp/PgDown Scroll  Space Toggle  ESC Cancel"))
+	lines = append(lines, cpuTopoMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle  Space/Enter Save  ESC Cancel"))
 
 	return lines
 }

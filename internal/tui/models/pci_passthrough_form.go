@@ -332,7 +332,7 @@ func (m *PCIPassthroughFormModel) renderAllLines() []string {
 
 	// Footer
 	lines = append(lines, "")
-	lines = append(lines, pciMutedStyle.Render("Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle/Action  ESC Cancel"))
+	lines = append(lines, pciMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle  Space/Enter Save  ESC Cancel"))
 
 	return lines
 }

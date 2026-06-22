@@ -45,7 +45,7 @@ func (m *CPUOptionsFormModel) RenderFooter() string {
 		parts = append(parts, cpuOptErrorStyle.Render("Error: "+errMsg))
 	}
 	parts = append(parts, "")
-	parts = append(parts, cpuOptMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Page  Space/Enter Toggle/Save  ESC Cancel"))
+	parts = append(parts, cpuOptMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle  Space/Enter Save  ESC Cancel"))
 	return strings.Join(parts, "\n")
 }
 
@@ -113,7 +113,7 @@ func (m *CPUOptionsFormModel) renderAllLines() []string {
 
 	// Footer
 	lines = append(lines, "")
-	lines = append(lines, cpuOptMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Page  Space/Enter Toggle/Save  ESC Cancel"))
+	lines = append(lines, cpuOptMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle  Space/Enter Save  ESC Cancel"))
 
 	return lines
 }
