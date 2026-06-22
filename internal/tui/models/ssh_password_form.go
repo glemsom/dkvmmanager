@@ -146,7 +146,7 @@ func (m *SSHPasswordFormModel) RenderFooter() string {
 		parts = append(parts, sshPwErrorStyle.Render(m.statusMessage))
 	}
 	parts = append(parts, "")
-	parts = append(parts, sshPwMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  Space/Enter Select  ESC Cancel"))
+	parts = append(parts, sshPwMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  ESC Cancel"))
 	return strings.Join(parts, "\n")
 }
 
@@ -360,7 +360,7 @@ func (m *SSHPasswordFormModel) renderAllLines() []string {
 	if m.statusMessage != "" {
 		lines = append(lines, sshPwErrorStyle.Render(m.statusMessage), "")
 	}
-	lines = append(lines, sshPwMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  Space/Enter Select  ESC Cancel"))
+	lines = append(lines, sshPwMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  ESC Cancel"))
 	return lines
 }
 

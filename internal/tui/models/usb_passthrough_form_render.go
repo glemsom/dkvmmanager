@@ -54,7 +54,7 @@ func (m *USBPassthroughFormModel) RenderFooter() string {
 
 	// Footer help text
 	parts = append(parts, "")
-	parts = append(parts, usbMutedStyle.Render("Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle  ESC Cancel"))
+	parts = append(parts, usbMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle  Space/Enter Save  ESC Cancel"))
 
 	return strings.Join(parts, "\n")
 }

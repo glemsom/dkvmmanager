@@ -96,7 +96,7 @@ func (m *StartStopScriptFormModel) RenderHeader() string {
 
 // RenderFooter returns the form footer markup (help text).
 func (m *StartStopScriptFormModel) RenderFooter() string {
-	return startStopScriptMutedStyle.Render("Tab Navigate  PgUp/PgDown Scroll  Space/Enter Select  ESC Cancel")
+	return startStopScriptMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle  Space/Enter Save  ESC Cancel")
 }
 
 // RenderPosition returns the markup for a single position.

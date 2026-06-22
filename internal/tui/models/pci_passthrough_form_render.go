@@ -97,7 +97,7 @@ func (m *PCIPassthroughFormModel) RenderFooter() string {
 
 	// Footer help text
 	parts = append(parts, "")
-	parts = append(parts, pciMutedStyle.Render("Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle/Action  ESC Cancel"))
+	parts = append(parts, pciMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle  Space/Enter Save  ESC Cancel"))
 
 	return strings.Join(parts, "\n")
 }

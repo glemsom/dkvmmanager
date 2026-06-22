@@ -242,7 +242,7 @@ func (m *CPUTopologyFormModel) RenderFooter() string {
 	}
 
 	parts = append(parts, "")
-	parts = append(parts, cpuTopoMutedStyle.Render("Tab Navigate  PgUp/PgDown Scroll  Space Toggle  ESC Cancel"))
+	parts = append(parts, cpuTopoMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle  Space/Enter Save  ESC Cancel"))
 	return strings.Join(parts, "\n")
 }
 

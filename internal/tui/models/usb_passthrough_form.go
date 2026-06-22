@@ -298,7 +298,7 @@ func (m *USBPassthroughFormModel) renderAllLines() []string {
 
 	// Footer
 	lines = append(lines, "")
-	lines = append(lines, usbMutedStyle.Render("Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle  ESC Cancel"))
+	lines = append(lines, usbMutedStyle.Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle  Space/Enter Save  ESC Cancel"))
 
 	return lines
 }
