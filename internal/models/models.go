@@ -90,6 +90,7 @@ type CPUDie struct {
 	Threads     int       `json:"threads" yaml:"threads"`           // Threads per core
 	LogicalCPUs []int     `json:"logical_cpus" yaml:"logical_cpus"` // Logical CPU IDs on this die
 	L3CacheKB   int       `json:"l3_cache_kb" yaml:"l3_cache_kb"`   // L3 cache size in KB
+	L3CacheAssoc int      `json:"l3_cache_assoc" yaml:"l3_cache_assoc"` // L3 cache associativity (ways)
 	CoreDetails []CPUCore `json:"core_details" yaml:"core_details"` // Per-core thread details
 }
 

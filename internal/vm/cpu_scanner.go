@@ -106,9 +106,10 @@ func (s *CPUScanner) ScanTopology() (models.HostCPUTopology, error) {
 		die, ok := dieMap[cpu.dieID]
 		if !ok {
 			die = &models.CPUDie{
-				ID:        cpu.dieID,
-				Threads:   threadsPerCore,
-				L3CacheKB: s.readL3CacheKB(cpu.dieID),
+				ID:           cpu.dieID,
+				Threads:      threadsPerCore,
+				L3CacheKB:    s.readL3CacheKB(cpu.dieID),
+				L3CacheAssoc: s.readL3CacheAssoc(cpu.dieID),
 			}
 			dieMap[cpu.dieID] = die
 		}
@@ -256,6 +257,62 @@ func (s *CPUScanner) readThreadSiblings(cpuDir string) []int {
 		return nil
 	}
 	return parseIntList(strings.TrimSpace(string(data)))
+}
+
+// readL3CacheAssoc reads the L3 cache ways_of_associativity for a given die from sysfs
+func (s *CPUScanner) readL3CacheAssoc(dieID int) int {
+	cpuDirs, err := s.findOnlineCPUDirs()
+	if err != nil || len(cpuDirs) == 0 {
+		return 0
+	}
+
+	// Find a CPU in this die
+	targetDir := ""
+	for _, dir := range cpuDirs {
+		die := s.readSysfsInt(filepath.Join(dir, "topology", "die_id"))
+		if die == dieID {
+			targetDir = dir
+			break
+		}
+	}
+	if targetDir == "" {
+		targetDir = cpuDirs[0]
+	}
+
+	cacheDir := filepath.Join(targetDir, "cache")
+	cacheEntries, err := os.ReadDir(cacheDir)
+	if err != nil {
+		return 0
+	}
+
+	for _, entry := range cacheEntries {
+		if !entry.IsDir() {
+			continue
+		}
+		indexPath := filepath.Join(cacheDir, entry.Name())
+
+		// Check if this is L3 cache
+		typeData, err := os.ReadFile(filepath.Join(indexPath, "level"))
+		if err != nil {
+			continue
+		}
+		if strings.TrimSpace(string(typeData)) != "3" {
+			continue
+		}
+
+		// Read ways_of_associativity
+		assocData, err := os.ReadFile(filepath.Join(indexPath, "ways_of_associativity"))
+		if err != nil {
+			continue
+		}
+		val, err := strconv.Atoi(strings.TrimSpace(string(assocData)))
+		if err != nil {
+			return 0
+		}
+		return val
+	}
+
+	return 0
 }
 
 // readL3CacheKB reads the L3 cache size for a given die from sysfs
