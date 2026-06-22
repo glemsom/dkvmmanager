@@ -454,6 +454,129 @@ func TestCPUOptionsFormWithL3CacheAssocDie(t *testing.T) {
 	}
 }
 
+// TestCPUOptionsFormL3CachePersistence tests L3 cache size/assoc persistence after save
+func TestCPUOptionsFormL3CachePersistence(t *testing.T) {
+	vmManager := createTestVMManager(t)
+	repo := vmManager.Repository()
+
+	f := NewCPUOptionsFormModelWithTopo(repo, models.HostCPUTopology{
+		Dies: []models.CPUDie{
+			{ID: 0, L3CacheKB: 32768, L3CacheAssoc: 16},
+			{ID: 1, L3CacheKB: 98304, L3CacheAssoc: 12},
+		},
+	}, nil)
+
+	// Navigate to L3CacheSizeDie0 and set value
+	var size0Idx int = -1
+	for i, p := range f.positions {
+		if p.Key == "L3CacheSizeDie0" {
+			size0Idx = i
+			break
+		}
+	}
+	if size0Idx < 0 {
+		t.Fatal("L3CacheSizeDie0 field not found")
+	}
+
+	// Set L3 cache size via setTextValue (simulates user typing)
+	f.focusIndex = size0Idx
+	f.handleCharInput("3")
+	f.handleCharInput("2")
+	f.handleCharInput("M")
+
+	if f.getTextValue("L3CacheSizeDie0") != "32M" {
+		t.Fatalf("Before save: L3CacheSizeDie0 = %q, want 32M", f.getTextValue("L3CacheSizeDie0"))
+	}
+
+	// Navigate to save button (last position) and save
+	f.focusIndex = len(f.positions) - 1
+	model, cmd := f.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	f = model.(*CPUOptionsFormModel)
+
+	if cmd == nil {
+		t.Fatal("Expected command after save, got nil")
+	}
+	msg := cmd()
+	if _, ok := msg.(CPUOptionsUpdatedMsg); !ok {
+		t.Errorf("Expected CPUOptionsUpdatedMsg, got %T", msg)
+	}
+
+	// Verify saved options directly via repo
+	var saved models.CPUOptions
+	if err := repo.GetConfig("cpu_options", &saved); err != nil {
+		t.Fatalf("Failed to GetConfig: %v", err)
+	}
+
+	// Check L3 cache size persisted
+	if saved.L3CacheSizeDie == nil {
+		t.Fatal("L3CacheSizeDie is nil after save")
+	}
+	if saved.L3CacheSizeDie[0] != "32M" {
+		t.Errorf("L3CacheSizeDie[0] = %q, want 32M AFTER SAVE", saved.L3CacheSizeDie[0])
+	}
+
+	// Also check L3 cache assoc
+	// Set L3CacheAssocDie0
+	var assoc0Idx int = -1
+	for i, p := range f.positions {
+		if p.Key == "L3CacheAssocDie0" {
+			assoc0Idx = i
+			break
+		}
+	}
+	if assoc0Idx < 0 {
+		t.Fatal("L3CacheAssocDie0 field not found")
+	}
+
+	f.focusIndex = assoc0Idx
+	f.handleCharInput("1")
+	f.handleCharInput("6")
+
+	if f.getTextValue("L3CacheAssocDie0") != "16" {
+		t.Fatalf("Before save: L3CacheAssocDie0 = %q, want 16", f.getTextValue("L3CacheAssocDie0"))
+	}
+
+	// Save again
+	f.focusIndex = len(f.positions) - 1
+	model, cmd = f.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	f = model.(*CPUOptionsFormModel)
+
+	if cmd == nil {
+		t.Fatal("Expected command after second save, got nil")
+	}
+	msg = cmd()
+	if _, ok := msg.(CPUOptionsUpdatedMsg); !ok {
+		t.Errorf("Expected CPUOptionsUpdatedMsg, got %T", msg)
+	}
+
+	// Re-read from repo
+	if err := repo.GetConfig("cpu_options", &saved); err != nil {
+		t.Fatalf("Failed to GetConfig: %v", err)
+	}
+
+	if saved.L3CacheAssocDie == nil {
+		t.Fatal("L3CacheAssocDie is nil after save")
+	}
+	if saved.L3CacheAssocDie[0] != 16 {
+		t.Errorf("L3CacheAssocDie[0] = %d, want 16 AFTER SAVE", saved.L3CacheAssocDie[0])
+	}
+
+	// Simulate re-entering form: create a new form and verify values
+	f2 := NewCPUOptionsFormModelWithTopo(repo, models.HostCPUTopology{
+		Dies: []models.CPUDie{
+			{ID: 0, L3CacheKB: 32768, L3CacheAssoc: 16},
+			{ID: 1, L3CacheKB: 98304, L3CacheAssoc: 12},
+		},
+	}, nil)
+
+	if f2.getTextValue("L3CacheSizeDie0") != "32M" {
+		t.Errorf("After re-open: L3CacheSizeDie0 = %q, want 32M", f2.getTextValue("L3CacheSizeDie0"))
+	}
+	if f2.getTextValue("L3CacheAssocDie0") != "16" {
+		t.Errorf("After re-open: L3CacheAssocDie0 = %q, want 16", f2.getTextValue("L3CacheAssocDie0"))
+	}
+}
+
 // createTestVMManager creates a temporary VM manager for testing
 func createTestVMManager(t *testing.T) *vm.Manager {
 	t.Helper()

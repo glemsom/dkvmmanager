@@ -177,9 +177,12 @@ func (r *Repository) GetConfig(key string, dest interface{}) error {
 	}
 	// Use json tag name so struct tags (json:"...") match keys produced by SaveConfig
 	// which uses JSON marshal/unmarshal for struct→map conversion.
+	// WeaklyTypedInput enables conversion of map keys/values to the target type, e.g.
+	// JSON string keys like "0" → int 0 for map[int]string.
 	config := &mapstructure.DecoderConfig{
-		TagName: "json",
-		Result:  dest,
+		TagName:          "json",
+		Result:           dest,
+		WeaklyTypedInput: true,
 	}
 	decoder, err := mapstructure.NewDecoder(config)
 	if err != nil {
