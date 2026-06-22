@@ -1152,11 +1152,11 @@ func TestBuildCPUOptsStringWithL3CacheSizeDie(t *testing.T) {
 
 	result := runner.buildCPUOptsString()
 
-	if !containsString(result, "l3-cache-size-die0=32M") {
-		t.Errorf("Expected l3-cache-size-die0=32M flag, got: %s", result)
+	if !containsString(result, "l3-cache-size-die0=33554432") {
+		t.Errorf("Expected l3-cache-size-die0=33554432 flag, got: %s", result)
 	}
-	if !containsString(result, "l3-cache-size-die1=96M") {
-		t.Errorf("Expected l3-cache-size-die1=96M flag, got: %s", result)
+	if !containsString(result, "l3-cache-size-die1=100663296") {
+		t.Errorf("Expected l3-cache-size-die1=100663296 flag, got: %s", result)
 	}
 }
 

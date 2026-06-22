@@ -6,6 +6,7 @@ import (
 	"log"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/glemsom/dkvmmanager/internal/models"
@@ -374,7 +375,11 @@ func (r *VMRunner) buildCPUOptsString() string {
 	sort.Ints(dieIndices)
 	for _, dieIdx := range dieIndices {
 		if size := opts.L3CacheSizeDie[dieIdx]; size != "" {
-			flags = append(flags, fmt.Sprintf("l3-cache-size-die%d=%s", dieIdx, size))
+			if bytes, err := parseSizeToBytes(size); err != nil {
+				log.Printf("[WARN] invalid L3 cache size for die %d: %q: %v", dieIdx, size, err)
+			} else {
+				flags = append(flags, fmt.Sprintf("l3-cache-size-die%d=%d", dieIdx, bytes))
+			}
 		}
 	}
 	dieIndices = make([]int, 0, len(opts.L3CacheAssocDie))
@@ -430,4 +435,54 @@ func extractFunctionNumber(addr string) int {
 		return -1
 	}
 	return fn
+}
+
+// parseSizeToBytes converts a human-readable size string (e.g. "32M", "96M", "1024")
+// to raw bytes. Supports K, M, G suffixes (case-insensitive).
+// Returns 0 and error on invalid input.
+func parseSizeToBytes(s string) (uint32, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, fmt.Errorf("empty size")
+	}
+
+	// Find where the numeric part ends
+	i := 0
+	for ; i < len(s); i++ {
+		if s[i] < '0' || s[i] > '9' {
+			break
+		}
+	}
+	if i == 0 {
+		return 0, fmt.Errorf("no numeric prefix")
+	}
+
+	numStr := s[:i]
+	suffix := strings.ToLower(s[i:])
+
+	num, err := strconv.ParseUint(numStr, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid number %q: %w", numStr, err)
+	}
+
+	var multiplier uint64 = 1
+	switch suffix {
+	case "k", "kb":
+		multiplier = 1024
+	case "m", "mb":
+		multiplier = 1024 * 1024
+	case "g", "gb":
+		multiplier = 1024 * 1024 * 1024
+	case "":
+		// raw bytes
+	default:
+		return 0, fmt.Errorf("unknown size suffix %q", suffix)
+	}
+
+	total := num * multiplier
+	if total > uint64(^uint32(0)) {
+		return 0, fmt.Errorf("size %d exceeds uint32 max", total)
+	}
+
+	return uint32(total), nil
 }
