@@ -52,6 +52,7 @@ func createMockSysfs(t *testing.T) string {
 			os.MkdirAll(cacheDir, 0755)
 			os.WriteFile(filepath.Join(cacheDir, "level"), []byte("3\n"), 0644)
 			os.WriteFile(filepath.Join(cacheDir, "size"), []byte("32M\n"), 0644)
+			os.WriteFile(filepath.Join(cacheDir, "ways_of_associativity"), []byte("16\n"), 0644)
 		}
 	}
 
@@ -112,6 +113,9 @@ func TestCPUScannerScanTopology(t *testing.T) {
 	}
 	if die0.L3CacheKB != 32768 {
 		t.Errorf("Die[0].L3CacheKB = %d, want 32768", die0.L3CacheKB)
+	}
+	if die0.L3CacheAssoc != 16 {
+		t.Errorf("Die[0].L3CacheAssoc = %d, want 16", die0.L3CacheAssoc)
 	}
 
 	// Die 1
@@ -262,6 +266,7 @@ func TestCPUScannerAsymmetricL3(t *testing.T) {
 			cacheDir := filepath.Join(cpuDir, "cache", "index0")
 			os.MkdirAll(cacheDir, 0755)
 			os.WriteFile(filepath.Join(cacheDir, "level"), []byte("3\n"), 0644)
+			os.WriteFile(filepath.Join(cacheDir, "ways_of_associativity"), []byte("16\n"), 0644)
 			if dieID == 0 {
 				os.WriteFile(filepath.Join(cacheDir, "size"), []byte("32M\n"), 0644)
 			} else {
@@ -283,8 +288,14 @@ func TestCPUScannerAsymmetricL3(t *testing.T) {
 	if topo.Dies[0].L3CacheKB != 32768 {
 		t.Errorf("Die[0].L3CacheKB = %d, want 32768 (32M)", topo.Dies[0].L3CacheKB)
 	}
+	if topo.Dies[0].L3CacheAssoc != 16 {
+		t.Errorf("Die[0].L3CacheAssoc = %d, want 16", topo.Dies[0].L3CacheAssoc)
+	}
 	if topo.Dies[1].L3CacheKB != 98304 {
 		t.Errorf("Die[1].L3CacheKB = %d, want 98304 (96M)", topo.Dies[1].L3CacheKB)
+	}
+	if topo.Dies[1].L3CacheAssoc != 16 {
+		t.Errorf("Die[1].L3CacheAssoc = %d, want 16", topo.Dies[1].L3CacheAssoc)
 	}
 }
 

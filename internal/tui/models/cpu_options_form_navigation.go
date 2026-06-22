@@ -130,6 +130,9 @@ func (m *CPUOptionsFormModel) BuildPositions() []form.FocusPos {
 				Data: cpuOptFocusData{kind: int(form.FocusText), fieldName: fieldKey},
 			})
 			assocLabel := fmt.Sprintf("Die %d L3 cache associativity (e.g. 12)", die.ID)
+			if die.L3CacheAssoc > 0 {
+				assocLabel += fmt.Sprintf(" — detected: %d", die.L3CacheAssoc)
+			}
 			assocKey := fmt.Sprintf("L3CacheAssocDie%d", die.ID)
 			positions = append(positions, form.FocusPos{
 				Kind: form.FocusText, Label: assocLabel, Key: assocKey,
