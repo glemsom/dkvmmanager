@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/glemsom/dkvmmanager/internal/models"
@@ -236,6 +237,42 @@ func TestVCPUPinningRenderPosition(t *testing.T) {
 	output = m.RenderPosition(m.positions[2], true, -1)
 	if output == "" {
 		t.Error("expected non-empty apply_kernel button render output")
+	}
+}
+
+// TestVCPUPinningToggleRenderingSymmetric verifies toggles use same-width format.
+func TestVCPUPinningToggleRenderingSymmetric(t *testing.T) {
+	m := newTestVCPUPinningFormModel(t)
+
+	// Enabled → should show [ON] (compact, matching other forms)
+	m.pinning.Enabled = true
+	m.useHostTopology = true
+	output := m.RenderPosition(m.positions[0], false, -1)
+	if !strings.Contains(output, "[ON]") {
+		t.Errorf("enabled toggle should contain [ON], got: %q", output)
+	}
+	if strings.Contains(output, "[ ON ]") {
+		t.Errorf("enabled toggle should not contain [ ON ] (has extra spaces), got: %q", output)
+	}
+
+	// Disabled → should show [OFF]
+	m.pinning.Enabled = false
+	output = m.RenderPosition(m.positions[0], false, -1)
+	if !strings.Contains(output, "[OFF]") {
+		t.Errorf("disabled toggle should contain [OFF], got: %q", output)
+	}
+
+	// Use Host Topology toggle: enabled → [ON], disabled → [OFF]
+	m.useHostTopology = true
+	output = m.RenderPosition(m.positions[1], false, -1)
+	if !strings.Contains(output, "[ON]") {
+		t.Errorf("use_host_topology enabled should contain [ON], got: %q", output)
+	}
+
+	m.useHostTopology = false
+	output = m.RenderPosition(m.positions[1], false, -1)
+	if !strings.Contains(output, "[OFF]") {
+		t.Errorf("use_host_topology disabled should contain [OFF], got: %q", output)
 	}
 }
 

@@ -288,9 +288,9 @@ func (m *VCPUPinningFormModel) renderPinningEnabledToggle(focused bool) string {
 	var togglePart string
 	if m.pinning.Enabled {
 		if focused {
-			togglePart = vcpuPinningFocusStyle.Render("[ ON ]")
+			togglePart = vcpuPinningFocusStyle.Render("[ON]")
 		} else {
-			togglePart = vcpuPinningEnabledStyle.Render("[ ON ]")
+			togglePart = vcpuPinningEnabledStyle.Render("[ON]")
 		}
 	} else {
 		if focused {
@@ -314,7 +314,7 @@ func (m *VCPUPinningFormModel) renderUseHostTopologyToggle(focused bool) string 
 
 	var togglePart string
 	if m.useHostTopology {
-		togglePart = vcpuPinningEnabledStyle.Render("[ ON ]")
+		togglePart = vcpuPinningEnabledStyle.Render("[ON]")
 	} else {
 		togglePart = styles.WarningTextStyle().Render("[OFF]")
 	}
