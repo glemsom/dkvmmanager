@@ -8,6 +8,7 @@ import (
 
 	"github.com/glemsom/dkvmmanager/internal/models"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
+	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
@@ -120,7 +121,7 @@ func (m *VMFormModel) RenderHeader() string {
 
 // RenderFooter returns the form footer.
 func (m *VMFormModel) RenderFooter() string {
-	return "Tab Navigate  Space/Enter Browse  ESC Cancel"
+	return styles.MutedTextStyle().Render("Tab/Shift+Tab Navigate  PgUp/PgDown Scroll  Space/Enter Toggle  Space/Enter Save  ESC Cancel")
 }
 
 // OnEnter is called when the form becomes active.
