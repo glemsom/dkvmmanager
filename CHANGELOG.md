@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **User docs**: Added `docs/user/storage.md` covering LVM logical volume creation
+  and disk management for VMs.
+  ([#100](https://github.com/glemsom/dkvmmanager/issues/100))
+
 ## [0.2.0] - 2026-06-22
 
 ### Added
