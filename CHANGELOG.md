@@ -8,6 +8,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-22
+
+### Added
+- **Host L3 cache associativity detection**: New `L3CacheAssoc` field on CPU
+  topology that shows detected L3 cache associativity per die in the CPU options
+  form. The CPU scanner now populates associativity alongside cache size.
+  ([#86](https://github.com/glemsom/dkvmmanager/issues/86))
+  (`internal/models/models.go`, `internal/vm/cpu_scanner.go`,
+  `internal/tui/models/cpu_options_form_navigation.go`)
+
+### Fixed
+- **Status bar position and styling**: Status bar now sits at screen bottom;
+  faint (dim) style applied only to chrome borders, not to form content
+  (`internal/tui/models/view.go`)
+- **Config view rendering after resize**: `WindowSizeMsg` handler now runs before
+  registry dispatch, fixing config view rendering when terminal is resized
+  ([#84](https://github.com/glemsom/dkvmmanager/issues/84))
+  (`internal/tui/models/key_handlers.go`)
+- **SSH Password Apply button format**: Uses standard
+  `[Space/Enter] Apply [ESC] Cancel` format
+  ([#89](https://github.com/glemsom/dkvmmanager/issues/89))
+  (`internal/tui/models/ssh_password_form.go`)
+- **CPU Topology save hint**: Uses `[Space/Enter] Save` instead of `[Enter] Save`
+  ([#90](https://github.com/glemsom/dkvmmanager/issues/90))
+  (`internal/tui/models/cpu_topology_form_render.go`)
+- **Start/Stop Script Cancel highlighting**: Cancel button highlights Cancel
+  instead of Save
+  ([#91](https://github.com/glemsom/dkvmmanager/issues/91))
+  (`internal/tui/models/start_stop_script_form_render.go`)
+- **Standardised footer help text**: All 8 forms now use consistent
+  `[Space/Enter] <Action>  [ESC] Cancel` footer format
+  ([#92](https://github.com/glemsom/dkvmmanager/issues/92))
+  (9 files across CPU, PCI, USB, SSH, script, vCPU pinning, VM forms)
+- **Symmetric vCPU Pinning toggle rendering**: `[ON]/[OFF]` toggle now renders
+  symmetrically in the vCPU pinning form
+  (`internal/tui/models/vcpu_pinning_form_render.go`,
+  `internal/tui/models/vcpu_pinning_form_test.go`,
+  `docs/terminal-capabilities.md`)
+- **[Space/Enter] consistency and cancel highlighting**: Ensured all forms use
+  `[Space/Enter]` for save/apply actions and Cancel buttons highlight correctly
+  (`internal/tui/models/cpu_topology_form.go`,
+  `internal/tui/models/start_stop_script_form_render.go`)
+
+### Changed
+- **CPU scanner refactored**: Extracted `findL3CacheIndexPath`, fixed variable
+  naming, improved fallback logic
+  (`internal/vm/cpu_scanner.go`)
+
 ## [0.1.31] - 2026-06-21
 
 ### Added
@@ -316,7 +364,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.1.31...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/glemsom/dkvmmanager/compare/v0.1.31...v0.2.0
 [0.1.31]: https://github.com/glemsom/dkvmmanager/compare/v0.1.30...v0.1.31
 [0.1.30]: https://github.com/glemsom/dkvmmanager/compare/v0.1.29...v0.1.30
 [0.1.29]: https://github.com/glemsom/dkvmmanager/compare/v0.1.28...v0.1.29
