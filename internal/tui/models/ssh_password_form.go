@@ -128,9 +128,9 @@ func (m *SSHPasswordFormModel) RenderPosition(pos form.FocusPos, focused bool, c
 			sshPwLabelStyle.Render("Strength: ") + bar + " " + lipgloss.NewStyle().Foreground(strengthColor).Render(strengthText),
 			"",
 		}
-		applyText := sshPwMutedStyle.Render("[Apply]")
+		applyText := sshPwMutedStyle.Render("[Space/Enter] Apply") + "    " + sshPwMutedStyle.Render("[ESC] Cancel")
 		if focused {
-			applyText = sshPwSaveStyle.Render("[Apply]")
+			applyText = sshPwSaveStyle.Render("[Space/Enter] Apply") + "    " + sshPwMutedStyle.Render("[ESC] Cancel")
 		}
 		lines = append(lines, applyText)
 		return strings.Join(lines, "\n")

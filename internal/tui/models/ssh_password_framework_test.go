@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
@@ -272,5 +273,32 @@ func TestSSHPasswordForm_Integration_Render(t *testing.T) {
 	// View should contain the form title
 	if viewContent == "Loading..." {
 		t.Error("view shows loading state after SetSize")
+	}
+}
+
+// TestSSHPasswordForm_ApplyButtonFormat verifies the Apply button follows standard format
+// with [Space/Enter] Apply  [ESC] Cancel pattern.
+func TestSSHPasswordForm_ApplyButtonFormat(t *testing.T) {
+	fm := NewSSHPasswordFormModel()
+	sf := form.NewScrollableForm(fm)
+	sf.SetSize(80, 24)
+
+	// Navigate to Apply button (index 2)
+	sf.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	result, _ := sf.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	sf = result.(*form.ScrollableForm)
+
+	if sf.FocusIndex() != 2 {
+		t.Fatalf("expected focus on apply button (index 2), got %d", sf.FocusIndex())
+	}
+
+	viewContent := sf.View().Content
+
+	// Should show the standard footer pattern
+	if !strings.Contains(viewContent, "[Space/Enter] Apply") {
+		t.Errorf("Apply button should show '[Space/Enter] Apply', got:\n%s", viewContent)
+	}
+	if !strings.Contains(viewContent, "[ESC] Cancel") {
+		t.Errorf("Apply button should show '[ESC] Cancel', got:\n%s", viewContent)
 	}
 }
