@@ -142,6 +142,19 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return HandleLVCreateUpdatedMsg(m, msg)
 	}
 
+	// Handle WindowSizeMsg before registry dispatch so windowWidth/windowHeight
+	// are always updated even when a sub-view is active. The registry dispatch
+	// below would otherwise swallow this message and leave the dimensions at 0,
+	// causing SetSize to be called with negative/invalid values later.
+	if wm, ok := msg.(tea.WindowSizeMsg); ok {
+		m.windowWidth = wm.Width
+		m.windowHeight = wm.Height
+		// Forward to active sub-view so viewport can resize
+		m.forwardWindowSizeToSubView(wm)
+		// List sizing is done in render methods based on contentHeight()
+		return m, nil
+	}
+
 	// VMRunning-specific messages (polling/log) must bypass the registry dispatch
 	// because the registry calls cmd() synchronously and feeds the result through
 	// handleSubViewMsg, which breaks the command chain for Tick-based polling and
@@ -211,13 +224,6 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		return m.handleKeyPress(msg)
-	case tea.WindowSizeMsg:
-		m.windowWidth = msg.Width
-		m.windowHeight = msg.Height
-		// Forward to active sub-view so viewport can resize
-		m.forwardWindowSizeToSubView(msg)
-		// List sizing is done in render methods based on contentHeight()
-		return m, nil
 	}
 
 	return m, nil
