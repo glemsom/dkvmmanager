@@ -259,11 +259,12 @@ func (s *CPUScanner) readThreadSiblings(cpuDir string) []int {
 	return parseIntList(strings.TrimSpace(string(data)))
 }
 
-// readL3CacheAssoc reads the L3 cache ways_of_associativity for a given die from sysfs
-func (s *CPUScanner) readL3CacheAssoc(dieID int) int {
+// findL3CacheIndexPath finds the sysfs cache index path (e.g., .../cpu0/cache/index0)
+// for the L3 cache of the given die. Returns empty string on failure.
+func (s *CPUScanner) findL3CacheIndexPath(dieID int) string {
 	cpuDirs, err := s.findOnlineCPUDirs()
 	if err != nil || len(cpuDirs) == 0 {
-		return 0
+		return ""
 	}
 
 	// Find a CPU in this die
@@ -276,13 +277,13 @@ func (s *CPUScanner) readL3CacheAssoc(dieID int) int {
 		}
 	}
 	if targetDir == "" {
-		targetDir = cpuDirs[0]
+		return ""
 	}
 
 	cacheDir := filepath.Join(targetDir, "cache")
 	cacheEntries, err := os.ReadDir(cacheDir)
 	if err != nil {
-		return 0
+		return ""
 	}
 
 	for _, entry := range cacheEntries {
@@ -292,81 +293,47 @@ func (s *CPUScanner) readL3CacheAssoc(dieID int) int {
 		indexPath := filepath.Join(cacheDir, entry.Name())
 
 		// Check if this is L3 cache
-		typeData, err := os.ReadFile(filepath.Join(indexPath, "level"))
+		levelData, err := os.ReadFile(filepath.Join(indexPath, "level"))
 		if err != nil {
 			continue
 		}
-		if strings.TrimSpace(string(typeData)) != "3" {
+		if strings.TrimSpace(string(levelData)) != "3" {
 			continue
 		}
-
-		// Read ways_of_associativity
-		assocData, err := os.ReadFile(filepath.Join(indexPath, "ways_of_associativity"))
-		if err != nil {
-			continue
-		}
-		val, err := strconv.Atoi(strings.TrimSpace(string(assocData)))
-		if err != nil {
-			return 0
-		}
-		return val
+		return indexPath
 	}
 
-	return 0
+	return ""
+}
+
+// readL3CacheAssoc reads the L3 cache ways_of_associativity for a given die from sysfs
+func (s *CPUScanner) readL3CacheAssoc(dieID int) int {
+	indexPath := s.findL3CacheIndexPath(dieID)
+	if indexPath == "" {
+		return 0
+	}
+	assocData, err := os.ReadFile(filepath.Join(indexPath, "ways_of_associativity"))
+	if err != nil {
+		return 0
+	}
+	val, err := strconv.Atoi(strings.TrimSpace(string(assocData)))
+	if err != nil {
+		return 0
+	}
+	return val
 }
 
 // readL3CacheKB reads the L3 cache size for a given die from sysfs
 func (s *CPUScanner) readL3CacheKB(dieID int) int {
-	// L3 cache is shared per die. Find it by scanning cache/index* for type "Unified"
-	// We look at cpu0's cache dirs (or the first cpu of the die)
-	cpuDirs, err := s.findOnlineCPUDirs()
-	if err != nil || len(cpuDirs) == 0 {
+	indexPath := s.findL3CacheIndexPath(dieID)
+	if indexPath == "" {
 		return 0
 	}
-
-	// Find a CPU in this die
-	targetDir := ""
-	for _, dir := range cpuDirs {
-		die := s.readSysfsInt(filepath.Join(dir, "topology", "die_id"))
-		if die == dieID {
-			targetDir = dir
-			break
-		}
-	}
-	if targetDir == "" {
-		targetDir = cpuDirs[0]
-	}
-
-	cacheDir := filepath.Join(targetDir, "cache")
-	cacheEntries, err := os.ReadDir(cacheDir)
+	sizeData, err := os.ReadFile(filepath.Join(indexPath, "size"))
 	if err != nil {
 		return 0
 	}
-
-	for _, entry := range cacheEntries {
-		if !entry.IsDir() {
-			continue
-		}
-		indexPath := filepath.Join(cacheDir, entry.Name())
-
-		// Check if this is L3 cache
-		typeData, err := os.ReadFile(filepath.Join(indexPath, "level"))
-		if err != nil {
-			continue
-		}
-		if strings.TrimSpace(string(typeData)) != "3" {
-			continue
-		}
-
-		// Read size
-		sizeData, err := os.ReadFile(filepath.Join(indexPath, "size"))
-		if err != nil {
-			continue
-		}
-		return parseCacheSizeKB(strings.TrimSpace(string(sizeData)))
-	}
-
-	return 0
+	return parseCacheSizeKB(strings.TrimSpace(string(sizeData)))
 }
 
 // parseIntList parses a comma-separated list of integers and ranges (e.g., "0-3,7")
