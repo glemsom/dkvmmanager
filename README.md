@@ -2,6 +2,8 @@
 
 Terminal UI for managing KVM/QEMU virtual machines on a single Linux host.
 
+> **Part of [DKVM](https://github.com/glemsom/dkvm)** — a KVM-based hypervisor for single-host virtualization. DKVM Manager is the TUI frontend for the DKVM stack.
+
 Built with Go and [BubbleTea](https://github.com/charmbracelet/bubbletea), offering keyboard-driven navigation through VM creation, hardware configuration, runtime monitoring, and system power operations.
 
 ## Features
