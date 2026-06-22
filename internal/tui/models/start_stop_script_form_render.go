@@ -92,6 +92,9 @@ func (m *StartStopScriptFormModel) renderButtonPosition(pos form.FocusPos, focus
 	}
 
 	if pos.Key == "cancel" {
+		if focused {
+			return startStopScriptMutedStyle.Render("[Space/Enter] Save") + "    " + startStopScriptSaveStyle.Render("[ESC] Cancel")
+		}
 		return startStopScriptMutedStyle.Render("[Space/Enter] Save    [ESC] Cancel")
 	}
 
@@ -278,6 +281,8 @@ func (m *StartStopScriptFormModel) renderButtons(lines []string) []string {
 	focused := (m.focusIndex == saveIdx || m.focusIndex == cancelIdx)
 	if focused && m.focusIndex == saveIdx {
 		lines = append(lines, startStopScriptSaveStyle.Render("[Space/Enter] Save")+"    "+startStopScriptMutedStyle.Render("[ESC] Cancel"))
+	} else if focused && m.focusIndex == cancelIdx {
+		lines = append(lines, startStopScriptMutedStyle.Render("[Space/Enter] Save")+"    "+startStopScriptSaveStyle.Render("[ESC] Cancel"))
 	} else {
 		lines = append(lines, startStopScriptMutedStyle.Render("[Space/Enter] Save    [ESC] Cancel"))
 	}

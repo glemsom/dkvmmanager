@@ -448,6 +448,59 @@ func TestStartStopScriptKeyDelegationToFileBrowser(t *testing.T) {
 	}
 }
 
+// TestCustomScriptFormSaveCancelFocus tests that Save and Cancel buttons
+// show correct hint text highlighting when focused.
+func TestCustomScriptFormSaveCancelFocus(t *testing.T) {
+	vmManager := createTestVMManagerForScript(t)
+	fm, err := NewStartStopScriptFormModel(vmManager.Repository())
+	if err != nil {
+		t.Fatalf("Failed to create form: %v", err)
+	}
+
+	// Use builtin mode: positions = [toggle, save, cancel]
+	fm.config.UseBuiltin = true
+	fm.rebuildPositions()
+	fm.SetSize(78, 20)
+
+	// Render reference styled strings
+	saveStyled := startStopScriptSaveStyle.Render("[Space/Enter] Save")
+	cancelStyled := startStopScriptSaveStyle.Render("[ESC] Cancel")
+	saveMuted := startStopScriptMutedStyle.Render("[Space/Enter] Save")
+	cancelMuted := startStopScriptMutedStyle.Render("[ESC] Cancel")
+
+	// Focus on save (index 1)
+	fm.focusIndex = 1
+	saveView := fm.View().Content
+
+	// Save-focused: Save part should be highlighted, Cancel part muted
+	if !strings.Contains(saveView, saveStyled) {
+		t.Error("Save-focused: '[Space/Enter] Save' should be highlighted (save style)")
+	}
+	if !strings.Contains(saveView, cancelMuted) {
+		t.Error("Save-focused: '[ESC] Cancel' should be muted")
+	}
+
+	// Focus on cancel (index 2)
+	fm.focusIndex = 2
+	cancelView := fm.View().Content
+
+	// Cancel-focused: Cancel part should be highlighted, Save part muted
+	if !strings.Contains(cancelView, saveMuted) {
+		t.Error("Cancel-focused: '[Space/Enter] Save' should be muted")
+	}
+	if !strings.Contains(cancelView, cancelStyled) {
+		t.Error("Cancel-focused: '[ESC] Cancel' should be highlighted (save style)")
+	}
+
+	// Unfocused: everything muted (rendered as one combined muted string)
+	fm.focusIndex = 0 // toggle
+	toggleView := fm.View().Content
+	bothMuted := startStopScriptMutedStyle.Render("[Space/Enter] Save    [ESC] Cancel")
+	if !strings.Contains(toggleView, bothMuted) {
+		t.Error("Toggle-focused: hint should appear fully muted")
+	}
+}
+
 // TestStartStopScriptViewShowsFileBrowserWhenActive tests that the View shows file browser when active
 func TestStartStopScriptViewShowsFileBrowserWhenActive(t *testing.T) {
 	vmManager := createTestVMManagerForScript(t)
