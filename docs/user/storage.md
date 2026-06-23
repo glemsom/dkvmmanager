@@ -216,37 +216,7 @@ Once a disk is selected (from any source type), the path is inserted into the VM
 
 ---
 
-## Architecture Notes
-
-### Model hierarchy
-
-```
-MainModel
-└── ViewRegistry
-    ├── ViewLVCreate (LVCreateModel → ScrollableForm → LVCreateFormModel)
-    │   └── (no sub-models; LVCreateFormModel handles everything inline)
-    └── ViewVMCreate / ViewVMEdit (VMFormModel)
-        └── VMFormModel.addDiskModel (AddDiskModel)
-            ├── fileBrowser (FileBrowserModel — FileTypeDiskImage)
-            ├── blockDevice (BlockDeviceModel)
-            └── lvmVolume (LVMVolumeModel)
-```
-
-### Message flow
-
-1. **LV Create**: `LVCreateFormModel` validates → `createCmd()` runs `lvcreate` → `LVCreateUpdatedMsg` or `lvCreateErrorMsg` → handled via `form.MessageHandler` interface
-2. **Disk Add**: `AddDiskModel` delegates to sub-model (file browser, block device, LVM volume) → sub-model sends `FileSelectedMsg` → `AddDiskModel.handleFileSelected()` → `DiskAddedMsg` → `VMFormModel.HandleMessage()`
-
-### Shared form framework
-
-The LV creation form uses the same `form.ScrollableForm` / `form.FormModel` framework as the VM form:
-
-- `LVCreateFormModel` implements `FormModel` interface (`BuildPositions`, `RenderPosition`, `HandleEnter`, `HandleChar`, etc.)
-- Focus positions are a flat list of `form.FocusPos` entries (Text, Custom, Toggle, Button)
-- Validation errors are stored per-position via the `errors` map
-- The form is wrapped in `LVCreateModel` → `form.ScrollableForm`
-
-> **Source**: `internal/tui/models/form/` package; `internal/tui/models/lv_create.go`; `internal/tui/models/lv_create_form.go`.
+> **Behind the scenes**: See [Architecture](../dev/architecture.md) for model hierarchy, message flow, and form framework details.
 
 ---
 

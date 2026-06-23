@@ -78,6 +78,43 @@ Three poll loops run concurrently on independent cadences:
 
 ---
 
+### VM startup sequence
+
+When the user selects a VM in the VMs tab and presses Enter:
+
+```
+User presses Enter on VM in VMs tab
+  → handleVMSelection()
+    → creates VMRunner + VMRunningModel
+    → view switches to ViewVMRunning
+    → tea.Batch(
+        vmRunningModel.Init()          // polls with nil runner → [STARTING]
+        startVMCommand(runner, ...)     // async goroutine
+      )
+    → VMStartedMsg (runner now available)
+      → tea.Batch(
+          seedAndSubscribe()            // seed from persisted log
+          waitForVMExit()              // blocks on runner.Done()
+          pollStatus()                 // 500ms tick
+          initialStatus()              // immediate status query
+          pollMetrics()                // 2s tick
+        )
+    → ... live updates ...
+    → user presses q → runner.Stop()
+    → VMStoppedMsg → return to main menu
+```
+
+### View bypass for VMRunning messages
+
+`VMStatusUpdateMsg`, `VMLogMsg`, and `VMMetricsUpdateMsg` bypass the view
+registry dispatch in `update()`. They route directly to
+`VMRunningModel.Update()` to avoid the registry's synchronous command
+execution pattern, which would break the tick-based polling chain and
+blocking channel reads.
+
+> **Source**: `internal/tui/models/key_handlers.go` → `update()` — VMRunning-specific message routing.
+
+
 ## View Registry & Message Flow
 
 The `ViewRegistry` manages sub-view lifecycles. Each TUI form/screen registers as a `ViewDef` with a factory function. The registry handles activation, deactivation, and config menu ordering.
@@ -118,6 +155,65 @@ graph TD
 
 ---
 
+### VM Management message flow
+
+1. **Create**: `VMCreateModel` → form validation → `VMCreatedMsg` → `HandleVMCreatedMsg` → `UnifiedViewReturn`
+2. **Edit**: `VMEditModel` → form validation → `VMUpdatedMsg` → `HandleVMUpdatedMsg` → `UnifiedViewReturn`
+3. **Delete**: `VMDeleteModel` → confirm → `VMDeletedMsg` → `HandleVMDeletedMsg` → `UnifiedViewReturn`
+4. **File/Disk selection**: `FileSelectedMsg` / `DiskAddedMsg` → route through `handleSubViewMsg` → `VMFormModel.HandleMessage()`
+
+All create/edit/delete messages go through the `messageHandlers` registry
+(registered in `init()`) and return to `ViewConfigMenu` via `UnifiedViewReturn()`.
+
+> **Source**: `internal/tui/models/message_handlers.go` → `HandleVMCreatedMsg()`, `HandleVMUpdatedMsg()`, `HandleVMDeletedMsg()`, `UnifiedViewReturn()`; `internal/tui/models/vm_form.go` → `HandleMessage()`.
+
+### Hardware forms message flow
+
+1. **CPU Topology**: save → `CPUTopologyUpdatedMsg` → handler → `UnifiedViewReturn`
+2. **vCPU Pinning**: save → `VCPUPinningUpdatedMsg`; apply kernel → `VCPUCPUKernelAppliedMsg` (async)
+3. **CPU Options**: save → `CPUOptionsUpdatedMsg` → handler → `UnifiedViewReturn`
+4. **PCI Passthrough**: save → `PCIPassthroughUpdatedMsg`; apply kernel → `PCIVFIOKernelAppliedMsg` (async)
+5. **USB Passthrough**: save → `USBPassthroughUpdatedMsg` → handler → `UnifiedViewReturn`
+
+All `*UpdatedMsg` types implement `form.FormSavedMsg` interface for unified
+return handling.
+
+> **Source**: `internal/tui/models/message_handlers.go` → respective handler functions.
+
+### Scripts & SSH message flow
+
+1. **Start/Stop Script**: Save → `SaveConfig("custom_script", …)` → `StartStopScriptSavedMsg` → `unifiedViewReturn` → Configuration tab
+2. **SSH Password**: Apply → `chpasswd` + `lbu commit` → `SSHPasswordUpdatedMsg` → `unifiedViewReturn` → Configuration tab
+3. Both implement `form.FormSavedMsg` interface for the `UnifiedViewReturn` dispatch
+
+> **Source**: `internal/tui/models/start_stop_script.go` → `StartStopScriptSavedMsg`; `internal/tui/models/ssh_password.go` → `SSHPasswordUpdatedMsg`; `internal/tui/models/message_handlers.go` → `UnifiedViewReturn()`.
+
+### Storage message flow
+
+1. **LV Create**: `LVCreateFormModel` validates → `createCmd()` runs `lvcreate` → `LVCreateUpdatedMsg` or `lvCreateErrorMsg` → handled via `form.MessageHandler` interface
+2. **Disk Add**: `AddDiskModel` delegates to sub-model (file browser, block device, LVM volume) → sub-model sends `FileSelectedMsg` → `AddDiskModel.handleFileSelected()` → `DiskAddedMsg` → `VMFormModel.HandleMessage()`
+
+> **Source**: `internal/tui/models/lv_create.go`; `internal/tui/models/lv_create_form.go`; `internal/tui/models/disk_add.go`.
+
+### Power & Save message flow
+
+```
+User selects Power Off / Reboot / Save changes
+  → handleMenuSelection() → handlePowerSelection() / handleConfigMenuSelection()
+    → runPowerOff() / runReboot() / runLBUCommit()
+      → async command execution (exec.Command)
+        → PowerOffMsg / RebootMsg / LBUCommitMsg
+          → HandlePowerOffMsg / HandleRebootMsg / HandleLBUCommitMsg
+            → statusBar.SetMessage()
+```
+
+All three operations return `tea.Model, tea.Cmd` with no view change — the user
+stays on the current screen. The status bar provides feedback when the async
+message arrives.
+
+> **Source**: `internal/tui/models/key_handlers.go` → `handleMenuSelection()`; `internal/tui/models/message_handlers.go` → handler registry
+
+
 ## Form Framework
 
 The form system (`internal/tui/models/form/`) provides a reusable scrolling form with focus management.
@@ -154,6 +250,106 @@ The form system (`internal/tui/models/form/`) provides a reusable scrolling form
 - `internal/tui/models/vm_form.go` — form interaction handlers
 
 ---
+
+### Form model hierarchies
+
+Each form in the TUI follows a consistent pattern: a thin `*Model` struct
+wraps `form.ScrollableForm`, and a `*FormModel` struct implements the
+`FormModel` interface.
+
+#### VM management forms
+
+```
+MainModel
+├── ViewVMSelect (VM picker for edit/delete)
+├── ViewVMDelete (VMDeleteModel — confirmation dialog)
+└── ViewRegistry
+    ├── ViewVMCreate (VMCreateModel → ScrollableForm → VMFormModel)
+    │   ├── VMFormModel.fileBrowser (FileBrowserModel)
+    │   └── VMFormModel.addDiskModel (AddDiskModel)
+    │       ├── fileBrowser (FileBrowserModel — FileTypeDiskImage)
+    │       ├── blockDevice (BlockDeviceModel)
+    │       └── lvmVolume (LVMVolumeModel)
+    └── ViewVMEdit (VMEditModel → ScrollableForm → VMFormModel)
+        └── (same sub-models as create)
+```
+
+#### Hardware forms
+
+```
+MainModel
+└── ViewRegistry
+    ├── ViewCPUTopology (CPUTopologyModel → ScrollableForm → CPUTopologyFormModel)
+    ├── ViewVCPUPinning (VCPUPinningModel → ScrollableForm → VCPUPinningFormModel)
+    ├── ViewCPUOptions (CPUOptionsModel → ScrollableForm → CPUOptionsFormModel)
+    ├── ViewPCIPassthrough (PCIPassthroughModel → ScrollableForm → PCIPassthroughFormModel)
+    └── ViewUSBPassthrough (USBPassthroughModel → ScrollableForm → USBPassthroughFormModel)
+```
+
+All hardware forms share the `ScrollableForm` framework:
+- Thin `*Model` struct wraps `*form.ScrollableForm` and delegates `Init`, `Update`, `View`, `SetSize`
+- `*FormModel` implements `form.FormModel` interface
+- Focus positions built as `[]form.FocusPos` with kind, label, key, and optional `Data`
+- Backward-compatible `Init`/`Update`/`View` methods exist for legacy test support
+- Viewports managed internally via `charm.land/bubbles/v2/viewport`
+
+#### Scripts and SSH forms
+
+```
+MainModel
+└── ViewRegistry
+    ├── ViewStartStopScript (StartStopScriptModel → ScrollableForm → StartStopScriptFormModel)
+    │   └── fileBrowser (FileBrowserModel) — script path selection
+    └── ViewSSHPassword (SSHPasswordModel → ScrollableForm → SSHPasswordFormModel)
+```
+
+- `StartStopScriptFormModel` implements `form.FormModel` — dynamic positions (toggle changes field count)
+- `SSHPasswordFormModel` implements `form.FormModel` — static positions (three fields: new, confirm, apply)
+
+#### Storage forms
+
+```
+MainModel
+└── ViewRegistry
+    ├── ViewLVCreate (LVCreateModel → ScrollableForm → LVCreateFormModel)
+    │   └── (no sub-models; LVCreateFormModel handles everything inline)
+    └── ViewVMCreate / ViewVMEdit (VMFormModel)
+        └── VMFormModel.addDiskModel (AddDiskModel)
+            ├── fileBrowser (FileBrowserModel — FileTypeDiskImage)
+            ├── blockDevice (BlockDeviceModel)
+            └── lvmVolume (LVMVolumeModel)
+```
+
+> **Source**: `internal/tui/models/form/` package; respective `*_form.go` files for each model.
+
+### GRUB configuration integration
+
+Two hardware forms write to GRUB configuration (`/media/usb/boot/grub/grub.cfg`):
+
+| Form | Button | Writes |
+|------|--------|--------|
+| PCI Passthrough | Apply to Kernel | `vfio-pci.ids=` |
+| vCPU Pinning | Apply to Kernel | `isolcpus=`, `nohz_full=`, `rcu_nocbs=` |
+
+Both create `.bak` backup before writing. The GRUB file path is configurable
+via `grub_config_path` in the repository config.
+
+> **Source**: `internal/vm/grub_config.go`; `internal/config/config.go` → `GrubConfigPath`.
+
+### Tab navigation
+
+The Power tab is one of three top-level tabs:
+
+| Tab | Purpose |
+|-----|---------|
+| VMs | List and start VMs |
+| Configuration | VM and hardware config, scripts, SSH, storage, save |
+| Power | Power off and reboot |
+
+`Tab` cycles through them; each has its own list model (`powerList`, `configList`, `menuList`).
+
+> **Source**: `internal/tui/models/init.go` → `NewMainModelWithConfig()`; `internal/tui/components/tab_model.go`
+
 
 ## Testing Patterns
 

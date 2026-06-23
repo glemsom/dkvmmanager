@@ -71,5 +71,6 @@ No ASCII fallback needed.
 `RoundedBorder()` (arcs ╭╮╰╯) does NOT work — requires ASCII fallback or
 replacement with straight variants.
 
-**Decision (ADR pending):** Use straight borders everywhere for consistent
-appearance across all terminals. Eliminates the TERM=linux border fallback.
+**Decision:** Use straight borders everywhere for consistent appearance across
+all terminals. See [ADR-0002](adr/0002-use-straight-borders-for-terminal-compatibility.md)
+for full rationale.

@@ -224,61 +224,18 @@ Press `q` to intentionally stop the VM, or wait for the VM to stop naturally.
 
 ## Keybindings
 
-| Key | Context | Action |
-|-----|---------|--------|
-| `q` | VM running | Stop VM gracefully (QMP `system_powerdown`) |
-| `q` | VM stopped | Exit view, return to main menu |
-| `Ctrl+C` | VM running | Force kill QEMU process |
-| `↑/↓` / `j/k` | Log viewport | Scroll one line |
-| `PgUp` / `PgDn` | Log viewport | Scroll one page |
-| `Home` / `End` | Log viewport | Jump to top/bottom |
-| `ESC` | Running view | Show reminder (VM still running) |
+- Press `q` to stop a running VM gracefully, or to exit the view when the VM has stopped.
+- Press `Ctrl+C` to force-kill the QEMU process.
+- Use `↑/↓` / `j/k`, `PgUp`/`PgDn`, or `Home`/`End` to scroll the log viewport.
+- `ESC` shows a reminder — it does not leave the running view while a VM is active.
+
+See [Keybindings](keybindings.md) for the full reference.
 
 > **Source**: `internal/tui/models/vm_running.go` → `handleKeyPress()`; viewport delegates to `charm.land/bubbles/v2/viewport`.
 
 ---
 
-## Architecture Notes
-
-### Message flow
-
-```
-User presses Enter on VM in VMs tab
-  → handleVMSelection()
-    → creates VMRunner + VMRunningModel
-    → view switches to ViewVMRunning
-    → tea.Batch(
-        vmRunningModel.Init()          // polls with nil runner → [STARTING]
-        startVMCommand(runner, ...)     // async goroutine
-      )
-    → VMStartedMsg (runner now available)
-      → tea.Batch(
-          seedAndSubscribe()            // seed from persisted log
-          waitForVMExit()              // blocks on runner.Done()
-          pollStatus()                 // 500ms tick
-          initialStatus()              // immediate status query
-          pollMetrics()                // 2s tick
-        )
-    → ... live updates ...
-    → user presses q → runner.Stop()
-    → VMStoppedMsg → return to main menu
-```
-
-### Polling cadence
-
-| Poll | Interval | Source |
-|------|----------|--------|
-| Status | 500ms | QMP `query-status` + `query-cpus-fast` |
-| Metrics | 2s | QMP block/balloon + `/proc` CPU/RSS |
-| Log | Event-driven | Channel from runner's log subscriber |
-
-Status and metrics polls are decoupled — each returns its own `tea.Tick` command to reschedule itself.
-
-### View bypass
-
-`VMStatusUpdateMsg`, `VMLogMsg`, and `VMMetricsUpdateMsg` bypass the view registry dispatch in `update()`. They route directly to `VMRunningModel.Update()` to avoid the registry's synchronous command execution pattern, which would break the tick-based polling chain and blocking channel reads.
-
-> **Source**: `internal/tui/models/key_handlers.go` → `update()` — VMRunning-specific message routing.
+> **Behind the scenes**: See [Architecture](../dev/architecture.md) for VM startup sequence, polling cadence, and message routing details.
 
 ---
 

@@ -73,22 +73,9 @@ The creation form opens with these fields:
 
 ### Form keybindings
 
-| Key | Action |
-|-----|--------|
-| `Tab` / `Shift+Tab` | Navigate between fields |
-| `↑/↓` | Scroll when content exceeds viewport |
-| `Enter` on text/list field | Move to next field |
-| `Enter` on toggle | Toggle value (ON/OFF, NAT/Bridge) |
-| `Enter` on **Save** | Validate and create VM |
-| `Enter` on **[+ Add Disk]** | Add empty disk slot |
-| `Enter` on **[+ Add CDROM]** | Add empty CDROM slot |
-| `Enter` on disk/CDROM item | Open file picker or disk selector |
-| `Space` | Same as Enter for toggles, save, and list items |
-| `Backspace` / `Delete` | Delete character in text fields |
-| `Del` (focused on list item) | Remove that item from the list |
-| `ESC` | Cancel and return to Configuration tab |
+Use `Tab`/`Shift+Tab` to navigate fields, `↑/↓` to scroll when content exceeds the viewport, `Enter`/`Space` to activate toggles, buttons, or list items, `Backspace`/`Delete` for text input, and `ESC` to cancel and return to the Configuration tab.
 
-> **Source**: `internal/tui/models/vm_form.go` → `HandleEnter()`, `HandleChar()`, `HandleBackspace()`, `HandleDelete()`; `internal/tui/models/form/keybinds.go`.
+See [Keybindings](keybindings.md) for the full reference.
 
 ### Save & validation
 
@@ -120,11 +107,7 @@ If no VMs exist, the status bar shows "No VMs available to edit" and no action i
 
 ### VM selection list
 
-The VM selection view lists all existing VMs sorted by ID:
-
-- `↑/↓` / `j/k` — navigate
-- `Enter` / `Space` — select VM to edit
-- `ESC` — cancel, return to Configuration tab
+The VM selection view lists all existing VMs sorted by ID. Navigate with `↑/↓` / `j/k`, select with `Enter`/`Space`, or press `ESC` to cancel.
 
 > **Source**: `internal/tui/models/vm_selection.go` → `renderVMSelectView()`.
 
@@ -165,10 +148,7 @@ Are you sure you want to delete VM '<name>' (ID: <id>)?
 ↑/↓ Navigate  Space/Enter Select  ESC Cancel
 ```
 
-**Keybindings**:
-- `↑/↓` / `j/k` — switch between No and Yes
-- `Enter` / `Space` — confirm selection
-- `ESC` — cancel (same as selecting No)
+Navigate with `↑/↓` / `j/k`, confirm with `Enter`/`Space`, or press `ESC` to cancel (same as selecting No).
 
 **Behavior**:
 - Selecting **No** returns to the Configuration tab (no action)
@@ -185,12 +165,7 @@ Used when selecting ISO images for CD/DVD drives. Activated by pressing `Enter` 
 
 ### Navigation
 
-| Key | Action |
-|-----|--------|
-| `↑/↓` / `j/k` | Navigate files/directories |
-| `Enter` / `Space` | Enter directory or select file |
-| `Backspace` | Go to parent directory |
-| `ESC` | Cancel (no selection) |
+Navigate with `↑/↓` / `j/k`, enter a directory or select a file with `Enter`/`Space`, go to the parent directory with `Backspace`, or press `ESC` to cancel.
 
 ### Filtering
 
@@ -233,7 +208,7 @@ Space/Enter Select  ESC Cancel
 
 **Step 1 — File browser** (disk image file selected): Opens a file browser filtered for disk images (`.img`, `.raw`, `.qcow2`, `.qcow`, `.vmdk`, `.vdi`, `.vhdx`) and block devices.
 
-**Step 2 — Block device lister** (block device selected): Lists available block devices with size, type, and read-only status.
+**Step 2 — Block device lister** (block device selected): Lists available block devices with size, type, and read-only status. Navigate with `↑/↓` / `j/k`, select with `Enter`/`Space`, or cancel with `ESC`.
 
 **Step 3 — LVM volume lister** (LVM selected): Lists LVM logical volumes discovered via `lvs --noheadings`.
 
@@ -248,57 +223,15 @@ Available block devices:
 
 > sda  256G  disk
   sdb  1TB   disk  [RO]
-
-↑/↓ Navigate  Space/Enter Select  ESC Cancel
 ```
 
-Read-only devices are marked `[RO]`. The model runs `lsblk`-equivalent logic to discover devices.
+Read-only devices are marked `[RO]`. Navigate with `↑/↓` / `j/k`, select with `Enter`/`Space`, or cancel with `ESC`. The model runs `lsblk`-equivalent logic to discover devices.
 
 > **Source**: `internal/tui/models/disk_selector.go` → `BlockDeviceModel`, `loadDevices()`.
 
 ---
 
-## Architecture Notes
-
-### Model hierarchy
-
-```
-MainModel
-├── ViewVMSelect (VM picker for edit/delete)
-├── ViewVMDelete (VMDeleteModel — confirmation dialog)
-└── ViewRegistry
-    ├── ViewVMCreate (VMCreateModel → ScrollableForm → VMFormModel)
-    │   ├── VMFormModel.fileBrowser (FileBrowserModel)
-    │   └── VMFormModel.addDiskModel (AddDiskModel)
-    │       ├── fileBrowser (FileBrowserModel — FileTypeDiskImage)
-    │       ├── blockDevice (BlockDeviceModel)
-    │       └── lvmVolume (LVMVolumeModel)
-    └── ViewVMEdit (VMEditModel → ScrollableForm → VMFormModel)
-        └── (same sub-models as create)
-```
-
-### Message flow
-
-1. **Create**: `VMCreateModel` → form validation → `VMCreatedMsg` → `HandleVMCreatedMsg` → `UnifiedViewReturn`
-2. **Edit**: `VMEditModel` → form validation → `VMUpdatedMsg` → `HandleVMUpdatedMsg` → `UnifiedViewReturn`
-3. **Delete**: `VMDeleteModel` → confirm → `VMDeletedMsg` → `HandleVMDeletedMsg` → `UnifiedViewReturn`
-4. **File/Disk selection**: `FileSelectedMsg` / `DiskAddedMsg` → route through `handleSubViewMsg` → `VMFormModel.HandleMessage()`
-
-All create/edit/delete messages go through the `messageHandlers` registry (registered in `init()`) and return to `ViewConfigMenu` via `UnifiedViewReturn()`.
-
-> **Source**: `internal/tui/models/message_handlers.go` → `HandleVMCreatedMsg()`, `HandleVMUpdatedMsg()`, `HandleVMDeletedMsg()`, `UnifiedViewReturn()`; `internal/tui/models/vm_form.go` → `HandleMessage()`.
-
-### Form framework
-
-The VM form uses the shared `ScrollableForm` framework:
-
-- `form.ScrollableForm` — handles scrolling, keyboard dispatch, cursor management
-- `VMFormModel` — implements `form.FormModel` interface (`BuildPositions`, `RenderPosition`, `HandleEnter`, `HandleChar`, etc.)
-- Focus positions are a flat list of `form.FocusPos` entries (text, list, toggle, header, button)
-- Cursor offsets are tracked per-position via `cursorOffsets` map
-- Validation errors stored per-position via `errors` map
-
-> **Source**: `internal/tui/models/form/` package; `internal/tui/models/vm_form_model.go` → `FormModel` interface implementation.
+> **Behind the scenes**: See [Architecture](../dev/architecture.md) for model hierarchy, message flow, and form framework details.
 
 ---
 

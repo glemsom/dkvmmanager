@@ -260,9 +260,20 @@ When `-debug` is set:
 
 ---
 
-## Configuration File
+## Application Configuration (`~/.dkvmmanager.yaml`)
 
 DKVM reads application-level settings from `~/.dkvmmanager.yaml`. If the file does not
+
+> **⚠️ Two configuration files — don't confuse them.** DKVM Manager uses **two separate YAML files** for different purposes:
+>
+> | File | Purpose | Edited by |
+> |------|---------|----------|
+> | `~/.dkvmmanager.yaml` | **Application settings** (QEMU path, firmware paths, data folder location, GRUB config path, etc.) | User manually (rarely needed) |
+> | `/media/dkvmdata/dkvmmanager/config.yaml` | **VM configurations** (all VMs, their hardware, scripts, etc.) | TUI automatically when you create/edit VMs |
+>
+> Most users **never need to edit `~/.dkvmmanager.yaml`** — the defaults work well on standard DKVM hosts.
+> The TUI reads/writes `/media/dkvmdata/dkvmmanager/config.yaml` directly when you manage VMs.
+> See [Data Folder & Mount Point](#data-folder--mount-point) for details on the VM config file.
 exist, all defaults below are used. Paths support `~` expansion.
 
 | Field | Default | Description |

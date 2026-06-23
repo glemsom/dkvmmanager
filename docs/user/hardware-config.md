@@ -78,14 +78,9 @@ Summary: 3 cores for VMs, 9 for host
 
 ### Keybindings
 
-| Key | Action |
-|-----|--------|
-| `Tab` / `↓` | Next core |
-| `Shift+Tab` / `↑` | Previous core |
-| `PgUp` / `PgDown` | Scroll half-page |
-| `Space` / `Enter` on core | Toggle between HOST and VM |
-| `Space` / `Enter` on **Save** | Validate and persist |
-| `ESC` | Cancel, return to Configuration tab |
+Use `Tab`/`↓` and `Shift+Tab`/`↑` to move between cores, `Space`/`Enter` to toggle a core or activate the Save button, `PgUp`/`PgDown` to scroll, and `ESC` to cancel.
+
+See [Keybindings](keybindings.md) for the full reference.
 
 ### Validation
 
@@ -151,15 +146,9 @@ topology-aware
 
 ### Keybindings
 
-| Key | Action |
-|-----|--------|
-| `Tab` / `↓` | Next toggle/button |
-| `Shift+Tab` / `↑` | Previous toggle/button |
-| `PgUp` / `PgDown` | Scroll half-page |
-| `Space` / `Enter` on toggle | Toggle ON/OFF |
-| `Space` / `Enter` on **Save** | Recompute and save pinning |
-| `Space` / `Enter` on **Apply to Kernel** | Write `isolcpus=`, `nohz_full=`, `rcu_nocbs=` to GRUB |
-| `ESC` | Cancel, return to Configuration tab |
+Use `Tab`/`↓` and `Shift+Tab`/`↑` to move between toggles and buttons, `Space`/`Enter` to toggle a value or activate a button, `PgUp`/`PgDown` to scroll, and `ESC` to cancel.
+
+See [Keybindings](keybindings.md) for the full reference.
 
 ### Apply to Kernel
 
@@ -290,16 +279,9 @@ These override what QEMU reports to the guest. Only shown when `Expose host L3 c
 
 ### Keybindings
 
-| Key | Action |
-|-----|--------|
-| `Tab` / `↓` | Next field |
-| `Shift+Tab` / `↑` | Previous field |
-| `PgUp` / `PgDown` | Scroll half-page |
-| `Space` / `Enter` on toggle | Toggle ON/OFF |
-| `Enter` on text field | Move to next field |
-| `Backspace` / `Delete` | Edit text in focused field |
-| `Space` / `Enter` on **Save** | Validate and persist |
-| `ESC` | Cancel, return to Configuration tab |
+Use `Tab`/`↓` and `Shift+Tab`/`↑` to navigate fields, `Space`/`Enter` to toggle values or activate the Save button, `Backspace`/`Delete` for text input, `PgUp`/`PgDown` to scroll, and `ESC` to cancel.
+
+See [Keybindings](keybindings.md) for the full reference.
 
 ### Validation
 
@@ -359,17 +341,9 @@ PCI Passthrough Configuration
 
 ### Keybindings
 
-| Key | Action |
-|-----|--------|
-| `Tab` / `↓` | Next device/button |
-| `Shift+Tab` / `↑` | Previous device/button |
-| `PgUp` / `PgDown` | Scroll half-page |
-| `Space` / `Enter` on device | Toggle selection |
-| `Space` / `Enter` on **Save** | Validate and persist |
-| `Space` / `Enter` on **Apply to Kernel** | Write `vfio-pci.ids=` to GRUB |
-| `ESC` | Cancel, return to Configuration tab |
+Use `Tab`/`↓` and `Shift+Tab`/`↑` to navigate devices and buttons, `Space`/`Enter` to toggle a device selection or activate a button, `PgUp`/`PgDown` to scroll, and `ESC` to cancel. Group headers are display-only — focus moves only between device toggles and buttons.
 
-> Group headers are display-only (focus skips over them). Focus moves only between device toggles and buttons.
+See [Keybindings](keybindings.md) for the full reference.
 
 ### Strict IOMMU group selection
 
@@ -439,14 +413,9 @@ USB Passthrough Configuration
 
 ### Keybindings
 
-| Key | Action |
-|-----|--------|
-| `Tab` / `↓` | Next device/button |
-| `Shift+Tab` / `↑` | Previous device/button |
-| `PgUp` / `PgDown` | Scroll half-page |
-| `Space` / `Enter` on device | Toggle selection |
-| `Space` / `Enter` on **Save** | Validate and persist |
-| `ESC` | Cancel, return to Configuration tab |
+Use `Tab`/`↓` and `Shift+Tab`/`↑` to navigate devices and buttons, `Space`/`Enter` to toggle a device selection or activate the Save button, `PgUp`/`PgDown` to scroll, and `ESC` to cancel.
+
+See [Keybindings](keybindings.md) for the full reference.
 
 ### Validation
 
@@ -466,51 +435,7 @@ USB Passthrough Configuration
 
 ---
 
-## Architecture Notes
-
-### Model hierarchy — hardware forms
-
-```
-MainModel
-└── ViewRegistry
-    ├── ViewCPUTopology (CPUTopologyModel → ScrollableForm → CPUTopologyFormModel)
-    ├── ViewVCPUPinning (VCPUPinningModel → ScrollableForm → VCPUPinningFormModel)
-    ├── ViewCPUOptions (CPUOptionsModel → ScrollableForm → CPUOptionsFormModel)
-    ├── ViewPCIPassthrough (PCIPassthroughModel → ScrollableForm → PCIPassthroughFormModel)
-    └── ViewUSBPassthrough (USBPassthroughModel → ScrollableForm → USBPassthroughFormModel)
-```
-
-All hardware forms share the `ScrollableForm` framework:
-- Thin `*Model` struct wraps `*form.ScrollableForm` and delegates `Init`, `Update`, `View`, `SetSize`
-- `*FormModel` implements `form.FormModel` interface: `BuildPositions`, `RenderHeader`, `RenderFooter`, `RenderPosition`, `HandleEnter`, `HandleChar`, `HandleBackspace`, `HandleDelete`
-- Focus positions built as `[]form.FocusPos` with kind, label, key, and optional `Data` (typed per-form)
-- Backward-compatible `Init`/`Update`/`View` methods exist for legacy test support
-- Viewports managed internally via `charm.land/bubbles/v2/viewport`
-
-### Message flow
-
-1. **CPU Topology**: save → `CPUTopologyUpdatedMsg` → handler → `UnifiedViewReturn`
-2. **vCPU Pinning**: save → `VCPUPinningUpdatedMsg`; apply kernel → `VCPUCPUKernelAppliedMsg` (async)
-3. **CPU Options**: save → `CPUOptionsUpdatedMsg` → handler → `UnifiedViewReturn`
-4. **PCI Passthrough**: save → `PCIPassthroughUpdatedMsg`; apply kernel → `PCIVFIOKernelAppliedMsg` (async)
-5. **USB Passthrough**: save → `USBPassthroughUpdatedMsg` → handler → `UnifiedViewReturn`
-
-All `*UpdatedMsg` types implement `form.FormSavedMsg` interface for unified return handling.
-
-> **Source**: `internal/tui/models/message_handlers.go` → `HandleCPUTopologyUpdatedMsg()`, `HandleVCPUPinningUpdatedMsg()`, etc.
-
-### GRUB configuration integration
-
-Two hardware forms write to GRUB configuration (`/media/usb/boot/grub/grub.cfg`):
-
-| Form | Button | Writes |
-|------|--------|--------|
-| PCI Passthrough | Apply to Kernel | `vfio-pci.ids=` |
-| vCPU Pinning | Apply to Kernel | `isolcpus=`, `nohz_full=`, `rcu_nocbs=` |
-
-Both create `.bak` backup before writing. The GRUB file path is configurable via `grub_config_path` in the repository config.
-
-> **Source**: `internal/vm/grub_config.go`; `internal/config/config.go` → `GrubConfigPath`.
+> **Behind the scenes**: See [Architecture](../dev/architecture.md) for model hierarchy, message flow, and GRUB configuration integration details.
 
 ---
 

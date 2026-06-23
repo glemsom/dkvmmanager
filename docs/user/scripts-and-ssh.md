@@ -45,15 +45,9 @@ The form opens with a mode toggle and (in custom mode) path fields:
 
 ### Keybindings
 
-| Key | Action |
-|-----|--------|
-| `Tab` / `Shift+Tab` / `↑↓` | Navigate between fields |
-| `Space` / `Enter` on **Mode** | Toggle Builtin ↔ Custom |
-| `←` / `→` on **Mode** | Select Builtin (left) or Custom (right) |
-| `Space` / `Enter` on **Browse** | Open file browser at `/media/dkvmdata` |
-| `Space` / `Enter` on **Save** | Persist config |
-| `Space` / `Enter` on **Cancel** / `ESC` | Discard and return |
-| `PgUp` / `PgDown` | Scroll form content |
+Use `Tab`/`Shift+Tab` to navigate fields, `Space`/`Enter` to toggle the Mode or activate buttons, `PgUp`/`PgDown` to scroll, and `ESC` to discard and return.
+
+See [Keybindings](keybindings.md) for the full reference.
 
 > **Source**: `internal/tui/models/start_stop_script_form.go` → `HandleEnter()`, `handleArrowKey()`; `internal/tui/models/start_stop_script_form_render.go` → `renderTogglePosition()`, `renderButtonPosition()`.
 
@@ -112,13 +106,9 @@ Configuration tab → **Set SSH Password** (index 9).
 
 ### Keybindings
 
-| Key | Action |
-|-----|--------|
-| `Tab` / `Shift+Tab` / `↑↓` | Navigate between fields |
-| `Enter` / `Space` on text field | Move to next field |
-| `Enter` / `Space` on **Apply** | Validate and apply |
-| `Backspace` / `Delete` | Delete character |
-| `ESC` | Cancel and return to Configuration tab |
+Use `Tab`/`Shift+Tab` to navigate fields, `Enter`/`Space` on a text field to move to the next field or on **Apply** to validate and apply, `Backspace`/`Delete` for text input, and `ESC` to cancel and return to the Configuration tab.
+
+See [Keybindings](keybindings.md) for the full reference.
 
 > **Source**: `internal/tui/models/ssh_password_form.go` → `handleKey()`; `internal/tui/models/ssh_password_form_validation.go`.
 
@@ -165,35 +155,7 @@ Score maps to labels: **Weak** (≤1, red), **Fair** (2–3, yellow), **Strong**
 
 ---
 
-## Architecture Notes
-
-### Model hierarchy
-
-```
-MainModel
-└── ViewRegistry
-    ├── ViewStartStopScript (StartStopScriptModel → ScrollableForm → StartStopScriptFormModel)
-    │   └── fileBrowser (FileBrowserModel) — script path selection
-    └── ViewSSHPassword (SSHPasswordModel → ScrollableForm → SSHPasswordFormModel)
-```
-
-### Message flow
-
-1. **Start/Stop Script**: Save → `SaveConfig("custom_script", …)` → `StartStopScriptSavedMsg` → `unifiedViewReturn` → Configuration tab
-2. **SSH Password**: Apply → `chpasswd` + `lbu commit` → `SSHPasswordUpdatedMsg` → `unifiedViewReturn` → Configuration tab
-3. Both implement `form.FormSavedMsg` interface for the `UnifiedViewReturn` dispatch
-
-> **Source**: `internal/tui/models/start_stop_script.go` → `StartStopScriptSavedMsg`; `internal/tui/models/ssh_password.go` → `SSHPasswordUpdatedMsg`; `internal/tui/models/message_handlers.go` → `UnifiedViewReturn()`.
-
-### Form framework
-
-Both forms use the shared `ScrollableForm` framework from `internal/tui/models/form/`:
-
-- `StartStopScriptFormModel` implements `form.FormModel` — dynamic positions (toggle changes field count)
-- `SSHPasswordFormModel` implements `form.FormModel` — static positions (three fields: new, confirm, apply)
-- `ScrollableForm` handles viewport scrolling, keyboard dispatch, and cursor management
-
-> **Source**: `internal/tui/models/form/` package; `internal/tui/models/start_stop_script_form.go` → `HandleEnter()`, `BuildPositions()`; `internal/tui/models/ssh_password_form.go` → `HandleEnter()`, `BuildPositions()`.
+> **Behind the scenes**: See [Architecture](../dev/architecture.md) for model hierarchy, message flow, and form framework details.
 
 ---
 

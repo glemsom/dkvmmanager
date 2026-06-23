@@ -124,9 +124,8 @@ See [CLI Flags Reference](docs/reference/cli-flags.md) for all available flags.
 | `↑/↓` / `j/k` | Any list | Navigate |
 | `Enter` / `Space` | Any list | Select |
 | `Esc` | Sub-view | Cancel / return |
-| `r` | VMs tab | Refresh VM list |
 
-Full reference: [Keybindings](docs/user/keybindings.md)
+See [Keybindings](docs/user/keybindings.md) for the full reference.
 
 ## Build & Test
 

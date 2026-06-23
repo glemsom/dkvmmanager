@@ -96,37 +96,7 @@ Configuration tab → scroll to bottom → **Save changes** (always the last ite
 
 ---
 
-## Architecture Notes
-
-### Tab Navigation
-
-The Power tab is one of three top-level tabs:
-
-| Tab | Purpose |
-|-----|---------|
-| VMs | List and start VMs |
-| Configuration | VM and hardware config, scripts, SSH, storage, save |
-| Power | Power off and reboot |
-
-`Tab` cycles through them; each has its own list model (`powerList`, `configList`, `menuList`).
-
-> **Source**: `internal/tui/models/init.go` → `NewMainModelWithConfig()`; `internal/tui/components/tab_model.go`
-
-### Message Flow
-
-```
-User selects Power Off / Reboot / Save changes
-  → handleMenuSelection() → handlePowerSelection() / handleConfigMenuSelection()
-    → runPowerOff() / runReboot() / runLBUCommit()
-      → async command execution (exec.Command)
-        → PowerOffMsg / RebootMsg / LBUCommitMsg
-          → HandlePowerOffMsg / HandleRebootMsg / HandleLBUCommitMsg
-            → statusBar.SetMessage()
-```
-
-All three operations return `tea.Model, tea.Cmd` with no view change — the user stays on the current screen. The status bar provides feedback when the async message arrives.
-
-> **Source**: `internal/tui/models/key_handlers.go` → `handleMenuSelection()`; `internal/tui/models/message_handlers.go` → handler registry
+> **Behind the scenes**: See [Architecture](../dev/architecture.md) for tab navigation model and message flow details.
 
 ---
 
