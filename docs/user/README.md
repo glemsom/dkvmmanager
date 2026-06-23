@@ -11,6 +11,20 @@ See [CONTEXT.md](../CONTEXT.md) for the project domain glossary.
 - [Setup & Prerequisites](setup.md) — install requirements, configure hugepages, IOMMU, LVM
 - [VM Management](vm-management.md) — create your first VM
 
+## Learning Path
+
+New to DKVM Manager? Follow this recommended reading order — each document builds on the previous one.
+
+1. **[Tutorial](tutorial.md)** — create your first VM in 10 minutes
+2. **[Setup & Prerequisites](setup.md)** — host preparation: KVM, IOMMU, hugepages, LVM
+3. **[VM Management](vm-management.md)** — deeper VM operations: create, edit, delete
+4. **[Hardware Configuration](hardware-config.md)** — CPU topology, pinning, PCI/USB passthrough
+5. **[Running VMs](running-vms.md)** — runtime monitoring, logs, metrics
+6. **[Storage](storage.md)** — LVM logical volume creation and disk management
+7. **[Power & Save](power-and-save.md)** — power off, reboot, and saving configuration changes
+
+This complements the alphabetical index below by providing a purpose-driven reading order.
+
 ## Documentation Index
 
 | Section | Description |
