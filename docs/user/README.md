@@ -24,18 +24,22 @@ See [CONTEXT.md](../CONTEXT.md) for the project domain glossary.
 | [Power & Save](power-and-save.md) | Power off, reboot, and saving configuration changes (LBU commit) |
 | [Keybindings](keybindings.md) | Complete keyboard reference for the TUI |
 | [FAQ](faq.md) | Frequently asked questions |
+| [Upgrade & Migration](upgrade.md) | Upgrade binary, Alpine package, version compatibility, migrating to a new host |
 | [Troubleshooting](troubleshooting.md) | Common issues and solutions |
+
+## Understanding DKVM Manager
+
+- [How DKVM Manager Works](../explanation/how-dkvm-manager-works.md) — architecture overview for end users: two-layer config, runner lifecycle, QMP, hugepages, metrics
+- [Understanding LBU](../explanation/understanding-lbu.md) — why `lbu commit` exists, Alpine diskless mode, what persists and what doesn't
 
 ## Quick Reference
 
 | Key | Context | Action |
 |-----|---------|--------|
 | `q` / `Ctrl+C` | Top-level (no VM running) | Quit application |
-| `q` | Running VM view | Stop VM and return to menu |
-| `Esc` | Sub-view (form, dialog) | Cancel / return to parent tab |
 | `Tab` | Top-level | Switch tabs: VMs, Configuration, Power |
 | `↑/↓` / `j/k` | Any list | Navigate items |
 | `Enter` / `Space` | Any list | Select item |
-| `r` | VMs tab | Refresh VM list |
+| `Esc` | Sub-view (form, dialog) | Cancel / return to parent tab |
 
 See [Keybindings](keybindings.md) for the full reference.
