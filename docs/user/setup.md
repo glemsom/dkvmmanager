@@ -241,16 +241,13 @@ mount -o remount,rw /media/usb
 
 ### CLI flags
 
-| Flag | Purpose |
-|------|---------|
-| `-debug` | Enable verbose logging to `debug.log` (disables AltScreen, renders on stderr) |
-| `-dry-run` | Build QEMU command but don't execute it |
-| `-test <scenario>` | Run test scenario and exit (`main_menu`, `vm_create`) |
-| `-skip-mount-check` | Skip `/media/dkvmdata` mount point check |
+See [CLI Flags Reference](../reference/cli-flags.md) for all available flags.
 
 ### Minimum terminal
 
 DKVM requires 80×25 terminal. Warns on smaller sizes but allows continuing.
+
+See [Terminal Capabilities](../terminal-capabilities.md) for detailed analysis of terminal compatibility (box-drawing, CP437 support, color profiles).
 
 ### Debug mode details
 

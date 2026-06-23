@@ -1,5 +1,10 @@
 # DKVM Manager
 
+[![Go version](https://img.shields.io/github/go-mod/go-version/glemsom/dkvmmanager)](https://github.com/glemsom/dkvmmanager/blob/main/go.mod)
+[![License](https://img.shields.io/github/license/glemsom/dkvmmanager)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/glemsom/dkvmmanager)](https://github.com/glemsom/dkvmmanager/releases/latest)
+[![Build status](https://img.shields.io/github/actions/workflow/status/glemsom/dkvmmanager/release-please.yml?branch=main)](https://github.com/glemsom/dkvmmanager/actions)
+
 Terminal UI for managing KVM/QEMU virtual machines on a single Linux host.
 
 > **Part of [DKVM](https://github.com/glemsom/dkvm)** — a KVM-based hypervisor for single-host virtualization. DKVM Manager is the TUI frontend for the DKVM stack.
@@ -15,30 +20,56 @@ Built with Go and [BubbleTea](https://github.com/charmbracelet/bubbletea), offer
 - **Scripts & SSH** — start/stop hook scripts and SSH password management
 - **Power management** — system power off, reboot, and LBU commit for persisting configuration
 
+## Installation
+
+### From GitHub Releases (recommended)
+
+Download the latest pre-built binary for Linux amd64:
+
+```bash
+curl -LO https://github.com/glemsom/dkvmmanager/releases/latest/download/dkvmmanager-linux-amd64
+chmod +x dkvmmanager-linux-amd64
+sudo mv dkvmmanager-linux-amd64 /usr/local/bin/dkvmmanager
+```
+
+Verify the installation:
+
+```bash
+dkvmmanager --help
+```
+
+### Build from Source
+
+Requires Go 1.26+ and Docker:
+
+```bash
+make build
+```
+
+The binary is produced at `./dkvmmanager`.
+
+### Alpine Linux (DKVM host)
+
+On the [DKVM](https://github.com/glemsom/dkvm) hypervisor, install directly:
+
+```bash
+apk add dkvmmanager
+```
+
 ## Quick Start
 
 ```bash
-# Build
-make build
-
-# Run
-./dkvmmanager
+# Run (after installation)
+dkvmmanager
 
 # With debug logging
-./dkvmmanager -debug
+dkvmmanager -debug
 
 # Dry-run (build QEMU command without executing)
-./dkvmmanager -dry-run
+dkvmmanager -dry-run
 ```
 
-### CLI Flags
-
-| Flag | Purpose |
-|------|---------|
-| `-debug` | Verbose logging to `debug.log` |
-| `-dry-run` | Build QEMU command but don't execute |
-| `-test <scenario>` | Run test scenario and exit |
-| `-skip-mount-check` | Skip `/media/dkvmdata` mount point check |
+See [CLI Flags Reference](docs/reference/cli-flags.md) for all available flags.
 
 ### Minimum Requirements
 
@@ -60,6 +91,10 @@ make build
 | [Running VMs](docs/user/running-vms.md) | VM runtime — log viewer, status, metrics, stopping |
 | [Power & Save](docs/user/power-and-save.md) | Power off, reboot, and saving configuration changes (LBU commit) |
 | [Keybindings](docs/user/keybindings.md) | Complete keyboard reference for the TUI |
+| [FAQ](docs/user/faq.md) | Frequently asked questions |
+| [Troubleshooting](docs/user/troubleshooting.md) | Common issues and solutions |
+| [CLI Flags Reference](docs/reference/cli-flags.md) | All command-line flags and options |
+| [Example Scripts](examples/README.md) | Reference scripts for PCI passthrough |
 | [User Guide Index](docs/user/README.md) | Overview of all user documentation |
 
 ### Developer Documentation

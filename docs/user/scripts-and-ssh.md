@@ -202,4 +202,5 @@ Both forms use the shared `ScrollableForm` framework from `internal/tui/models/f
 - [VM Management](vm-management.md) — creating and editing VMs
 - [Running VMs](running-vms.md) — VM lifecycle and script output in log viewer
 - [Hardware Configuration](hardware-config.md) — PCI passthrough device configuration (used by builtin scripts)
+- [Example Scripts](../../examples/README.md) — reference scripts for PCI passthrough
 - [Keybindings](keybindings.md) — complete keyboard reference

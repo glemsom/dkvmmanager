@@ -201,3 +201,4 @@ make build         # via Docker (golang:1.26-alpine)
 - [CONTEXT.md](../../CONTEXT.md) — domain glossary
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) — contribution workflow
 - [ADR 0001: Runner owns the running-VM data plane](../adr/0001-runner-owned-running-vm-data-plane.md) — key architectural decision
+- [Charmbracelet v2 Migration Audit](../charmbracelet-v2-migration-audit.md) — detailed API change checklist for BubbleTea v1→v2 migration
