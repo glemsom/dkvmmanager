@@ -193,7 +193,7 @@ DKVM Manager expects `/media/dkvmdata` to be a **mount point** (not a plain dire
 
 | Path | Purpose |
 |------|---------|
-| `/media/dkvmdata/dkvmmanager/config.yaml` | VM configuration YAML |
+| `/media/dkvmdata/dkvmmanager/config.yaml` | VM configuration YAML — see [VM Config Schema](../reference/vm-config.md) |
 | `/media/dkvmdata/vms/<id>/qemu.log` | Per-VM persisted log |
 | `/media/dkvmdata/vms/<id>/` | Per-VM data (scripts, configs) |
 | `/media/dkvmdata/isos/` | ISO images for VM boot |
@@ -273,23 +273,10 @@ DKVM reads application-level settings from `~/.dkvmmanager.yaml`. If the file do
 >
 > Most users **never need to edit `~/.dkvmmanager.yaml`** — the defaults work well on standard DKVM hosts.
 > The TUI reads/writes `/media/dkvmdata/dkvmmanager/config.yaml` directly when you manage VMs.
-> See [Data Folder & Mount Point](#data-folder--mount-point) for details on the VM config file.
+> See [VM Config Schema](../reference/vm-config.md) for the full VM file structure.
 exist, all defaults below are used. Paths support `~` expansion.
 
-| Field | Default | Description |
-|-------|---------|-------------|
-| `data_folder` | `/media/dkvmdata` | Data folder for VM storage — configs, logs, ISOs, scripts, LVs |
-| `vms_config_file` | `/media/dkvmdata/dkvmmanager/config.yaml` | VM repository YAML path |
-| `reserved_mem_mb` | `4096` | Memory (MB) reserved for the host OS; used for hugepage calculation |
-| `bios_code` | `/usr/share/OVMF/OVMF_CODE.fd` | OVMF UEFI firmware code file — copied per-VM for QEMU |
-| `bios_vars` | `/usr/share/OVMF/OVMF_VARS.fd` | OVMF UEFI firmware variables template — copied per-VM |
-| `network_bridge` | `br0` | Default network bridge name for bridge-mode networking |
-| `qemu_path` | `/usr/bin/qemu-system-x86_64` | QEMU system emulator binary path |
-| `tpm_binary` | `/usr/bin/swtpm` | Software TPM binary path (used when VM TPM is enabled) |
-| `log_file` | `/var/log/dkvm.log` | Application-level log output path |
-| `grub_config_path` | `/media/usb/boot/grub/grub.cfg` | GRUB configuration file — edited by PCI passthrough and vCPU pinning forms |
-
-> **Source**: `internal/config/config.go` → `Config` struct, `DefaultConfig()`.
+See the [App Config Schema](../reference/app-config.md) for the complete field reference with types, defaults, descriptions, and examples.
 ---
 
 ## See Also

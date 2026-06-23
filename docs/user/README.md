@@ -58,3 +58,11 @@ This complements the alphabetical index below by providing a purpose-driven read
 | `Esc` | Sub-view (form, dialog) | Cancel / return to parent tab |
 
 See [Keybindings](keybindings.md) for the full reference.
+
+## Reference Documentation
+
+| Page | Description |
+|------|-------------|
+| [CLI Flags](../reference/cli-flags.md) | All command-line flags (`-debug`, `-dry-run`, `-test`, `-skip-mount-check`) |
+| [App Config Schema](../reference/app-config.md) | `~/.dkvmmanager.yaml` — application settings field reference |
+| [VM Config Schema](../reference/vm-config.md) | `/media/dkvmdata/dkvmmanager/config.yaml` — VM YAML structure field reference |
