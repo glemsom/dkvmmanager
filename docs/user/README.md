@@ -23,6 +23,8 @@ See [CONTEXT.md](../CONTEXT.md) for the project domain glossary.
 | [Running VMs](running-vms.md) | VM runtime: log viewer, status, metrics, stopping |
 | [Power & Save](power-and-save.md) | Power off, reboot, and saving configuration changes (LBU commit) |
 | [Keybindings](keybindings.md) | Complete keyboard reference for the TUI |
+| [FAQ](faq.md) | Frequently asked questions |
+| [Troubleshooting](troubleshooting.md) | Common issues and solutions |
 
 ## Quick Reference
 
