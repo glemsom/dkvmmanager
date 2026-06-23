@@ -105,6 +105,7 @@ See [CLI Flags Reference](docs/reference/cli-flags.md) for all available flags.
 | [CONTEXT.md](CONTEXT.md) | Domain glossary — ubiquitous language for the project |
 | [ADR 0001](docs/adr/0001-runner-owned-running-vm-data-plane.md) | Key architectural decision — runner owns the running-VM data plane |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution workflow, commit conventions, release process |
+| [CHANGELOG.md](CHANGELOG.md) | Release history, version changes, and migration notes |
 
 ### Agent Documentation
 
