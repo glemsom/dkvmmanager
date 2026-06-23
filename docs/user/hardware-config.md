@@ -9,14 +9,7 @@ Configure CPU topology, vCPU pinning, CPU feature flags, and PCI/USB device pass
 - For PCI passthrough: IOMMU enabled, vfio-pci driver loaded (see [setup.md](setup.md))
 - For vCPU pinning: CPU topology must be configured first
 
-## Concepts
-
-- **CPU topology**: Sockets, cores, and threads — how they map to vCPUs presented to the guest. DKVM auto-discovers host topology and lets you allocate physical cores to VMs.
-- **vCPU pinning**: Binding guest vCPUs to specific host pCPUs. Pinning is auto-computed from the CPU topology configuration, aligning guest dies and siblings with host topology.
-- **CPU options**: QEMU CPU model and feature flags. Includes Hyper-V enlightenments, hypervisor stealth, L3 cache topology exposure, and advanced features (x2APIC, invariant TSC, migratable, etc.).
-- **IOMMU groups**: Each PCI device belongs to an IOMMU group. For passthrough, **all devices in a group must be passed through together** (strict mode). DKVM enforces this automatically.
-- **vfio-pci binding**: Binds PCI devices to the vfio-pci kernel driver at boot. DKVM writes `vfio-pci.ids=` to the GRUB `linux` line.
-- **USB passthrough**: Pass USB devices to VMs by vendor:product ID. Scanned from `/sys/bus/usb/devices/`.
+> **You should know**: See [How DKVM Manager Works](../explanation/how-dkvm-manager-works.md) for CPU topology, vCPU pinning, and IOMMU background.
 
 ## Navigation
 

@@ -7,15 +7,7 @@ Configure start/stop hook scripts and the SSH access password for your VMs.
 - VM created (see [VM Management](vm-management.md))
 - For custom scripts: shell scripts accessible from the host filesystem
 
-## Concepts
-
-- **Start script**: Shell script executed before QEMU launches — used for pre-flight setup like mounting filesystems, binding PCI devices to vfio-pci, or preparing host resources.
-- **Stop script**: Shell script executed after QEMU exits — used for teardown like unmounting filesystems or releasing devices.
-- **Builtin mode**: Auto-generated script that handles PCI passthrough device binding (vfio-pci `driver_override`). No user script file needed.
-- **Custom mode**: User-supplied script paths. The runner calls the script with arguments `<start|stop> [device_address_1] [device_address_2] ...`.
-- **SSH password**: Sets the host system password via `chpasswd`, persisted with `lbu commit`. Used for SSH access to the DKVM host.
-
-> **Source**: `internal/vm/vm_runner.go` → `executeStartScript()`, `executeStopScript()`; `internal/vm/script_generator.go` → `GenerateBuiltinScript()`, `GenerateBuiltinStopScript()`.
+> **You should know**: See [How DKVM Manager Works](../explanation/how-dkvm-manager-works.md) for start/stop script concepts.
 
 ---
 

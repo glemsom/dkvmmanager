@@ -8,14 +8,7 @@ Create, edit, and delete virtual machines through the DKVM Manager TUI.
 - `/media/dkvmdata` mounted and writable
 - At least one VM disk path or LVM volume available
 
-## Concepts
-
-- **VM config**: Stored as YAML in the repository file (default: `/media/dkvmdata/dkvmmanager/config.yaml`). Each VM has a unique UUID-based ID, name, disk/CDROM paths, MAC address, network mode, VNC, and TPM settings.
-- **MAC auto-generation**: When creating a VM, a random MAC address is pre-filled using `vmManager.GenerateMAC()`. It can be edited or left empty for auto-regeneration on save.
-- **Network modes**: `bridge` (bridged networking via host bridge) or `nat` (NAT-based). Default is `nat`.
-- **VNC**: Enables remote console access via QEMU's built-in VNC server. When enabled, listens on `0.0.0.0:0` (first available port).
-- **TPM**: Software TPM (swtpm) for guest trusted computing. Requires `swtpm` binary at the configured path.
-- **Validation**: Form validates name (alphanumeric, dash, underscore, space), MAC format (`xx:xx:xx:xx:xx:xx`), and TPM binary existence before save.
+> **You should know**: See [How DKVM Manager Works](../explanation/how-dkvm-manager-works.md) for VM configuration, MAC addresses, and network modes.
 
 ## Navigation
 

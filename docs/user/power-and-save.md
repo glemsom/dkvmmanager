@@ -7,13 +7,7 @@ Power off, reboot the system, and persist configuration changes (LBU commit). Al
 - [Setup completed](setup.md) — `/media/dkvmdata` mounted, KVM configured
 - `lbu` (Local Backup Utility) installed for saving configuration changes
 
-## Concepts
-
-- **LBU (Local Backup Utility)**: Persists configuration changes to the writable overlay. Without `lbu commit`, changes made in the Configuration tab are lost on reboot or power off.
-- **Power off**: Graceful system shutdown via `/sbin/poweroff`. Terminates all running VMs and shuts down the host.
-- **Reboot**: System restart via `/sbin/reboot`. Same termination behavior as power off.
-
-> **Source**: `internal/tui/models/debug.go` → `runLBUCommit()`, `runPowerOff()`, `runReboot()`
+> **You should know**: See [Understanding LBU](../explanation/understanding-lbu.md) for how LBU persists configuration changes.
 
 ---
 

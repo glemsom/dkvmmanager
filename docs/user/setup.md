@@ -8,14 +8,7 @@ Host setup guide covering all prerequisites before using DKVM Manager.
 - Root or sudo access for kernel configuration
 - `/media/dkvmdata` storage volume available
 
-## Concepts
-
-- **Hugepages**: 2 MB memory pages reserved at boot. QEMU uses them as backing for VM guest memory, reducing TLB pressure. Configured via `/proc/sys/vm/nr_hugepages`.
-- **IOMMU**: Input/Output Memory Management Unit — remaps DMA addresses for device isolation. Required for PCI passthrough. Enabled via kernel command-line (`intel_iommu=on` or `amd_iommu=on`).
-- **vfio-pci**: Kernel driver that binds PCI devices for userspace passthrough. Devices bound to vfio-pci are hidden from the host and assigned directly to a VM.
-- **LVM**: Logical Volume Manager — provides flexible disk backends for VMs. Volume Groups (VGs) act as storage pools; Logical Volumes (LVs) are disk images.
-- **GRUB config**: `/media/usb/boot/grub/grub.cfg` — kernel command-line lives here. DKVM Manager edits `linux` lines to add `vfio-pci.ids=`, `isolcpus=`, `nohz_full=`, and `rcu_nocbs=` parameters.
-- **Data folder**: `/media/dkvmdata` — mount point for DKVM data (VM configs, logs, ISOs, scripts, LVs). Must be a mount point (not a plain directory); DKVM checks this at startup.
+> **You should know**: See [How DKVM Manager Works](../explanation/how-dkvm-manager-works.md) for hugepages, IOMMU, and LVM background.
 
 ---
 

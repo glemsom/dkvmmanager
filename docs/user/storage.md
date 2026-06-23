@@ -8,12 +8,7 @@ Create LVM logical volumes and assign disks to virtual machines. The TUI provide
 - Volume group(s) available on the host
 - VM created (see [VM Management](vm-management.md))
 
-## Concepts
-
-- **Logical Volume (LV)**: A block storage device backed by an LVM Volume Group (VG). LVs serve as disk backends for VMs.
-- **Volume Group (VG)**: A pool of physical storage from one or more Physical Volumes (PVs). Free space in a VG determines how large an LV can be.
-- **Disk paths**: In the VM form, each hard disk entry is a path — a regular file (`.img`, `.qcow2`), a block device (`/dev/sda`), or an LVM LV (`/dev/<vg>/<lv>`).
-- **Disk source types**: Three options when adding a disk — disk image file, block device, or LVM logical volume. Each opens a dedicated lister or file browser.
+> **You should know**: See [How DKVM Manager Works](../explanation/how-dkvm-manager-works.md) for LVM concepts (LV, VG, disk paths).
 
 ---
 

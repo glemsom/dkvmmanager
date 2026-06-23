@@ -7,21 +7,7 @@ Start, monitor, and stop virtual machines. The running view provides real-time l
 - VM created (see [VM Management](vm-management.md))
 - Only one VM runs at a time
 
-## Concepts
-
-- **Runner** (`VMRunner`): Owns the QEMU process lifecycle — start, monitor, stop. Created with the VM config, host config, and aggregated `RunConfig`. Runs QEMU as a child process, manages QMP socket connection, dispatches log output to subscribers, and persists logs to disk.
-
-- **QMP client**: Connects to QEMU's QMP (QEMU Machine Protocol) Unix socket. Queries VM status (`query-status`), vCPU thread info (`query-cpus-fast`), block device stats (`query-blockstats`), and balloon size (`query-balloon`).
-
-- **Persisted log**: All QEMU stdout/stderr, plus start/stop script output, is written to `<data>/vms/<id>/qemu.log`. Log is available for post-mortem review even after the VM stops.
-
-- **Metrics snapshot**: CPU (per-vCPU and host process), memory (RSS), disk I/O rates, and balloon size. Refreshed every 2 seconds. Delta math converts raw cumulative counters to per-second rates.
-
-- **Status poll**: VM binary status (`running`, `paused`, `stopped`, etc.) and vCPU thread IDs. Polled every 500ms via QMP. Falls back to process-is-alive check if QMP is unavailable for >5s.
-
-- **Start/stop scripts**: Run before QEMU starts (start script) and after QEMU exits (stop script). Output prefixed with `[start]` / `[stop]` in the log.
-
-> **Source**: `internal/vm/vm_runner.go` → `VMRunner`; `internal/vm/qmp_client.go` → `QMPClientInterface`; `internal/vm/metrics.go` → `Metrics`, `Snapshot()`; `internal/vm/proc.go` → `/proc` readers.
+> **You should know**: See [How DKVM Manager Works](../explanation/how-dkvm-manager-works.md) for the runner, QMP, and metrics background.
 
 ---
 
