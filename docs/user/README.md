@@ -40,6 +40,7 @@ This complements the alphabetical index below by providing a purpose-driven read
 | [FAQ](faq.md) | Frequently asked questions |
 | [Upgrade & Migration](upgrade.md) | Upgrade binary, Alpine package, version compatibility, migrating to a new host |
 | [Troubleshooting](troubleshooting.md) | Common issues and solutions |
+| [Backup & Restore](backup-and-restore.md) | Protect VM configs, LVM volumes, and Alpine overlay; restore after failure |
 
 ## Understanding DKVM Manager
 
