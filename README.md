@@ -50,10 +50,12 @@ The binary is produced at `./dkvmmanager`.
 
 ### Alpine Linux (DKVM host)
 
-On the [DKVM](https://github.com/glemsom/dkvm) hypervisor, install directly:
+On the [DKVM](https://github.com/glemsom/dkvm) hypervisor (or any Alpine Linux system), download the pre-built binary:
 
 ```bash
-apk add dkvmmanager
+curl -LO https://github.com/glemsom/dkvmmanager/releases/latest/download/dkvmmanager-linux-amd64
+chmod +x dkvmmanager-linux-amd64
+sudo mv dkvmmanager-linux-amd64 /usr/local/bin/dkvmmanager
 ```
 
 ## Quick Start
