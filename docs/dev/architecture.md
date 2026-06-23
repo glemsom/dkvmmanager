@@ -30,15 +30,43 @@ Overview of DKVM Manager's internal architecture. Read `CONTEXT.md` first for do
 
 Sequence from create to teardown:
 
-1. **`NewVMRunner(vm, cfg, runCfg)`** — creates runner with VM config and RunConfig
-2. **`Start()`** — builds QEMU command, starts process, connects QMP, runs start script
-3. **QMP negotiation** — handshake, query capabilities
-4. **Poll loops**:
-   - Status poll (500ms): binary status + vCPU threads
-   - Metrics poll (2s): full snapshot from QMP + `/proc`
-   - Log subscription: `Subscribe()` channel for stdout/stderr/script output
-5. **`Stop()`** — QMP `system_powerdown` or quit, waits for exit, runs stop script
-6. **Cleanup** — closes QMP socket, removes pid file, persists final log
+```mermaid
+sequenceDiagram
+    participant C as Caller
+    participant R as Runner
+    participant Q as QEMU
+    participant M as QMP
+    participant P as /proc
+
+    C->>R: NewVMRunner(vm, cfg, runCfg)
+    C->>R: Start()
+    R->>Q: spawn QEMU process
+    R->>M: connect QMP
+    M-->>R: capabilities
+    R->>R: run start script
+
+    par Status poll (500ms)
+        R->>M: query status
+        M-->>R: running state + vCPU TIDs
+    and Metrics poll (2s)
+        R->>M: QMP snapshot
+        R->>P: /proc/<pid>
+        P-->>R: RSS, CPU time
+    and Log subscription
+        R-->>C: Subscribe() channel
+    end
+
+    C->>R: Stop()
+    R->>M: system_powerdown
+    R->>Q: wait for exit
+    R->>R: run stop script
+    R->>R: cleanup
+```
+
+Three poll loops run concurrently on independent cadences:
+- **Status** (500ms): QMP binary status + vCPU thread IDs
+- **Metrics** (2s): full QMP snapshot (`query-cpus`, `query-blockstats`, `query-balloon`) + `/proc/<pid>`
+- **Log**: `Subscribe()` channel streaming stdout, stderr, and script output
 
 ### Source references
 
@@ -68,12 +96,18 @@ type SubViewModel interface {
 
 ### Message Dispatch Flow
 
-1. `MainModel.update()` receives `tea.Msg`
-2. Global keys intercepted first (ESC for sub-view return)
-3. View change / VM lifecycle messages handled
-4. Registry dispatch: if a sub-view is active, message routed to `ActiveModel().Update()`
-5. VMRunning messages (status/log/metrics) bypass registry to avoid breaking poll chains
-6. Fallback: remaining messages hit `handleKeyPress()` for tab/list navigation
+```mermaid
+graph TD
+    A[tea.Msg received by MainModel.update] --> B{Global key?<br/>ESC for sub-view return}
+    B -->|Yes| C[Intercept & handle globally]
+    B -->|No| D{View change /<br/>VM lifecycle msg?}
+    D -->|Yes| E[Handle directly]
+    D -->|No| F{Sub-view active?<br/>view registry check}
+    F -->|Yes| G[Route to ActiveModel.Update]
+    F -->|No| H{VMRunning msg?<br/>status / log / metrics}
+    H -->|Yes| I[Bypass registry,<br/>feed VMRunningModel directly]
+    H -->|No| J[Fallback: handleKeyPress<br/>tab / list navigation]
+```
 
 ### Source references
 
