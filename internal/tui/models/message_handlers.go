@@ -4,7 +4,6 @@ package models
 import (
 	"fmt"
 	"log"
-	"reflect"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
@@ -50,79 +49,48 @@ func (m *MainModel) handleVMStoppedMsg(vsm VMStoppedMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// MessageHandler is a function that processes a message and returns the model/cmd.
-type MessageHandler func(m *MainModel, msg tea.Msg) (tea.Model, tea.Cmd)
-
-// messageHandlers holds registered handlers for specific message types.
-var messageHandlers = make(map[string]MessageHandler)
-
-// RegisterMessageHandler registers a handler for a message type (by name).
-// Package init functions should call this for their message types.
-func RegisterMessageHandler(msgName string, handler MessageHandler) {
-	messageHandlers[msgName] = handler
-}
-
-// init registers all message handlers at package initialization time.
-func init() {
-	// Register handlers for messages that use the unified pattern
-	RegisterMessageHandler("VMCreatedMsg", HandleVMCreatedMsg)
-	RegisterMessageHandler("VMUpdatedMsg", HandleVMUpdatedMsg)
-	RegisterMessageHandler("VMDeletedMsg", HandleVMDeletedMsg)
-	RegisterMessageHandler("PCIVFIOKernelAppliedMsg", HandlePCIVFIOKernelAppliedMsg)
-	RegisterMessageHandler("VCPUCPUKernelAppliedMsg", HandleVCPUCPUKernelAppliedMsg)
-	RegisterMessageHandler("LVCreateUpdatedMsg", HandleLVCreateUpdatedMsg)
-	RegisterMessageHandler("LBUCommitMsg", HandleLBUCommitMsg)
-	RegisterMessageHandler("RebootMsg", HandleRebootMsg)
-	RegisterMessageHandler("PowerOffMsg", HandlePowerOffMsg)
-}
-
-// HandleVMCreatedMsg handles VMCreatedMsg using unified pattern.
-func HandleVMCreatedMsg(m *MainModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-	vcm := msg.(VMCreatedMsg)
+// handleVMCreated handles VMCreatedMsg.
+func (m *MainModel) handleVMCreated(msg VMCreatedMsg) (tea.Model, tea.Cmd) {
 	m.rebuildMenuList()
-	return m.UnifiedViewReturn(fmt.Sprintf("VM '%s' created successfully", vcm.VMName))
+	return m.UnifiedViewReturn(fmt.Sprintf("VM '%s' created successfully", msg.VMName))
 }
 
-// HandleVMUpdatedMsg handles VMUpdatedMsg using unified pattern.
-func HandleVMUpdatedMsg(m *MainModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-	vcm := msg.(VMUpdatedMsg)
+// handleVMUpdated handles VMUpdatedMsg.
+func (m *MainModel) handleVMUpdated(msg VMUpdatedMsg) (tea.Model, tea.Cmd) {
 	m.rebuildMenuList()
-	return m.UnifiedViewReturn(fmt.Sprintf("VM '%s' updated successfully", vcm.VMName))
+	return m.UnifiedViewReturn(fmt.Sprintf("VM '%s' updated successfully", msg.VMName))
 }
 
-// HandleVMDeletedMsg handles VMDeletedMsg using unified pattern.
-func HandleVMDeletedMsg(m *MainModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-	vdm := msg.(VMDeletedMsg)
+// handleVMDeleted handles VMDeletedMsg.
+func (m *MainModel) handleVMDeleted(msg VMDeletedMsg) (tea.Model, tea.Cmd) {
 	m.rebuildMenuList()
-	return m.UnifiedViewReturn(fmt.Sprintf("VM '%s' deleted successfully", vdm.VMName))
+	return m.UnifiedViewReturn(fmt.Sprintf("VM '%s' deleted successfully", msg.VMName))
 }
 
-// HandlePCIVFIOKernelAppliedMsg handles PCIVFIOKernelAppliedMsg with conditional status.
-func HandlePCIVFIOKernelAppliedMsg(m *MainModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-	kam := msg.(PCIVFIOKernelAppliedMsg)
+// handlePCIVFIOKernelApplied handles PCIVFIOKernelAppliedMsg.
+func (m *MainModel) handlePCIVFIOKernelApplied(msg PCIVFIOKernelAppliedMsg) (tea.Model, tea.Cmd) {
 	var status string
-	if kam.Success {
+	if msg.Success {
 		status = "vfio-pci.ids applied to kernel successfully"
 	} else {
-		status = "Apply to kernel failed: " + kam.Error
+		status = "Apply to kernel failed: " + msg.Error
 	}
 	return m.UnifiedViewReturn(status)
 }
 
-// HandleVCPUCPUKernelAppliedMsg handles VCPUCPUKernelAppliedMsg with conditional status.
-func HandleVCPUCPUKernelAppliedMsg(m *MainModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-	kam := msg.(VCPUCPUKernelAppliedMsg)
+// handleVCPUCPUKernelApplied handles VCPUCPUKernelAppliedMsg.
+func (m *MainModel) handleVCPUCPUKernelApplied(msg VCPUCPUKernelAppliedMsg) (tea.Model, tea.Cmd) {
 	var status string
-	if kam.Success {
+	if msg.Success {
 		status = "CPU isolation parameters applied to kernel successfully"
 	} else {
-		status = "Apply to kernel failed: " + kam.Error
+		status = "Apply to kernel failed: " + msg.Error
 	}
 	return m.UnifiedViewReturn(status)
 }
 
-// HandleLVCreateUpdatedMsg handles LVCreateUpdatedMsg with optional preview status.
-func HandleLVCreateUpdatedMsg(m *MainModel, msg tea.Msg) (tea.Model, tea.Cmd) {
+// handleLVCreateUpdated handles LVCreateUpdatedMsg.
+func (m *MainModel) handleLVCreateUpdated(msg LVCreateUpdatedMsg) (tea.Model, tea.Cmd) {
 	// Get status from the active registry model
 	if m.viewRegistry != nil && m.viewRegistry.ActiveName() == ViewLVCreate {
 		if svm, ok := m.viewRegistry.ActiveModel().(*LVCreateModel); ok {
@@ -135,47 +103,43 @@ func HandleLVCreateUpdatedMsg(m *MainModel, msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m.UnifiedViewReturn("Logical volume created successfully")
 }
 
-// HandleLBUCommitMsg handles LBUCommitMsg completion (no view change).
-func HandleLBUCommitMsg(m *MainModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-	lcm := msg.(LBUCommitMsg)
+// handleLBUCommit handles LBUCommitMsg.
+func (m *MainModel) handleLBUCommit(msg LBUCommitMsg) (tea.Model, tea.Cmd) {
 	var status string
-	if lcm.Success {
-		status = "LBU commit: " + lcm.Output
+	if msg.Success {
+		status = "LBU commit: " + msg.Output
 	} else {
-		status = "LBU commit failed: " + lcm.Output
+		status = "LBU commit failed: " + msg.Output
 	}
 	m.statusBar.SetMessage(status)
 	return m, nil
 }
 
-// HandleRebootMsg handles RebootMsg completion (no view change).
-func HandleRebootMsg(m *MainModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-	rm := msg.(RebootMsg)
+// handleReboot handles RebootMsg.
+func (m *MainModel) handleReboot(msg RebootMsg) (tea.Model, tea.Cmd) {
 	var status string
-	if rm.Success {
-		status = "Reboot: " + rm.Output
+	if msg.Success {
+		status = "Reboot: " + msg.Output
 	} else {
-		status = "Reboot failed: " + rm.Output
+		status = "Reboot failed: " + msg.Output
 	}
 	m.statusBar.SetMessage(status)
 	return m, nil
 }
 
-// HandlePowerOffMsg handles PowerOffMsg completion (no view change).
-func HandlePowerOffMsg(m *MainModel, msg tea.Msg) (tea.Model, tea.Cmd) {
-	pom := msg.(PowerOffMsg)
+// handlePowerOff handles PowerOffMsg.
+func (m *MainModel) handlePowerOff(msg PowerOffMsg) (tea.Model, tea.Cmd) {
 	var status string
-	if pom.Success {
-		status = "Power off: " + pom.Output
+	if msg.Success {
+		status = "Power off: " + msg.Output
 	} else {
-		status = "Power off failed: " + pom.Output
+		status = "Power off failed: " + msg.Output
 	}
 	m.statusBar.SetMessage(status)
 	return m, nil
 }
 
 // handleSubViewMsg processes messages from sub-view command execution.
-// It dispatches to registered handlers first, then handles special cases.
 func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 	// FileSelectedMsg and DiskAddedMsg are handled by the VMFormModel's
 	// HandleMessage method via the MessageHandler interface.
@@ -244,15 +208,26 @@ func (m *MainModel) handleSubViewMsg(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Check registry for dynamic handler using type name
-	// Handle both pointer and non-pointer message types
-	msgType := reflect.TypeOf(nextMsg)
-	typeName := msgType.Name()
-	if typeName == "" && msgType.Kind() == reflect.Ptr {
-		typeName = msgType.Elem().Name()
-	}
-	if handler, ok := messageHandlers[typeName]; ok {
-		return handler(m, nextMsg)
+	// Handle unified message types from sub-view command execution
+	switch msg := nextMsg.(type) {
+	case VMCreatedMsg:
+		return m.handleVMCreated(msg)
+	case VMUpdatedMsg:
+		return m.handleVMUpdated(msg)
+	case VMDeletedMsg:
+		return m.handleVMDeleted(msg)
+	case PCIVFIOKernelAppliedMsg:
+		return m.handlePCIVFIOKernelApplied(msg)
+	case VCPUCPUKernelAppliedMsg:
+		return m.handleVCPUCPUKernelApplied(msg)
+	case LVCreateUpdatedMsg:
+		return m.handleLVCreateUpdated(msg)
+	case LBUCommitMsg:
+		return m.handleLBUCommit(msg)
+	case RebootMsg:
+		return m.handleReboot(msg)
+	case PowerOffMsg:
+		return m.handlePowerOff(msg)
 	}
 
 	// Special handling for interface-based messages (form.FormSavedMsg)

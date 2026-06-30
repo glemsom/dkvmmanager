@@ -123,23 +123,23 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// so they always route to the main model regardless of active view.
 	switch msg := msg.(type) {
 	case VMCreatedMsg:
-		return HandleVMCreatedMsg(m, msg)
+		return m.handleVMCreated(msg)
 	case VMUpdatedMsg:
-		return HandleVMUpdatedMsg(m, msg)
+		return m.handleVMUpdated(msg)
 	case VMDeletedMsg:
-		return HandleVMDeletedMsg(m, msg)
+		return m.handleVMDeleted(msg)
 	case LBUCommitMsg:
-		return HandleLBUCommitMsg(m, msg)
+		return m.handleLBUCommit(msg)
 	case RebootMsg:
-		return HandleRebootMsg(m, msg)
+		return m.handleReboot(msg)
 	case PowerOffMsg:
-		return HandlePowerOffMsg(m, msg)
+		return m.handlePowerOff(msg)
 	case PCIVFIOKernelAppliedMsg:
-		return HandlePCIVFIOKernelAppliedMsg(m, msg)
+		return m.handlePCIVFIOKernelApplied(msg)
 	case VCPUCPUKernelAppliedMsg:
-		return HandleVCPUCPUKernelAppliedMsg(m, msg)
+		return m.handleVCPUCPUKernelApplied(msg)
 	case LVCreateUpdatedMsg:
-		return HandleLVCreateUpdatedMsg(m, msg)
+		return m.handleLVCreateUpdated(msg)
 	}
 
 	// Handle WindowSizeMsg before registry dispatch so windowWidth/windowHeight
@@ -183,7 +183,7 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if cmd != nil {
 				nextMsg := cmd()
-				return m.handleSubViewOutput(nextMsg)
+				return m.handleSubViewMsg(nextMsg)
 			}
 			return m, nil
 		}
@@ -528,7 +528,7 @@ func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if modelCmd != nil {
 				nextMsg := modelCmd()
-				return m.handleSubViewOutput(nextMsg)
+				return m.handleSubViewMsg(nextMsg)
 			}
 			return m, nil
 		}
@@ -543,7 +543,7 @@ func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if vmCmd != nil {
 				nextMsg := vmCmd()
-				return m.handleSubViewOutput(nextMsg)
+				return m.handleSubViewMsg(nextMsg)
 			}
 		}
 	case ViewVMSelect:
@@ -590,11 +590,6 @@ func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-// handleSubViewOutput processes messages produced by sub-view command execution
-// (from delegateToSubView). Messages are now handled through the framework's
-// HandleMessage interface, so this just delegates to handleSubViewMsg.
-func (m *MainModel) handleSubViewOutput(nextMsg tea.Msg) (tea.Model, tea.Cmd) {
-	return m.handleSubViewMsg(nextMsg)
-}
+
 
 
