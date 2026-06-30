@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // TestPCIPassthroughConfigPersistence tests that PCI passthrough config
@@ -25,7 +25,7 @@ func TestPCIPassthroughConfigPersistence(t *testing.T) {
 	}
 
 	// Initially, config should be empty
-	var loadedCfg models.PCIPassthroughConfig
+	var loadedCfg domain.PCIPassthroughConfig
 	if err := mgr.Repository().GetConfig("pci_passthrough", &loadedCfg); err != nil {
 		t.Fatalf("GetConfig error: %v", err)
 	}
@@ -34,8 +34,8 @@ func TestPCIPassthroughConfigPersistence(t *testing.T) {
 	}
 
 	// Save a config with one device
-	saveCfg := models.PCIPassthroughConfig{
-		Devices: []models.PCIPassthroughDevice{
+	saveCfg := domain.PCIPassthroughConfig{
+		Devices: []domain.PCIPassthroughDevice{
 			{
 				Address:   "0000:01:00.0",
 				ROMPath:   "/roms/gpu.rom",
@@ -96,8 +96,8 @@ func TestPCIPassthroughConfigMultipleDevices(t *testing.T) {
 	}
 
 	// Save config with multiple devices
-	saveCfg := models.PCIPassthroughConfig{
-		Devices: []models.PCIPassthroughDevice{
+	saveCfg := domain.PCIPassthroughConfig{
+		Devices: []domain.PCIPassthroughDevice{
 			{
 				Address:   "0000:01:00.0",
 				Vendor:    "10de",
@@ -120,7 +120,7 @@ func TestPCIPassthroughConfigMultipleDevices(t *testing.T) {
 		t.Fatalf("SaveConfig error: %v", err)
 	}
 
-	var loadedCfg models.PCIPassthroughConfig
+	var loadedCfg domain.PCIPassthroughConfig
 	if err := mgr.Repository().GetConfig("pci_passthrough", &loadedCfg); err != nil {
 		t.Fatalf("GetConfig error: %v", err)
 	}
@@ -161,8 +161,8 @@ func TestPCIPassthroughConfigOverwrite(t *testing.T) {
 	}
 
 	// Save first config
-	cfg1 := models.PCIPassthroughConfig{
-		Devices: []models.PCIPassthroughDevice{
+	cfg1 := domain.PCIPassthroughConfig{
+		Devices: []domain.PCIPassthroughDevice{
 			{Address: "0000:01:00.0", Vendor: "10de", Device: "1b80", Name: "GPU 1", ClassCode: "0300"},
 		},
 	}
@@ -171,8 +171,8 @@ func TestPCIPassthroughConfigOverwrite(t *testing.T) {
 	}
 
 	// Save second config (overwrite)
-	cfg2 := models.PCIPassthroughConfig{
-		Devices: []models.PCIPassthroughDevice{
+	cfg2 := domain.PCIPassthroughConfig{
+		Devices: []domain.PCIPassthroughDevice{
 			{Address: "0000:02:00.0", Vendor: "1002", Device: "67df", Name: "GPU 2", ClassCode: "0300"},
 		},
 	}
@@ -181,7 +181,7 @@ func TestPCIPassthroughConfigOverwrite(t *testing.T) {
 	}
 
 	// Should have the second config, not the first
-	var loadedCfg models.PCIPassthroughConfig
+	var loadedCfg domain.PCIPassthroughConfig
 	if err := mgr.Repository().GetConfig("pci_passthrough", &loadedCfg); err != nil {
 		t.Fatalf("GetConfig error: %v", err)
 	}
@@ -210,8 +210,8 @@ func TestPCIPassthroughConfigEmptySave(t *testing.T) {
 	}
 
 	// First save a config with a device
-	saveCfg := models.PCIPassthroughConfig{
-		Devices: []models.PCIPassthroughDevice{
+	saveCfg := domain.PCIPassthroughConfig{
+		Devices: []domain.PCIPassthroughDevice{
 			{Address: "0000:01:00.0", Vendor: "10de", Device: "1b80", Name: "GPU", ClassCode: "0300"},
 		},
 	}
@@ -220,12 +220,12 @@ func TestPCIPassthroughConfigEmptySave(t *testing.T) {
 	}
 
 	// Now save empty config
-	emptyCfg := models.PCIPassthroughConfig{Devices: []models.PCIPassthroughDevice{}}
+	emptyCfg := domain.PCIPassthroughConfig{Devices: []domain.PCIPassthroughDevice{}}
 	if err := mgr.Repository().SaveConfig("pci_passthrough", emptyCfg); err != nil {
 		t.Fatalf("Empty save error: %v", err)
 	}
 
-	var loadedCfg models.PCIPassthroughConfig
+	var loadedCfg domain.PCIPassthroughConfig
 	if err := mgr.Repository().GetConfig("pci_passthrough", &loadedCfg); err != nil {
 		t.Fatalf("GetConfig error: %v", err)
 	}

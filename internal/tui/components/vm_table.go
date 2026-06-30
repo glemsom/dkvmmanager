@@ -6,18 +6,18 @@ import (
 	"charm.land/bubbles/v2/table"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
 // VMTable represents a table for displaying VM information
 type VMTable struct {
 	table table.Model
-	vms   []models.VM
+	vms   []domain.VM
 }
 
 // NewVMTable creates a new VM table
-func NewVMTable(vms []models.VM, width, height int) *VMTable {
+func NewVMTable(vms []domain.VM, width, height int) *VMTable {
 	columns := []table.Column{
 		{Title: "Name", Width: 25},
 		{Title: "ID", Width: 20},
@@ -59,7 +59,7 @@ func NewVMTable(vms []models.VM, width, height int) *VMTable {
 }
 
 // vmToRows converts VMs to table rows
-func vmToRows(vms []models.VM) []table.Row {
+func vmToRows(vms []domain.VM) []table.Row {
 	rows := make([]table.Row, len(vms))
 	for i, vm := range vms {
 		mac := vm.MAC
@@ -130,7 +130,7 @@ func (v *VMTable) View() tea.View {
 }
 
 // SelectedVM returns the currently selected VM
-func (v *VMTable) SelectedVM() *models.VM {
+func (v *VMTable) SelectedVM() *domain.VM {
 	if len(v.vms) == 0 {
 		return nil
 	}
@@ -142,7 +142,7 @@ func (v *VMTable) SelectedVM() *models.VM {
 }
 
 // SetVMs updates the VM list
-func (v *VMTable) SetVMs(vms []models.VM) {
+func (v *VMTable) SetVMs(vms []domain.VM) {
 	v.vms = vms
 	rows := vmToRows(vms)
 	v.table.SetRows(rows)

@@ -7,12 +7,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // BuildVFIOIDs builds the vfio-pci.ids parameter value from PCI passthrough devices.
 // Format: "vendor1:device1,vendor2:device2,..."
-func BuildVFIOIDs(devices []models.PCIPassthroughDevice) string {
+func BuildVFIOIDs(devices []domain.PCIPassthroughDevice) string {
 	if len(devices) == 0 {
 		return ""
 	}

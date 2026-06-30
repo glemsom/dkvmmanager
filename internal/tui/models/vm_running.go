@@ -9,7 +9,7 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -61,7 +61,7 @@ type VMMetricsUpdateMsg struct {
 // VMRunningModel displays a running VM with log output and status
 type VMRunningModel struct {
 	// VM info
-	vm     *models.VM
+	vm     *domain.VM
 	runner *vm.VMRunner
 
 	// Log viewport
@@ -94,7 +94,7 @@ type VMRunningModel struct {
 }
 
 // NewVMRunningModel creates a new VM running model
-func NewVMRunningModel(vmObj *models.VM, runner *vm.VMRunner) *VMRunningModel {
+func NewVMRunningModel(vmObj *domain.VM, runner *vm.VMRunner) *VMRunningModel {
 	return &VMRunningModel{
 		vm:          vmObj,
 		runner:      runner,

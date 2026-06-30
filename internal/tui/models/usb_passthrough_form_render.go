@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
@@ -84,7 +84,7 @@ func (m *USBPassthroughFormModel) RenderPosition(pos form.FocusPos, focused bool
 }
 
 // renderDeviceToggle renders a USB device as a toggle line.
-func (m *USBPassthroughFormModel) renderDeviceToggle(dev *models.USBDevice, selected, focused bool) string {
+func (m *USBPassthroughFormModel) renderDeviceToggle(dev *domain.USBDevice, selected, focused bool) string {
 	prefix := "  "
 	if focused {
 		prefix = usbFocusStyle.Render("> ")

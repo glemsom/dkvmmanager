@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 func TestGetCPUOptionsDefaults(t *testing.T) {
@@ -20,7 +20,7 @@ func TestGetCPUOptionsDefaults(t *testing.T) {
 		t.Fatalf("NewRepository error: %v", err)
 	}
 
-	var opts models.CPUOptions
+	var opts domain.CPUOptions
 	if err := repo.GetConfig("cpu_options", &opts); err != nil {
 		t.Fatalf("GetConfig error: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestSaveAndLoadCPUOptions(t *testing.T) {
 	}
 
 	// Save CPU options
-	opts := models.CPUOptions{
+	opts := domain.CPUOptions{
 		HideKVM:     true,
 		VendorID:    "AuthenticAMD",
 		HVRelaxed:   true,
@@ -63,7 +63,7 @@ func TestSaveAndLoadCPUOptions(t *testing.T) {
 	}
 
 	// Load CPU options
-	var loaded models.CPUOptions
+	var loaded domain.CPUOptions
 	if err := repo.GetConfig("cpu_options", &loaded); err != nil {
 		t.Fatalf("GetConfig error: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestCPUOptionsRoundTrip(t *testing.T) {
 	repo1, _ := NewRepository(configFile)
 
 	// Save all options set to true
-	opts := models.CPUOptions{
+	opts := domain.CPUOptions{
 		HideKVM:                true,
 		VendorID:               "GenuineIntel",
 		HVFrequency:            true,
@@ -137,7 +137,7 @@ func TestCPUOptionsRoundTrip(t *testing.T) {
 
 	// Fresh repository (simulates app restart)
 	repo2, _ := NewRepository(configFile)
-	var loaded models.CPUOptions
+	var loaded domain.CPUOptions
 	if err := repo2.GetConfig("cpu_options", &loaded); err != nil {
 		t.Fatalf("GetConfig error: %v", err)
 	}
@@ -168,10 +168,10 @@ func TestCPUOptionsCoexistsWithVMs(t *testing.T) {
 	repo, _ := NewRepository(configFile)
 
 	// Save a VM
-	repo.SaveVM(&models.VM{ID: "0", Name: "test-vm"})
+	repo.SaveVM(&domain.VM{ID: "0", Name: "test-vm"})
 
 	// Save CPU options
-	opts := models.CPUOptions{HideKVM: true, HVRelaxed: true}
+	opts := domain.CPUOptions{HideKVM: true, HVRelaxed: true}
 	repo.SaveConfig("cpu_options", opts)
 
 	// Verify both exist
@@ -180,7 +180,7 @@ func TestCPUOptionsCoexistsWithVMs(t *testing.T) {
 		t.Errorf("Expected 1 VM, got %d", len(vms))
 	}
 
-	var loaded models.CPUOptions
+	var loaded domain.CPUOptions
 	repo.GetConfig("cpu_options", &loaded)
 	if !loaded.HideKVM {
 		t.Errorf("CPU options not preserved after saving VM")
@@ -190,7 +190,7 @@ func TestCPUOptionsCoexistsWithVMs(t *testing.T) {
 	}
 
 	// Save another VM and verify CPU options persist
-	repo.SaveVM(&models.VM{ID: "1", Name: "test-vm-2"})
+	repo.SaveVM(&domain.VM{ID: "1", Name: "test-vm-2"})
 
 	vms, _ = repo.ListVMs()
 	if len(vms) != 2 {

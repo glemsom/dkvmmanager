@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // mockRepositoryForTopology creates a repository with a temporary config file
@@ -44,7 +44,7 @@ func TestGetCPUTopology(t *testing.T) {
 		"use_host_topology": true,
 	})
 
-	var topo models.CPUTopology
+	var topo domain.CPUTopology
 	if err := repo.GetConfig("cpu_topology", &topo); err != nil {
 		t.Fatalf("GetConfig error: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestSaveCPUTopology(t *testing.T) {
 	repo, cleanup := mockRepositoryForTopology(t)
 	defer cleanup()
 
-	topo := models.CPUTopology{
+	topo := domain.CPUTopology{
 		Enabled:         true,
 		SelectedCPUs:    []int{0, 1, 2, 3},
 		UseHostTopology: true,
@@ -82,7 +82,7 @@ func TestSaveCPUTopology(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var loaded models.CPUTopology
+	var loaded domain.CPUTopology
 	if err := repo.GetConfig("cpu_topology", &loaded); err != nil {
 		t.Fatalf("GetConfig error after reload: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestSaveCPUTopologyUseHostTopologyFalse(t *testing.T) {
 	repo, cleanup := mockRepositoryForTopology(t)
 	defer cleanup()
 
-	topo := models.CPUTopology{
+	topo := domain.CPUTopology{
 		Enabled:         true,
 		SelectedCPUs:    []int{0, 2, 4, 6},
 		UseHostTopology: false,
@@ -115,7 +115,7 @@ func TestSaveCPUTopologyUseHostTopologyFalse(t *testing.T) {
 		t.Fatalf("SaveConfig error: %v", err)
 	}
 
-	var loaded models.CPUTopology
+	var loaded domain.CPUTopology
 	if err := repo.GetConfig("cpu_topology", &loaded); err != nil {
 		t.Fatalf("GetConfig error: %v", err)
 	}
@@ -130,7 +130,7 @@ func TestSaveCPUTopologyRoundTripMultiple(t *testing.T) {
 	defer cleanup()
 
 	// Test multiple round-trips
-	testCases := []models.CPUTopology{
+	testCases := []domain.CPUTopology{
 		{Enabled: true, SelectedCPUs: []int{0}, UseHostTopology: true},
 		{Enabled: false, SelectedCPUs: []int{1, 2, 3, 4}, UseHostTopology: false},
 		{Enabled: true, SelectedCPUs: []int{0, 1, 2, 3, 4, 5, 6, 7}, UseHostTopology: true},
@@ -141,7 +141,7 @@ func TestSaveCPUTopologyRoundTripMultiple(t *testing.T) {
 			t.Fatalf("SaveConfig test case %d error: %v", i, err)
 		}
 
-		var loaded models.CPUTopology
+		var loaded domain.CPUTopology
 		if err := repo.GetConfig("cpu_topology", &loaded); err != nil {
 			t.Fatalf("GetConfig test case %d error: %v", i, err)
 		}

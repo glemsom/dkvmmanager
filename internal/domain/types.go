@@ -1,5 +1,5 @@
-// Package models provides data models for DKVM Manager
-package models
+// Package domain provides domain types for DKVM Manager
+package domain
 
 import "time"
 

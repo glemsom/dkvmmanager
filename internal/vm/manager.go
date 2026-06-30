@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // Manager handles virtual machine operations
@@ -53,17 +53,17 @@ func (m *Manager) GetConfig() *config.Config {
 }
 
 // ListVMs returns all configured VMs
-func (m *Manager) ListVMs() ([]models.VM, error) {
+func (m *Manager) ListVMs() ([]domain.VM, error) {
 	return m.repository.ListVMs()
 }
 
 // GetVM returns a VM by ID
-func (m *Manager) GetVM(id string) (*models.VM, error) {
+func (m *Manager) GetVM(id string) (*domain.VM, error) {
 	return m.repository.GetVM(id)
 }
 
 // CreateVM creates a new VM
-func (m *Manager) CreateVM(name string) (*models.VM, error) {
+func (m *Manager) CreateVM(name string) (*domain.VM, error) {
 	// Find next available VM ID
 	vmID, err := m.repository.FindNextAvailableID()
 	if err != nil {
@@ -82,7 +82,7 @@ func (m *Manager) CreateVM(name string) (*models.VM, error) {
 	}
 
 	// Create VM config
-	vm := models.VM{
+	vm := domain.VM{
 		ID:        fmt.Sprintf("%d", vmID),
 		Name:      name,
 		CreatedAt: time.Now(),
@@ -98,7 +98,7 @@ func (m *Manager) CreateVM(name string) (*models.VM, error) {
 }
 
 // CreateVMWithMAC creates a new VM with a specific MAC address (for testing)
-func (m *Manager) CreateVMWithMAC(name, mac string) (*models.VM, error) {
+func (m *Manager) CreateVMWithMAC(name, mac string) (*domain.VM, error) {
 	// Find next available VM ID
 	vmID, err := m.repository.FindNextAvailableID()
 	if err != nil {
@@ -117,7 +117,7 @@ func (m *Manager) CreateVMWithMAC(name, mac string) (*models.VM, error) {
 	}
 
 	// Create VM config with specified MAC
-	vm := models.VM{
+	vm := domain.VM{
 		ID:        fmt.Sprintf("%d", vmID),
 		Name:      name,
 		CreatedAt: time.Now(),
@@ -133,7 +133,7 @@ func (m *Manager) CreateVMWithMAC(name, mac string) (*models.VM, error) {
 }
 
 // SaveVM saves a VM configuration
-func (m *Manager) SaveVM(vm *models.VM) error {
+func (m *Manager) SaveVM(vm *domain.VM) error {
 	return m.repository.SaveVM(vm)
 }
 
@@ -167,7 +167,7 @@ func (m *Manager) ApplyVFIOIDsToKernel() error {
 	}
 
 	// Get current PCI passthrough config
-	var pciCfg models.PCIPassthroughConfig
+	var pciCfg domain.PCIPassthroughConfig
 	if err := m.repository.GetConfig("pci_passthrough", &pciCfg); err != nil {
 		if debugMode {
 			log.Printf("[DEBUG] ApplyVFIOIDsToKernel: failed to get PCI config: %v", err)
@@ -237,7 +237,7 @@ func (m *Manager) ApplyCPUParamsToKernel() error {
 	}
 
 	// Get current vCPU pinning config
-	var pinning models.VCPUPinningGlobal
+	var pinning domain.VCPUPinningGlobal
 	if err := m.repository.GetConfig("vcpu_pinning", &pinning); err != nil {
 		if debugMode {
 			log.Printf("[DEBUG] ApplyCPUParamsToKernel: failed to get vCPU pinning config: %v", err)
@@ -372,7 +372,7 @@ func generateMAC() string {
 
 // buildHostCPUList extracts sorted, deduplicated host CPU IDs from pinning mappings
 // and returns them as a comma-separated string (e.g., "0,1,2,3").
-func buildHostCPUList(mappings []models.VCPUToHostMapping) string {
+func buildHostCPUList(mappings []domain.VCPUToHostMapping) string {
 	cpuSet := make(map[int]bool)
 	for _, m := range mappings {
 		cpuSet[m.HostCPUID] = true

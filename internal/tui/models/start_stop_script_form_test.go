@@ -8,7 +8,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/config"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -273,8 +273,8 @@ func createTestVMManagerForScript(t *testing.T) *vm.Manager {
 	}
 
 	// Pre-populate some PCI config for display in builtin mode
-	pciCfg := models.PCIPassthroughConfig{
-		Devices: []models.PCIPassthroughDevice{
+	pciCfg := domain.PCIPassthroughConfig{
+		Devices: []domain.PCIPassthroughDevice{
 			{Address: "0000:01:00.0", Name: "NVIDIA GPU"},
 		},
 	}

@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
@@ -33,7 +33,7 @@ func (m *CPUTopologyFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd) {
 		return form.ResultNone, nil
 	}
 
-	topo := models.CPUTopology{
+	topo := domain.CPUTopology{
 		Enabled:      true,
 		SelectedCPUs: selectedCPUs,
 	}

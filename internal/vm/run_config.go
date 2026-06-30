@@ -1,19 +1,19 @@
 package vm
 
 import (
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // RunConfig aggregates all optional configuration for VMRunner into a single value.
 // A zero-valued RunConfig is safe to use (no panics, all fields at zero value).
 type RunConfig struct {
-	PCIPassthroughConfig models.PCIPassthroughConfig
-	USBPassthroughConfig models.USBPassthroughConfig
-	CPUOptions           models.CPUOptions
-	CPUTopology          models.CPUTopology
-	HostCPUTopology      models.HostCPUTopology
-	VCPUPinning          models.VCPUPinningGlobal
-	StartStopScript      models.StartStopScript
+	PCIPassthroughConfig domain.PCIPassthroughConfig
+	USBPassthroughConfig domain.USBPassthroughConfig
+	CPUOptions           domain.CPUOptions
+	CPUTopology          domain.CPUTopology
+	HostCPUTopology      domain.HostCPUTopology
+	VCPUPinning          domain.VCPUPinningGlobal
+	StartStopScript      domain.StartStopScript
 	DryRun               bool
 }
 

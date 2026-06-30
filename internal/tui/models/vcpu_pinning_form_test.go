@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
@@ -333,12 +333,12 @@ func newTestVCPUPinningFormModel(t *testing.T) *VCPUPinningFormModel {
 	// Fallback: construct manually for environments without CPU topology
 	formModel = &VCPUPinningFormModel{
 		vmManager: vmManager,
-		hostTopo: models.HostCPUTopology{
-			Dies: []models.CPUDie{
+		hostTopo: domain.HostCPUTopology{
+			Dies: []domain.CPUDie{
 				{
 					ID:   0,
 					Cores: 4,
-					CoreDetails: []models.CPUCore{
+					CoreDetails: []domain.CPUCore{
 						{ID: 0, Threads: []int{0, 1}},
 						{ID: 1, Threads: []int{2, 3}},
 						{ID: 2, Threads: []int{4, 5}},
@@ -349,11 +349,11 @@ func newTestVCPUPinningFormModel(t *testing.T) *VCPUPinningFormModel {
 			TotalCores: 4,
 			TotalCPUs:  8,
 		},
-		topology: models.CPUTopology{
+		topology: domain.CPUTopology{
 			Enabled:      true,
 			SelectedCPUs: []int{0, 1, 2, 3},
 		},
-		pinning:    models.VCPUPinningGlobal{Enabled: false, Mappings: nil},
+		pinning:    domain.VCPUPinningGlobal{Enabled: false, Mappings: nil},
 		errors:     make(map[string]string),
 		focusIndex: 0,
 		scanErr:    nil,

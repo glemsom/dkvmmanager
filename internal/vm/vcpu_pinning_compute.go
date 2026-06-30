@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // ComputePinningFromTopology derives 1:1 host CPU mappings from selected topology.
 // The mapping order is topology-aware: die -> core -> thread.
-func ComputePinningFromTopology(topo models.CPUTopology, host models.HostCPUTopology) (models.VCPUPinningGlobal, error) {
-	result := models.VCPUPinningGlobal{Enabled: false, Mappings: nil}
+func ComputePinningFromTopology(topo domain.CPUTopology, host domain.HostCPUTopology) (domain.VCPUPinningGlobal, error) {
+	result := domain.VCPUPinningGlobal{Enabled: false, Mappings: nil}
 	if !topo.Enabled || len(topo.SelectedCPUs) == 0 {
 		return result, nil
 	}
@@ -51,9 +51,9 @@ func ComputePinningFromTopology(topo models.CPUTopology, host models.HostCPUTopo
 		return threads[i].thread < threads[j].thread
 	})
 
-	mappings := make([]models.VCPUToHostMapping, 0, len(threads))
+	mappings := make([]domain.VCPUToHostMapping, 0, len(threads))
 	for i, th := range threads {
-		mappings = append(mappings, models.VCPUToHostMapping{VCPUID: i, HostCPUID: th.hostCPU})
+		mappings = append(mappings, domain.VCPUToHostMapping{VCPUID: i, HostCPUID: th.hostCPU})
 	}
 
 	result.Mappings = mappings

@@ -3,13 +3,13 @@ package components
 import (
 	"testing"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
-func makeTestVMs(count int) []models.VM {
-	vms := make([]models.VM, count)
+func makeTestVMs(count int) []domain.VM {
+	vms := make([]domain.VM, count)
 	for i := range vms {
-		vms[i] = models.VM{Name: "test-vm"}
+		vms[i] = domain.VM{Name: "test-vm"}
 	}
 	return vms
 }

@@ -7,15 +7,15 @@ import (
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
 // filterPCIBridges removes PCI bridge devices (switch ports, root ports) from the list.
 // Bridges should never be passed through directly — only end devices are valid targets.
-func filterPCIBridges(devices []models.PCIDevice) []models.PCIDevice {
-	var filtered []models.PCIDevice
+func filterPCIBridges(devices []domain.PCIDevice) []domain.PCIDevice {
+	var filtered []domain.PCIDevice
 	for _, d := range devices {
 		if !d.IsBridge {
 			filtered = append(filtered, d)
@@ -30,13 +30,13 @@ type PCIPassthroughFormModel struct {
 	repo          *vm.Repository
 	vmManager     *vm.Manager
 	hostDiscovery vm.HostDiscovery
-	devices       []models.PCIDevice          // All scanned devices
-	config    models.PCIPassthroughConfig // Current config (selected devices)
+	devices       []domain.PCIDevice          // All scanned devices
+	config    domain.PCIPassthroughConfig // Current config (selected devices)
 	selected  map[string]bool             // Quick lookup: address -> selected
 
 	// IOMMU group index: group number -> list of device pointers
 	// Group -1 represents ungrouped devices
-	iommuGroups map[int][]*models.PCIDevice
+	iommuGroups map[int][]*domain.PCIDevice
 
 	// Focus state
 	positions  []form.FocusPos
@@ -71,7 +71,7 @@ func NewPCIPassthroughFormModel(repo *vm.Repository, vmManager *vm.Manager, host
 	allDevices, scanErr := hostDiscovery.ScanPCIDevices()
 
 	// Load existing config
-	var cfg models.PCIPassthroughConfig
+	var cfg domain.PCIPassthroughConfig
 	repo.GetConfig("pci_passthrough", &cfg)
 
 	// Build lookup maps
@@ -99,7 +99,7 @@ func NewPCIPassthroughFormModel(repo *vm.Repository, vmManager *vm.Manager, host
 // buildIOMMUGroups indexes devices by IOMMU group number.
 // Devices with IOMMUGroup < 0 are placed in the -1 (ungrouped) bucket.
 func (m *PCIPassthroughFormModel) buildIOMMUGroups() {
-	m.iommuGroups = make(map[int][]*models.PCIDevice)
+	m.iommuGroups = make(map[int][]*domain.PCIDevice)
 	for i := range m.devices {
 		dev := &m.devices[i]
 		group := dev.IOMMUGroup

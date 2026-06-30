@@ -4,11 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 func TestNewVMTable(t *testing.T) {
-	vms := []models.VM{
+	vms := []domain.VM{
 		{ID: "vm-001", Name: "Test VM 1", MAC: "52:54:00:00:00:01"},
 		{ID: "vm-002", Name: "Test VM 2", MAC: "52:54:00:00:00:02"},
 	}
@@ -25,7 +25,7 @@ func TestNewVMTable(t *testing.T) {
 }
 
 func TestVMTableView(t *testing.T) {
-	vms := []models.VM{
+	vms := []domain.VM{
 		{ID: "vm-001", Name: "Test VM", MAC: "52:54:00:00:00:01"},
 	}
 
@@ -46,7 +46,7 @@ func TestVMTableView(t *testing.T) {
 }
 
 func TestVMTableSelectedVM(t *testing.T) {
-	vms := []models.VM{
+	vms := []domain.VM{
 		{ID: "vm-001", Name: "VM One"},
 		{ID: "vm-002", Name: "VM Two"},
 	}
@@ -64,7 +64,7 @@ func TestVMTableSelectedVM(t *testing.T) {
 }
 
 func TestVMTableSelectedVMEmpty(t *testing.T) {
-	table := NewVMTable([]models.VM{}, 80, 10)
+	table := NewVMTable([]domain.VM{}, 80, 10)
 
 	selected := table.SelectedVM()
 	if selected != nil {
@@ -73,13 +73,13 @@ func TestVMTableSelectedVMEmpty(t *testing.T) {
 }
 
 func TestVMTableSetVMs(t *testing.T) {
-	initial := []models.VM{
+	initial := []domain.VM{
 		{ID: "vm-001", Name: "Initial VM"},
 	}
 
 	table := NewVMTable(initial, 80, 10)
 
-	updated := []models.VM{
+	updated := []domain.VM{
 		{ID: "vm-002", Name: "Updated VM 1"},
 		{ID: "vm-003", Name: "Updated VM 2"},
 	}
@@ -97,7 +97,7 @@ func TestVMTableSetVMs(t *testing.T) {
 }
 
 func TestVMTableSetSize(t *testing.T) {
-	vms := []models.VM{
+	vms := []domain.VM{
 		{ID: "vm-001", Name: "Test VM"},
 	}
 
@@ -109,7 +109,7 @@ func TestVMTableSetSize(t *testing.T) {
 }
 
 func TestVMTableCursor(t *testing.T) {
-	vms := []models.VM{
+	vms := []domain.VM{
 		{ID: "vm-001", Name: "VM One"},
 		{ID: "vm-002", Name: "VM Two"},
 	}
@@ -122,7 +122,7 @@ func TestVMTableCursor(t *testing.T) {
 }
 
 func TestVMTableDisksColumn(t *testing.T) {
-	vms := []models.VM{
+	vms := []domain.VM{
 		{ID: "vm-001", Name: "Test VM", HardDisks: []string{"/dev/sda", "/dev/sdb"}},
 	}
 
@@ -135,7 +135,7 @@ func TestVMTableDisksColumn(t *testing.T) {
 }
 
 func TestVMTableEmptyMAC(t *testing.T) {
-	vms := []models.VM{
+	vms := []domain.VM{
 		{ID: "vm-001", Name: "Test VM"},
 	}
 

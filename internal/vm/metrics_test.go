@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // mockQMPClient implements QMPClientInterface for testing.
@@ -67,7 +67,7 @@ func (m *mockQMPClient) Quit() error            { return nil }
 func (m *mockQMPClient) Events() <-chan QMPEvent { return nil }
 
 func TestSnapshotColdSnapshot(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 
@@ -114,7 +114,7 @@ func TestSnapshotColdSnapshot(t *testing.T) {
 }
 
 func TestSnapshotWarmSnapshot(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 
@@ -176,7 +176,7 @@ func TestSnapshotWarmSnapshot(t *testing.T) {
 }
 
 func TestSnapshotNoQMPClient(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 
@@ -195,7 +195,7 @@ func TestSnapshotNoQMPClient(t *testing.T) {
 }
 
 func TestSnapshotQMPError(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 
@@ -214,7 +214,7 @@ func TestSnapshotQMPError(t *testing.T) {
 // client. The fields are populated with raw counters; the per-disk
 // B/s and IOPS math lives in the warm-snapshot test below.
 func TestSnapshotBlockAndBalloonPopulated(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 
@@ -270,7 +270,7 @@ func TestSnapshotBlockAndBalloonPopulated(t *testing.T) {
 // (QueryBalloon returns 0 with no error via graceful degradation) and when
 // query-blockstats returns an empty array.
 func TestSnapshotBlockAndBalloonGracefulNoBalloon(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 
@@ -305,7 +305,7 @@ func TestSnapshotBlockAndBalloonGracefulNoBalloon(t *testing.T) {
 // On the first call (cold), the B/s and IOPS fields are zero. On the second
 // call, they reflect the delta in raw counters divided by the wall-clock delta.
 func TestSnapshotBlockDelta(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 
@@ -444,7 +444,7 @@ func (c *countingBlockClient) QueryBlockStats() ([]QMPBlockDeviceStats, error) {
 // Snapshot() must be gracefully tolerated — Snapshot returns the metrics
 // with BalloonBytes=0 and no error, and other fields are still populated.
 func TestSnapshotBalloonNotActivatedGraceful(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 
@@ -482,7 +482,7 @@ func TestSnapshotBalloonNotActivatedGraceful(t *testing.T) {
 }
 
 func TestPID(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 
@@ -494,7 +494,7 @@ func TestPID(t *testing.T) {
 // S4 acceptance criteria: given a snapshot with PID=0, host fields are 0
 // and the function does not error. /proc is not consulted.
 func TestSnapshotHostFieldsZeroOnNoPID(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 
@@ -550,7 +550,7 @@ func TestSnapshotHostFieldsZeroOnNoPID(t *testing.T) {
 // S4: Snapshot() returns 0/0 with no error when PID is valid but /proc is
 // unreadable (e.g. process exited between PID discovery and read).
 func TestSnapshotHostFieldsZeroOnUnreadableProc(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 
@@ -584,7 +584,7 @@ func TestSnapshotHostFieldsZeroOnUnreadableProc(t *testing.T) {
 
 // S4: Snapshot() populates host fields when PID is valid and /proc readable.
 func TestSnapshotHostFieldsPopulatedOnValidPID(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 
@@ -622,7 +622,7 @@ func TestSnapshotHostFieldsPopulatedOnValidPID(t *testing.T) {
 
 // S4: warm Snapshot() computes host CPU% from deltas.
 func TestSnapshotHostCPUDelta(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 
@@ -685,7 +685,7 @@ func TestSnapshotHostCPUDelta(t *testing.T) {
 // Issue #66: Snapshot() must call readThreadCPUTime exactly once per vCPU
 // per snapshot call, not twice (double /proc read bug).
 func TestSnapshotReadThreadCPUTimeCalledOncePerVCPU(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 
@@ -743,7 +743,7 @@ func TestSnapshotReadThreadCPUTimeCalledOncePerVCPU(t *testing.T) {
 // Issue #66: Snapshot() with no PID (process not started) should not call
 // readThreadCPUTime at all, and should not double-read.
 func TestSnapshotReadThreadCPUTimeNotCalledWhenNoPID(t *testing.T) {
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
 	runner := NewVMRunner(vmObj, cfg, RunConfig{})
 

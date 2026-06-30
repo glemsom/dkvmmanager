@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // --- computeAPICID tests ---
@@ -64,17 +64,17 @@ func TestComputeAPICID(t *testing.T) {
 
 func TestGenerateAsymmetricCPUDevices_Symmetric(t *testing.T) {
 	// All cores on all dies selected — symmetric case
-	hostTopo := models.HostCPUTopology{
+	hostTopo := domain.HostCPUTopology{
 		TotalCores:     8,
 		TotalCPUs:      16,
 		ThreadsPerCore: 2,
-		Dies: []models.CPUDie{
+		Dies: []domain.CPUDie{
 			{
 				ID:          0,
 				Cores:       4,
 				Threads:     2,
 				LogicalCPUs: []int{0, 1, 2, 3, 4, 5, 6, 7},
-				CoreDetails: []models.CPUCore{
+				CoreDetails: []domain.CPUCore{
 					{ID: 0, DieID: 0, Threads: []int{0, 1}},
 					{ID: 1, DieID: 0, Threads: []int{2, 3}},
 					{ID: 2, DieID: 0, Threads: []int{4, 5}},
@@ -86,7 +86,7 @@ func TestGenerateAsymmetricCPUDevices_Symmetric(t *testing.T) {
 				Cores:       4,
 				Threads:     2,
 				LogicalCPUs: []int{8, 9, 10, 11, 12, 13, 14, 15},
-				CoreDetails: []models.CPUCore{
+				CoreDetails: []domain.CPUCore{
 					{ID: 0, DieID: 1, Threads: []int{8, 9}},
 					{ID: 1, DieID: 1, Threads: []int{10, 11}},
 					{ID: 2, DieID: 1, Threads: []int{12, 13}},
@@ -130,17 +130,17 @@ func TestGenerateAsymmetricCPUDevices_Symmetric(t *testing.T) {
 func TestGenerateAsymmetricCPUDevices_PartialDie(t *testing.T) {
 	// Asymmetric: all cores on die 0, cores 10-15 on die 1 (cores 8-9 reserved)
 	// This matches the user's scenario in the implementation plan.
-	hostTopo := models.HostCPUTopology{
+	hostTopo := domain.HostCPUTopology{
 		TotalCores:     16,
 		TotalCPUs:      32,
 		ThreadsPerCore: 2,
-		Dies: []models.CPUDie{
+		Dies: []domain.CPUDie{
 			{
 				ID:          0,
 				Cores:       8,
 				Threads:     2,
 				LogicalCPUs: []int{0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 22, 23},
-				CoreDetails: []models.CPUCore{
+				CoreDetails: []domain.CPUCore{
 					{ID: 0, DieID: 0, Threads: []int{0, 16}},
 					{ID: 1, DieID: 0, Threads: []int{1, 17}},
 					{ID: 2, DieID: 0, Threads: []int{2, 18}},
@@ -156,7 +156,7 @@ func TestGenerateAsymmetricCPUDevices_PartialDie(t *testing.T) {
 				Cores:       8,
 				Threads:     2,
 				LogicalCPUs: []int{8, 9, 10, 11, 12, 13, 14, 15, 24, 25, 26, 27, 28, 29, 30, 31},
-				CoreDetails: []models.CPUCore{
+				CoreDetails: []domain.CPUCore{
 					{ID: 8, DieID: 1, Threads: []int{8, 24}},
 					{ID: 9, DieID: 1, Threads: []int{9, 25}},
 					{ID: 10, DieID: 1, Threads: []int{10, 26}},
@@ -230,17 +230,17 @@ func TestGenerateAsymmetricCPUDevices_PartialDie(t *testing.T) {
 
 func TestGenerateAsymmetricCPUDevices_SingleDie(t *testing.T) {
 	// Only one die with partial core selection
-	hostTopo := models.HostCPUTopology{
+	hostTopo := domain.HostCPUTopology{
 		TotalCores:     4,
 		TotalCPUs:      8,
 		ThreadsPerCore: 2,
-		Dies: []models.CPUDie{
+		Dies: []domain.CPUDie{
 			{
 				ID:          0,
 				Cores:       4,
 				Threads:     2,
 				LogicalCPUs: []int{0, 1, 2, 3, 4, 5, 6, 7},
-				CoreDetails: []models.CPUCore{
+				CoreDetails: []domain.CPUCore{
 					{ID: 0, DieID: 0, Threads: []int{0, 1}},
 					{ID: 1, DieID: 0, Threads: []int{2, 3}},
 					{ID: 2, DieID: 0, Threads: []int{4, 5}},
@@ -276,17 +276,17 @@ func TestGenerateAsymmetricCPUDevices_SingleDie(t *testing.T) {
 
 func TestGenerateAsymmetricCPUDevices_NoDie0(t *testing.T) {
 	// User selects no CPUs on die 0 — should return an error
-	hostTopo := models.HostCPUTopology{
+	hostTopo := domain.HostCPUTopology{
 		TotalCores:     8,
 		TotalCPUs:      16,
 		ThreadsPerCore: 2,
-		Dies: []models.CPUDie{
+		Dies: []domain.CPUDie{
 			{
 				ID:          0,
 				Cores:       4,
 				Threads:     2,
 				LogicalCPUs: []int{0, 1, 2, 3, 4, 5, 6, 7},
-				CoreDetails: []models.CPUCore{
+				CoreDetails: []domain.CPUCore{
 					{ID: 0, DieID: 0, Threads: []int{0, 1}},
 					{ID: 1, DieID: 0, Threads: []int{2, 3}},
 					{ID: 2, DieID: 0, Threads: []int{4, 5}},
@@ -298,7 +298,7 @@ func TestGenerateAsymmetricCPUDevices_NoDie0(t *testing.T) {
 				Cores:       4,
 				Threads:     2,
 				LogicalCPUs: []int{8, 9, 10, 11, 12, 13, 14, 15},
-				CoreDetails: []models.CPUCore{
+				CoreDetails: []domain.CPUCore{
 					{ID: 0, DieID: 1, Threads: []int{8, 9}},
 					{ID: 1, DieID: 1, Threads: []int{10, 11}},
 					{ID: 2, DieID: 1, Threads: []int{12, 13}},
@@ -321,17 +321,17 @@ func TestGenerateAsymmetricCPUDevices_NoDie0(t *testing.T) {
 }
 
 func TestGenerateAsymmetricCPUDevices_Empty(t *testing.T) {
-	hostTopo := models.HostCPUTopology{
+	hostTopo := domain.HostCPUTopology{
 		TotalCores:     4,
 		TotalCPUs:      8,
 		ThreadsPerCore: 2,
-		Dies: []models.CPUDie{
+		Dies: []domain.CPUDie{
 			{
 				ID:          0,
 				Cores:       4,
 				Threads:     2,
 				LogicalCPUs: []int{0, 1, 2, 3, 4, 5, 6, 7},
-				CoreDetails: []models.CPUCore{
+				CoreDetails: []domain.CPUCore{
 					{ID: 0, DieID: 0, Threads: []int{0, 1}},
 					{ID: 1, DieID: 0, Threads: []int{2, 3}},
 					{ID: 2, DieID: 0, Threads: []int{4, 5}},
@@ -351,17 +351,17 @@ func TestGenerateAsymmetricCPUDevices_Empty(t *testing.T) {
 }
 
 func TestGenerateAsymmetricCPUDevices_InvalidCPU(t *testing.T) {
-	hostTopo := models.HostCPUTopology{
+	hostTopo := domain.HostCPUTopology{
 		TotalCores:     4,
 		TotalCPUs:      8,
 		ThreadsPerCore: 2,
-		Dies: []models.CPUDie{
+		Dies: []domain.CPUDie{
 			{
 				ID:          0,
 				Cores:       4,
 				Threads:     2,
 				LogicalCPUs: []int{0, 1, 2, 3, 4, 5, 6, 7},
-				CoreDetails: []models.CPUCore{
+				CoreDetails: []domain.CPUCore{
 					{ID: 0, DieID: 0, Threads: []int{0, 1}},
 					{ID: 1, DieID: 0, Threads: []int{2, 3}},
 				},

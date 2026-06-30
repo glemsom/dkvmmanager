@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 const (
@@ -36,7 +36,7 @@ func NewUSBScanner() *USBScanner {
 }
 
 // ScanDevices scans the host for all USB devices
-func (s *USBScanner) ScanDevices() ([]models.USBDevice, error) {
+func (s *USBScanner) ScanDevices() ([]domain.USBDevice, error) {
 	output, err := s.runLsusb()
 	if err != nil {
 		return nil, fmt.Errorf("failed to run lsusb: %w", err)
@@ -63,8 +63,8 @@ func (s *USBScanner) runLsusb() (string, error) {
 }
 
 // parseLsusbOutput parses the output of lsusb
-func (s *USBScanner) parseLsusbOutput(output string) []models.USBDevice {
-	var devices []models.USBDevice
+func (s *USBScanner) parseLsusbOutput(output string) []domain.USBDevice {
+	var devices []domain.USBDevice
 
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 	for _, line := range lines {
@@ -82,7 +82,7 @@ func (s *USBScanner) parseLsusbOutput(output string) []models.USBDevice {
 		product := strings.ToLower(matches[4])
 		name := strings.TrimSpace(matches[5])
 
-		devices = append(devices, models.USBDevice{
+		devices = append(devices, domain.USBDevice{
 			Vendor:  vendor,
 			Product: product,
 			Name:    name,
@@ -128,7 +128,7 @@ func (s *USBScanner) findBusDeviceID(vendor, product string) string {
 
 // ValidateUSBDevices checks that the given devices exist on the host.
 // Returns a list of warnings (non-fatal) and errors (fatal).
-func ValidateUSBDevices(devices []models.USBPassthroughDevice) (warnings []string, errors []string) {
+func ValidateUSBDevices(devices []domain.USBPassthroughDevice) (warnings []string, errors []string) {
 	// If no devices to validate, return early
 	if len(devices) == 0 {
 		return

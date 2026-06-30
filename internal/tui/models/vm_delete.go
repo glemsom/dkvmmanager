@@ -7,7 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -18,7 +18,7 @@ type VMDeleteModel struct {
 	vmManager *vm.Manager
 
 	// VM to delete
-	vm *models.VM
+	vm *domain.VM
 
 	// Selected option (0 = No, 1 = Yes)
 	selectedIndex int

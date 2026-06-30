@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 	"github.com/glemsom/dkvmmanager/internal/vm"
@@ -17,7 +17,7 @@ import (
 type VMFormModel struct {
 	mode      FormMode
 	vmManager *vm.Manager
-	vm        *models.VM // non-nil only in edit mode
+	vm        *domain.VM // non-nil only in edit mode
 
 	// Field values
 	vmName      string
@@ -66,7 +66,7 @@ func NewVMFormModel(vmManager *vm.Manager) *VMFormModel {
 }
 
 // NewVMFormModelEdit creates a form in Edit mode pre-filled from an existing VM
-func NewVMFormModelEdit(vmManager *vm.Manager, vmObj *models.VM) *VMFormModel {
+func NewVMFormModelEdit(vmManager *vm.Manager, vmObj *domain.VM) *VMFormModel {
 	hd := vmObj.HardDisks
 	if len(hd) == 0 {
 		hd = []string{""}

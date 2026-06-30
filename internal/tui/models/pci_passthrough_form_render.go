@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
@@ -140,7 +140,7 @@ func (m *PCIPassthroughFormModel) RenderPosition(pos form.FocusPos, focused bool
 
 // renderDeviceToggle renders a PCI device as a toggle line.
 // Format: [X] 0000:01:00.0 [GPU] NVIDIA GeForce GTX 1080 [10de:1b80] (IOMMU:1)
-func (m *PCIPassthroughFormModel) renderDeviceToggle(dev *models.PCIDevice, selected, focused bool) string {
+func (m *PCIPassthroughFormModel) renderDeviceToggle(dev *domain.PCIDevice, selected, focused bool) string {
 	prefix := "  "
 	if focused {
 		prefix = pciFocusStyle.Render("> ")

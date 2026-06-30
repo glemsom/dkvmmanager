@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // TestGenerateBuiltinScriptEmpty tests script generation with no devices
@@ -20,7 +20,7 @@ func TestGenerateBuiltinScriptEmpty(t *testing.T) {
 
 // TestGenerateBuiltinScriptSingleDevice tests script generation with one device
 func TestGenerateBuiltinScriptSingleDevice(t *testing.T) {
-	devices := []models.PCIPassthroughDevice{
+	devices := []domain.PCIPassthroughDevice{
 		{Address: "0000:01:00.0", Name: "NVIDIA GPU"},
 	}
 
@@ -47,7 +47,7 @@ func TestGenerateBuiltinScriptSingleDevice(t *testing.T) {
 
 // TestGenerateBuiltinScriptWithROM tests script generation with ROM path
 func TestGenerateBuiltinScriptWithROM(t *testing.T) {
-	devices := []models.PCIPassthroughDevice{
+	devices := []domain.PCIPassthroughDevice{
 		{Address: "0000:01:00.0", Name: "NVIDIA GPU", ROMPath: "/roms/gpu.rom"},
 	}
 
@@ -69,7 +69,7 @@ func TestGenerateBuiltinScriptWithROM(t *testing.T) {
 
 // TestGenerateBuiltinScriptMultipleDevices tests script generation with multiple devices
 func TestGenerateBuiltinScriptMultipleDevices(t *testing.T) {
-	devices := []models.PCIPassthroughDevice{
+	devices := []domain.PCIPassthroughDevice{
 		{Address: "0000:01:00.0", Name: "NVIDIA GPU"},
 		{Address: "0000:02:00.0", Name: "USB Controller"},
 	}
@@ -110,7 +110,7 @@ func TestGenerateBuiltinStopScript(t *testing.T) {
 
 // TestGenerateBuiltinScriptUnbind tests that script uses driver_override
 func TestGenerateBuiltinScriptUnbind(t *testing.T) {
-	devices := []models.PCIPassthroughDevice{
+	devices := []domain.PCIPassthroughDevice{
 		{Address: "0000:01:00.0", Name: "NVIDIA GPU"},
 	}
 

@@ -6,15 +6,15 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
 // --- Test Fixtures ---
 
 // mockUSBDevices returns a deterministic set of USB devices for testing
-func mockUSBDevices() []models.USBDevice {
-	return []models.USBDevice{
+func mockUSBDevices() []domain.USBDevice {
+	return []domain.USBDevice{
 		{Vendor: "046d", Product: "c52b", Name: "Logitech Unifying Receiver", ID: "1-1.2"},
 		{Vendor: "8087", Product: "0a2b", Name: "Intel Bluetooth", ID: "1-4"},
 		{Vendor: "0781", Product: "5567", Name: "SanDisk Cruzer Blade", ID: "2-1"},
@@ -343,7 +343,7 @@ func TestUSBViewShowsNoDevicesMessage(t *testing.T) {
 	m := &USBPassthroughFormModel{
 		repo:          vmManager.Repository(),
 		hostDiscovery: &noopHostDiscovery{},
-		devices:   []models.USBDevice{},
+		devices:   []domain.USBDevice{},
 		selected:  make(map[string]bool),
 		errors:    make(map[string]string),
 	}
@@ -396,7 +396,7 @@ func TestUSBFormEmptyDevices(t *testing.T) {
 	m := &USBPassthroughFormModel{
 		repo:          vmManager.Repository(),
 		hostDiscovery: &noopHostDiscovery{},
-		devices:   []models.USBDevice{},
+		devices:   []domain.USBDevice{},
 		selected:  make(map[string]bool),
 		errors:    make(map[string]string),
 	}

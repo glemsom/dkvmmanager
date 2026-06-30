@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 func TestGenerateMAC(t *testing.T) {
@@ -92,7 +92,7 @@ func TestListVMsWithMultipleDisks(t *testing.T) {
 	}
 
 	// Create VM using new API
-	vm := &models.VM{
+	vm := &domain.VM{
 		ID:        "0",
 		Name:      "test-vm",
 		HardDisks: []string{"/dev/sda", "/dev/sdb"},
@@ -314,7 +314,7 @@ func TestSaveVMConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vm := &models.VM{
+	vm := &domain.VM{
 		ID:        "7",
 		Name:      "save-test-vm",
 		HardDisks: []string{"/dev/sda", "/dev/sdb"},
@@ -362,7 +362,7 @@ func TestNetworkModePersistence(t *testing.T) {
 	}
 
 	// Save a VM with network_mode set to "bridge"
-	vm := &models.VM{
+	vm := &domain.VM{
 		ID:          "0",
 		Name:        "net-test-vm",
 		MAC:         "aa:bb:cc:dd:ee:ff",
@@ -407,7 +407,7 @@ func TestNetworkModePersistenceRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vm := &models.VM{
+	vm := &domain.VM{
 		ID:          "0",
 		Name:        "roundtrip-vm",
 		NetworkMode: "bridge",

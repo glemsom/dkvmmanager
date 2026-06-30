@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // TestUSBPassthroughConfigPersistence tests that USB passthrough config
@@ -25,7 +25,7 @@ func TestUSBPassthroughConfigPersistence(t *testing.T) {
 	}
 
 	// Initially, config should be empty
-	var loadedCfg models.USBPassthroughConfig
+	var loadedCfg domain.USBPassthroughConfig
 	if err := mgr.Repository().GetConfig("usb_passthrough", &loadedCfg); err != nil {
 		t.Fatalf("GetConfig error: %v", err)
 	}
@@ -34,8 +34,8 @@ func TestUSBPassthroughConfigPersistence(t *testing.T) {
 	}
 
 	// Save a config with one device
-	saveCfg := models.USBPassthroughConfig{
-		Devices: []models.USBPassthroughDevice{
+	saveCfg := domain.USBPassthroughConfig{
+		Devices: []domain.USBPassthroughDevice{
 			{
 				Vendor:  "046d",
 				Product: "c52b",
@@ -87,8 +87,8 @@ func TestUSBPassthroughConfigMultipleDevices(t *testing.T) {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
 
-	saveCfg := models.USBPassthroughConfig{
-		Devices: []models.USBPassthroughDevice{
+	saveCfg := domain.USBPassthroughConfig{
+		Devices: []domain.USBPassthroughDevice{
 			{
 				Vendor:  "046d",
 				Product: "c52b",
@@ -108,7 +108,7 @@ func TestUSBPassthroughConfigMultipleDevices(t *testing.T) {
 		t.Fatalf("SaveConfig error: %v", err)
 	}
 
-	var loadedCfg models.USBPassthroughConfig
+	var loadedCfg domain.USBPassthroughConfig
 	if err := mgr.Repository().GetConfig("usb_passthrough", &loadedCfg); err != nil {
 		t.Fatalf("GetConfig error: %v", err)
 	}
@@ -141,8 +141,8 @@ func TestUSBPassthroughConfigOverwrite(t *testing.T) {
 	}
 
 	// Save initial config
-	saveCfg := models.USBPassthroughConfig{
-		Devices: []models.USBPassthroughDevice{
+	saveCfg := domain.USBPassthroughConfig{
+		Devices: []domain.USBPassthroughDevice{
 			{Vendor: "046d", Product: "c52b", Name: "Logitech", BusID: "1-1"},
 		},
 	}
@@ -151,8 +151,8 @@ func TestUSBPassthroughConfigOverwrite(t *testing.T) {
 	}
 
 	// Overwrite with different config
-	newCfg := models.USBPassthroughConfig{
-		Devices: []models.USBPassthroughDevice{
+	newCfg := domain.USBPassthroughConfig{
+		Devices: []domain.USBPassthroughDevice{
 			{Vendor: "045e", Product: "028e", Name: "Xbox Controller", BusID: "3-2"},
 		},
 	}
@@ -160,7 +160,7 @@ func TestUSBPassthroughConfigOverwrite(t *testing.T) {
 		t.Fatalf("SaveConfig error: %v", err)
 	}
 
-	var loadedCfg models.USBPassthroughConfig
+	var loadedCfg domain.USBPassthroughConfig
 	if err := mgr.Repository().GetConfig("usb_passthrough", &loadedCfg); err != nil {
 		t.Fatalf("GetConfig error: %v", err)
 	}

@@ -73,7 +73,7 @@ custom_script:
 
 Loaded by `LoadRunConfigFromRepo()` into `RunConfig.StartStopScript`.
 
-> **Source**: `internal/models/models.go` → `StartStopScript` struct; `internal/vm/run_config.go` → `LoadRunConfigFromRepo()`.
+> **Source**: `internal/domain/models.go` → `StartStopScript` struct; `internal/vm/run_config.go` → `LoadRunConfigFromRepo()`.
 
 ---
 

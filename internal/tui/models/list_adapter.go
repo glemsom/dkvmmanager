@@ -7,7 +7,7 @@ import (
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
@@ -78,9 +78,9 @@ func (d MenuItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 	fmt.Fprint(w, style.Render(str))
 }
 
-// VMListAdapter wraps models.VM to implement list.Item interface
+// VMListAdapter wraps domain.VM to implement list.Item interface
 type VMListAdapter struct {
-	models.VM
+	domain.VM
 }
 
 func (a VMListAdapter) FilterValue() string { return a.VM.Name }
@@ -124,7 +124,7 @@ func (d VMListItemDelegate) Render(w io.Writer, m list.Model, index int, listIte
 }
 
 // buildVMListAdapter converts VMs to list.Item slice
-func buildVMListAdapter(vms []models.VM) []list.Item {
+func buildVMListAdapter(vms []domain.VM) []list.Item {
 	listItems := make([]list.Item, len(vms))
 	for i, vm := range vms {
 		listItems[i] = VMListAdapter{VM: vm}

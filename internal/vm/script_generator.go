@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // GenerateBuiltinScript generates a builtin start script for PCI passthrough.
 // The script iterates over configured PCI devices and binds the vfio-pci driver.
-func GenerateBuiltinScript(devices []models.PCIPassthroughDevice) (string, error) {
+func GenerateBuiltinScript(devices []domain.PCIPassthroughDevice) (string, error) {
 	if len(devices) == 0 {
 		return "# No PCI devices configured", nil
 	}
