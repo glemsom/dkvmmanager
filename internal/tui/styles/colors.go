@@ -245,8 +245,17 @@ func ActiveBorderStyle() lipgloss.Style {
 		BorderForeground(Colors.Primary)
 }
 
-// ListItemSelectedStyle returns the style for selected list items
+// ListItemSelectedStyle returns the style for selected list items.
+// On the Linux console (TERM=linux), bold is skipped because the console may
+// not properly clear the bold attribute via SGR reset, causing previously-
+// selected items to appear brighter than never-selected ones.
 func ListItemSelectedStyle() lipgloss.Style {
+	if theme.IsTERMLinux() {
+		return lipgloss.NewStyle().
+			Foreground(Colors.Primary).
+			Background(Colors.HoverBackground).
+			PaddingLeft(1)
+	}
 	return lipgloss.NewStyle().
 		Foreground(Colors.Primary).
 		Background(Colors.HoverBackground).

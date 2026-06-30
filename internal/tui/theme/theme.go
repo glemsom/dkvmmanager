@@ -103,16 +103,16 @@ func NewLightTheme() Theme {
 // DefaultTheme returns the default theme (dark).
 var DefaultTheme = NewDarkTheme()
 
-// isTERMLinux reports whether the terminal is the Linux console (TERM=linux),
+// IsTERMLinux reports whether the terminal is the Linux console (TERM=linux),
 // which only supports 8 ANSI colors. Codes 8-15 (bright variants) often render
 // as black, making text invisible on dark backgrounds.
-func isTERMLinux() bool {
+func IsTERMLinux() bool {
 	term := os.Getenv("TERM")
 	return term == "linux" || strings.HasPrefix(term, "linux-")
 }
 
 func init() {
-	if isTERMLinux() {
+	if IsTERMLinux() {
 		// On the Linux console (8 colors), ANSI 8 (bright black) renders
 		// indistinguishable from ANSI 0 (black).  Use ANSI 7 (light gray)
 		// instead so muted/dim text remains visible.
