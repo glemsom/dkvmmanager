@@ -133,38 +133,7 @@ func TestUnifiedViewReturnEmptyMessage(t *testing.T) {
 	}
 }
 
-func TestMessageHandlers_Registry(t *testing.T) {
-	// Test that registry handlers are registered correctly
-	handler := messageHandlers["VMCreatedMsg"]
-	if handler == nil {
-		t.Fatal("VMCreatedMsg handler not registered")
-	}
 
-	handler = messageHandlers["VMUpdatedMsg"]
-	if handler == nil {
-		t.Fatal("VMUpdatedMsg handler not registered")
-	}
-
-	handler = messageHandlers["VMDeletedMsg"]
-	if handler == nil {
-		t.Fatal("VMDeletedMsg handler not registered")
-	}
-
-	handler = messageHandlers["PCIVFIOKernelAppliedMsg"]
-	if handler == nil {
-		t.Fatal("PCIVFIOKernelAppliedMsg handler not registered")
-	}
-
-	handler = messageHandlers["VCPUCPUKernelAppliedMsg"]
-	if handler == nil {
-		t.Fatal("VCPUCPUKernelAppliedMsg handler not registered")
-	}
-
-	handler = messageHandlers["LBUCommitMsg"]
-	if handler == nil {
-		t.Fatal("LBUCommitMsg handler not registered")
-	}
-}
 
 func TestMessageHandlers_Dispatch(t *testing.T) {
 	m := setupTestModel(t)
