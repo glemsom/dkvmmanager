@@ -7,7 +7,7 @@ import (
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 	"github.com/glemsom/dkvmmanager/internal/vm"
@@ -23,8 +23,8 @@ func usbDeviceKey(vendor, product string) string {
 type USBPassthroughFormModel struct {
 	repo          *vm.Repository
 	hostDiscovery vm.HostDiscovery
-	devices       []models.USBDevice          // All scanned devices
-	config    models.USBPassthroughConfig // Current config (selected devices)
+	devices       []domain.USBDevice          // All scanned devices
+	config    domain.USBPassthroughConfig // Current config (selected devices)
 	selected  map[string]bool             // Quick lookup: vendor:product -> selected
 
 	// Focus state
@@ -56,7 +56,7 @@ func NewUSBPassthroughFormModel(repo *vm.Repository, hostDiscovery vm.HostDiscov
 	allDevices, scanErr := hostDiscovery.ScanUSBDevices()
 
 	// Load existing config
-	var cfg models.USBPassthroughConfig
+	var cfg domain.USBPassthroughConfig
 	repo.GetConfig("usb_passthrough", &cfg)
 
 	// Build lookup map
@@ -80,7 +80,7 @@ func NewUSBPassthroughFormModel(repo *vm.Repository, hostDiscovery vm.HostDiscov
 }
 
 // getDeviceByID finds a device by vendor:product key
-func (m *USBPassthroughFormModel) getDeviceByID(id string) *models.USBDevice {
+func (m *USBPassthroughFormModel) getDeviceByID(id string) *domain.USBDevice {
 	for i := range m.devices {
 		if usbDeviceKey(m.devices[i].Vendor, m.devices[i].Product) == id {
 			return &m.devices[i]

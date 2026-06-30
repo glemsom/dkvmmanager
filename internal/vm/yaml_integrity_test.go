@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // TestYAMLIntegrityAfterSave tests the actual YAML file after save operations
@@ -49,7 +49,7 @@ func TestYAMLIntegrityAfterSave(t *testing.T) {
 	// Now edit VM1 (simulating the edit model flow)
 	// First, load VM1 (like NewVMEditModel does)
 	allVMs, _ := mgr.ListVMs()
-	var targetVM *models.VM
+	var targetVM *domain.VM
 	for i := range allVMs {
 		if allVMs[i].ID == vm1.ID {
 			targetVM = &allVMs[i]
@@ -163,7 +163,7 @@ func TestRepositorySavePreservesOtherVMs(t *testing.T) {
 	}
 
 	// Save VM 0
-	vm0 := &models.VM{
+	vm0 := &domain.VM{
 		ID:        "0",
 		Name:      "vm-zero",
 		HardDisks: []string{"/dev/sda"},
@@ -174,7 +174,7 @@ func TestRepositorySavePreservesOtherVMs(t *testing.T) {
 	repo.SaveVM(vm0)
 
 	// Save VM 1
-	vm1 := &models.VM{
+	vm1 := &domain.VM{
 		ID:        "1",
 		Name:      "vm-one",
 		HardDisks: []string{"/dev/sdb"},

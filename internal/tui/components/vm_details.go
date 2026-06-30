@@ -7,12 +7,12 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
 type VMDetailsPanel struct {
-	vm     *models.VM
+	vm     *domain.VM
 	width  int
 	height int
 	title  string
@@ -29,7 +29,7 @@ func NewVMDetailsPanel() *VMDetailsPanel {
 	}
 }
 
-func (p *VMDetailsPanel) SetVM(vm *models.VM) {
+func (p *VMDetailsPanel) SetVM(vm *domain.VM) {
 	p.vm = vm
 }
 
@@ -247,7 +247,7 @@ func (p *VMDetailsPanel) renderActionBar(width int) string {
 	return actionBar
 }
 
-func (p *VMDetailsPanel) SelectedVM() *models.VM {
+func (p *VMDetailsPanel) SelectedVM() *domain.VM {
 	return p.vm
 }
 

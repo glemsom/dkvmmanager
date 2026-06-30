@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // buildQEMUArgs constructs the QEMU command line arguments from VM config
@@ -218,7 +218,7 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 	pciDevices := r.runCfg.PCIPassthroughConfig.Devices
 	// Backward compatibility: if no PCI config but GPUROM is set, use legacy passthrough
 	if len(pciDevices) == 0 && r.vm.GPUROM != "" {
-		pciDevices = []models.PCIPassthroughDevice{
+		pciDevices = []domain.PCIPassthroughDevice{
 			{Address: "0000:01:00.0", ROMPath: r.vm.GPUROM},
 		}
 	}

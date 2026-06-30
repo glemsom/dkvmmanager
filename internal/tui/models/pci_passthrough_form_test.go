@@ -5,31 +5,31 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
 // noopHostDiscovery is a test double that returns empty scans
 type noopHostDiscovery struct{}
 
-func (noopHostDiscovery) ScanPCIDevices() ([]models.PCIDevice, error) {
+func (noopHostDiscovery) ScanPCIDevices() ([]domain.PCIDevice, error) {
 	return nil, nil
 }
 
-func (noopHostDiscovery) ScanUSBDevices() ([]models.USBDevice, error) {
+func (noopHostDiscovery) ScanUSBDevices() ([]domain.USBDevice, error) {
 	return nil, nil
 }
 
-func (noopHostDiscovery) ScanCPUTopology() (models.HostCPUTopology, error) {
-	return models.HostCPUTopology{}, nil
+func (noopHostDiscovery) ScanCPUTopology() (domain.HostCPUTopology, error) {
+	return domain.HostCPUTopology{}, nil
 }
 
 // --- Test Fixtures ---
 
 // mockPCIDevices returns a deterministic set of PCI devices for testing
 // IOMMU groups: Group 1 (GPU + audio), Group 2 (USB), Group -1 (ungrouped)
-func mockPCIDevices() []models.PCIDevice {
-	return []models.PCIDevice{
+func mockPCIDevices() []domain.PCIDevice {
+	return []domain.PCIDevice{
 		{
 			Address:    "0000:01:00.0",
 			Vendor:     "10de",
@@ -498,7 +498,7 @@ func TestPCIFORMSavePreservesSelectedDevices(t *testing.T) {
 	}
 
 	// Verify saved config
-	var saved models.PCIPassthroughConfig
+	var saved domain.PCIPassthroughConfig
 	if err := m.repo.GetConfig("pci_passthrough", &saved); err != nil {
 		t.Fatalf("Failed to load saved PCI config: %v", err)
 	}
@@ -532,7 +532,7 @@ func TestPCIFORMNoROMInSavedConfig(t *testing.T) {
 	}
 	cmd()
 
-	var saved models.PCIPassthroughConfig
+	var saved domain.PCIPassthroughConfig
 	if err := m.repo.GetConfig("pci_passthrough", &saved); err != nil {
 		t.Fatalf("Failed to load saved PCI config: %v", err)
 	}
@@ -552,10 +552,10 @@ func TestPCIFORMEmptyDevices(t *testing.T) {
 		repo:          vmManager.Repository(),
 		vmManager:     vmManager,
 		hostDiscovery: &noopHostDiscovery{},
-		devices:       []models.PCIDevice{},
+		devices:       []domain.PCIDevice{},
 		selected:    make(map[string]bool),
 		errors:      make(map[string]string),
-		iommuGroups: make(map[int][]*models.PCIDevice),
+		iommuGroups: make(map[int][]*domain.PCIDevice),
 	}
 	m.BuildPositions()
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 25})
@@ -580,10 +580,10 @@ func TestPCIFORMViewShowsNoDevicesMessage(t *testing.T) {
 		repo:          vmManager.Repository(),
 		vmManager:     vmManager,
 		hostDiscovery: &noopHostDiscovery{},
-		devices:       []models.PCIDevice{},
+		devices:       []domain.PCIDevice{},
 		selected:    make(map[string]bool),
 		errors:      make(map[string]string),
-		iommuGroups: make(map[int][]*models.PCIDevice),
+		iommuGroups: make(map[int][]*domain.PCIDevice),
 	}
 	m.BuildPositions()
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 25})
@@ -889,7 +889,7 @@ func TestPCIFORMSelectMultipleGroups(t *testing.T) {
 	}
 	cmd()
 
-	var saved models.PCIPassthroughConfig
+	var saved domain.PCIPassthroughConfig
 	if err := m.repo.GetConfig("pci_passthrough", &saved); err != nil {
 		t.Fatalf("Failed to load saved PCI config: %v", err)
 	}
@@ -988,7 +988,7 @@ func TestPCIPassthroughFormModelInterface(t *testing.T) {
 
 // TestFilterPCIBridges verifies that PCI bridge devices are filtered out
 func TestFilterPCIBridges(t *testing.T) {
-	devices := []models.PCIDevice{
+	devices := []domain.PCIDevice{
 		{
 			Address:   "0000:01:00.0",
 			Name:      "NVIDIA GeForce GTX 1080",
@@ -1051,13 +1051,13 @@ func TestFilterPCIBridges(t *testing.T) {
 // TestFilterPCIBridgesEmptyAndAllBridges verifies edge cases
 func TestFilterPCIBridgesEmptyAndAllBridges(t *testing.T) {
 	// Empty input
-	filtered := filterPCIBridges([]models.PCIDevice{})
+	filtered := filterPCIBridges([]domain.PCIDevice{})
 	if len(filtered) != 0 {
 		t.Errorf("Empty input should yield empty output, got %d devices", len(filtered))
 	}
 
 	// All bridges
-	allBridges := []models.PCIDevice{
+	allBridges := []domain.PCIDevice{
 		{Address: "0000:01:00.0", ClassCode: "0604", IsBridge: true},
 		{Address: "0000:02:00.0", ClassCode: "0604", IsBridge: true},
 	}
@@ -1067,7 +1067,7 @@ func TestFilterPCIBridgesEmptyAndAllBridges(t *testing.T) {
 	}
 
 	// No bridges
-	noBridges := []models.PCIDevice{
+	noBridges := []domain.PCIDevice{
 		{Address: "0000:01:00.0", ClassCode: "0300", IsGPU: true},
 		{Address: "0000:02:00.0", ClassCode: "0c03", IsUSB: true},
 	}

@@ -5,11 +5,11 @@ import (
 	"log"
 	"sort"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // ApplyVCPUPinning applies thread affinity based on QMP CPU topology and configured mapping.
-func (r *VMRunner) ApplyVCPUPinning(pinning models.VCPUPinningGlobal) error {
+func (r *VMRunner) ApplyVCPUPinning(pinning domain.VCPUPinningGlobal) error {
 	if !pinning.Enabled || len(pinning.Mappings) == 0 {
 		return nil
 	}

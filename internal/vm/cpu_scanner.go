@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 const (
@@ -37,14 +37,14 @@ func NewCPUScannerWithPath(sysfsPath string) *CPUScanner {
 }
 
 // ScanTopology detects the host CPU topology from sysfs
-func (s *CPUScanner) ScanTopology() (models.HostCPUTopology, error) {
+func (s *CPUScanner) ScanTopology() (domain.HostCPUTopology, error) {
 	cpuDirs, err := s.findOnlineCPUDirs()
 	if err != nil {
-		return models.HostCPUTopology{}, fmt.Errorf("failed to find CPU directories: %w", err)
+		return domain.HostCPUTopology{}, fmt.Errorf("failed to find CPU directories: %w", err)
 	}
 
 	if len(cpuDirs) == 0 {
-		return models.HostCPUTopology{}, fmt.Errorf("no CPU entries found in %s", s.sysfsPath)
+		return domain.HostCPUTopology{}, fmt.Errorf("no CPU entries found in %s", s.sysfsPath)
 	}
 
 	// Collect per-CPU topology info
@@ -99,13 +99,13 @@ func (s *CPUScanner) ScanTopology() (models.HostCPUTopology, error) {
 	}
 
 	// Group by die
-	dieMap := make(map[int]*models.CPUDie)
+	dieMap := make(map[int]*domain.CPUDie)
 	coreThreads := make(map[string][]int) // key: "dieID:coreID" -> thread IDs
 
 	for _, cpu := range cpus {
 		die, ok := dieMap[cpu.dieID]
 		if !ok {
-			die = &models.CPUDie{
+			die = &domain.CPUDie{
 				ID:           cpu.dieID,
 				Threads:      threadsPerCore,
 				L3CacheKB:    s.readL3CacheKB(cpu.dieID),
@@ -137,7 +137,7 @@ func (s *CPUScanner) ScanTopology() (models.HostCPUTopology, error) {
 					key := fmt.Sprintf("%d:%d", die.ID, cpu.coreID)
 					threads := coreThreads[key]
 					sort.Ints(threads)
-					die.CoreDetails = append(die.CoreDetails, models.CPUCore{
+					die.CoreDetails = append(die.CoreDetails, domain.CPUCore{
 						ID:      cpu.coreID,
 						Threads: threads,
 						DieID:   die.ID,
@@ -153,7 +153,7 @@ func (s *CPUScanner) ScanTopology() (models.HostCPUTopology, error) {
 	}
 
 	// Convert map to sorted slice
-	dies := make([]models.CPUDie, 0, len(dieMap))
+	dies := make([]domain.CPUDie, 0, len(dieMap))
 	var dieIDs []int
 	for id := range dieMap {
 		dieIDs = append(dieIDs, id)
@@ -173,7 +173,7 @@ func (s *CPUScanner) ScanTopology() (models.HostCPUTopology, error) {
 		totalCPUs += len(die.LogicalCPUs)
 	}
 
-	return models.HostCPUTopology{
+	return domain.HostCPUTopology{
 		Dies:           dies,
 		TotalCores:     totalCores,
 		TotalCPUs:      totalCPUs,
@@ -399,7 +399,7 @@ func parseCacheSizeKB(s string) int {
 // CPUIndexToTopology maps a logical CPU index to host topology coordinates.
 // Uses HostCPUTopology to find die-id, core-id, thread-id.
 // Returns error if CPU ID is not found in the topology.
-func CPUIndexToTopology(cpuID int, host models.HostCPUTopology) (dieID, coreID, threadID int, err error) {
+func CPUIndexToTopology(cpuID int, host domain.HostCPUTopology) (dieID, coreID, threadID int, err error) {
 	// Search through all dies and cores for this CPU
 	for _, die := range host.Dies {
 		for _, core := range die.CoreDetails {

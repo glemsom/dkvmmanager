@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 const (
@@ -40,7 +40,7 @@ func NewPCIScanner() *PCIScanner {
 }
 
 // ScanDevices scans the host for all PCI devices
-func (s *PCIScanner) ScanDevices() ([]models.PCIDevice, error) {
+func (s *PCIScanner) ScanDevices() ([]domain.PCIDevice, error) {
 	output, err := s.runLspci()
 	if err != nil {
 		return nil, fmt.Errorf("failed to run lspci: %w", err)
@@ -68,8 +68,8 @@ func (s *PCIScanner) runLspci() (string, error) {
 }
 
 // parseLspciOutput parses the output of lspci -nn -D
-func (s *PCIScanner) parseLspciOutput(output string) []models.PCIDevice {
-	var devices []models.PCIDevice
+func (s *PCIScanner) parseLspciOutput(output string) []domain.PCIDevice {
+	var devices []domain.PCIDevice
 
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 	for _, line := range lines {
@@ -96,7 +96,7 @@ func (s *PCIScanner) parseLspciOutput(output string) []models.PCIDevice {
 		// Class 0604 = PCI-to-PCI bridge (PCIe switch ports, root ports, downstream ports)
 		isBridge := classCode == "0604"
 
-		devices = append(devices, models.PCIDevice{
+		devices = append(devices, domain.PCIDevice{
 			Address:    addr,
 			Vendor:     vendor,
 			Device:     device,
@@ -155,7 +155,7 @@ func GetIOMMUGroupDevices(groupNum int) []string {
 
 // ValidatePCIDevices checks that the given devices exist and their IOMMU groups are valid
 // Returns a list of warnings (non-fatal) and errors (fatal)
-func ValidatePCIDevices(devices []models.PCIPassthroughDevice) (warnings []string, errors []string) {
+func ValidatePCIDevices(devices []domain.PCIPassthroughDevice) (warnings []string, errors []string) {
 	scanner := NewPCIScanner()
 	allDevices, err := scanner.ScanDevices()
 	if err != nil {
@@ -164,7 +164,7 @@ func ValidatePCIDevices(devices []models.PCIPassthroughDevice) (warnings []strin
 	}
 
 	// Build lookup
-	deviceMap := make(map[string]models.PCIDevice)
+	deviceMap := make(map[string]domain.PCIDevice)
 	for _, d := range allDevices {
 		deviceMap[d.Address] = d
 	}

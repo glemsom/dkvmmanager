@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // TestSaveAndReloadFromFreshRepository tests saving then reading from a new repository
@@ -17,8 +17,8 @@ func TestSaveAndReloadFromFreshRepository(t *testing.T) {
 
 	// First session: create 2 VMs
 	repo1, _ := NewRepository(configFile)
-	repo1.SaveVM(&models.VM{ID: "0", Name: "vm-zero", HardDisks: []string{"/dev/sda"}, MAC: "aa:bb:cc:dd:ee:ff", VNCListen: "0.0.0.0:0"})
-	repo1.SaveVM(&models.VM{ID: "1", Name: "vm-one", HardDisks: []string{"/dev/sdb"}, MAC: "11:22:33:44:55:66", VNCListen: "0.0.0.0:1"})
+	repo1.SaveVM(&domain.VM{ID: "0", Name: "vm-zero", HardDisks: []string{"/dev/sda"}, MAC: "aa:bb:cc:dd:ee:ff", VNCListen: "0.0.0.0:0"})
+	repo1.SaveVM(&domain.VM{ID: "1", Name: "vm-one", HardDisks: []string{"/dev/sdb"}, MAC: "11:22:33:44:55:66", VNCListen: "0.0.0.0:1"})
 
 	vms, _ := repo1.ListVMs()
 	if len(vms) != 2 {
@@ -33,7 +33,7 @@ func TestSaveAndReloadFromFreshRepository(t *testing.T) {
 	}
 
 	// Edit VM 0 in session 2
-	repo2.SaveVM(&models.VM{ID: "0", Name: "vm-zero-edited", HardDisks: []string{"/dev/sdc"}, MAC: "aa:bb:cc:dd:ee:ff", VNCListen: "0.0.0.0:0"})
+	repo2.SaveVM(&domain.VM{ID: "0", Name: "vm-zero-edited", HardDisks: []string{"/dev/sdc"}, MAC: "aa:bb:cc:dd:ee:ff", VNCListen: "0.0.0.0:0"})
 
 	vms, _ = repo2.ListVMs()
 	if len(vms) != 2 {
@@ -61,12 +61,12 @@ func TestMultipleSequentialSaves(t *testing.T) {
 	repo, _ := NewRepository(configFile)
 
 	// Create 2 VMs
-	repo.SaveVM(&models.VM{ID: "0", Name: "vm-0"})
-	repo.SaveVM(&models.VM{ID: "1", Name: "vm-1"})
+	repo.SaveVM(&domain.VM{ID: "0", Name: "vm-0"})
+	repo.SaveVM(&domain.VM{ID: "1", Name: "vm-1"})
 
 	// Edit VM 0 ten times rapidly
 	for i := 0; i < 10; i++ {
-		repo.SaveVM(&models.VM{ID: "0", Name: "vm-0-edited"})
+		repo.SaveVM(&domain.VM{ID: "0", Name: "vm-0-edited"})
 		vms, err := repo.ListVMs()
 		if err != nil {
 			t.Fatalf("ListVMs error on iteration %d: %v", i, err)
@@ -133,7 +133,7 @@ func TestRealYAMLFormat(t *testing.T) {
 	}
 
 	// Edit VM 0
-	var vm0 *models.VM
+	var vm0 *domain.VM
 	for i := range vms {
 		if vms[i].ID == "0" {
 			vm0 = &vms[i]

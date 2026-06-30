@@ -19,7 +19,7 @@ import (
 
 	"github.com/glemsom/dkvmmanager/internal/config"
 	"github.com/glemsom/dkvmmanager/internal/hugepages"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // Package-level debug mode flag for the vm package
@@ -46,7 +46,7 @@ func SetDryRunMode(enabled bool) {
 
 // VMRunner manages the lifecycle of a running QEMU virtual machine
 type VMRunner struct {
-	vm         *models.VM
+	vm         *domain.VM
 	cfg        *config.Config
 	runCfg     RunConfig
 	cmd        *exec.Cmd
@@ -92,7 +92,7 @@ type VMRunner struct {
 // NewVMRunner creates a new VM runner for the given VM with the provided RunConfig.
 // runCfg aggregates all optional configuration (PCI/USB passthrough, CPU options,
 // topology, pinning, scripts, dry-run). A zero-valued RunConfig is safe to use.
-func NewVMRunner(vm *models.VM, cfg *config.Config, runCfg RunConfig) *VMRunner {
+func NewVMRunner(vm *domain.VM, cfg *config.Config, runCfg RunConfig) *VMRunner {
 	r := &VMRunner{
 		vm:          vm,
 		cfg:         cfg,
@@ -346,7 +346,7 @@ func (r *VMRunner) QMPClient() QMPClientInterface {
 }
 
 // VM returns the VM model
-func (r *VMRunner) VM() *models.VM {
+func (r *VMRunner) VM() *domain.VM {
 	return r.vm
 }
 
@@ -386,7 +386,7 @@ func (r *VMRunner) VCpuCount() int {
 }
 
 // VCPUPinning returns the vCPU pinning configuration
-func (r *VMRunner) VCPUPinning() models.VCPUPinningGlobal {
+func (r *VMRunner) VCPUPinning() domain.VCPUPinningGlobal {
 	return r.runCfg.VCPUPinning
 }
 
@@ -599,12 +599,12 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 }
 
 // PCIPassthroughDevices returns the PCI passthrough devices
-func (r *VMRunner) PCIPassthroughDevices() []models.PCIPassthroughDevice {
+func (r *VMRunner) PCIPassthroughDevices() []domain.PCIPassthroughDevice {
 	return r.runCfg.PCIPassthroughConfig.Devices
 }
 
 // USBPassthroughDevices returns the USB passthrough devices
-func (r *VMRunner) USBPassthroughDevices() []models.USBPassthroughDevice {
+func (r *VMRunner) USBPassthroughDevices() []domain.USBPassthroughDevice {
 	return r.runCfg.USBPassthroughConfig.Devices
 }
 

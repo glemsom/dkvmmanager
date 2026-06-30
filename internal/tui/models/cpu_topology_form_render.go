@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
@@ -127,7 +127,7 @@ func (m *CPUTopologyFormModel) renderAllLines() []string {
 }
 
 // renderCoreLine renders a physical core with its thread info
-func (m *CPUTopologyFormModel) renderCoreLine(core *models.CPUCore, selected, focused bool) string {
+func (m *CPUTopologyFormModel) renderCoreLine(core *domain.CPUCore, selected, focused bool) string {
 	prefix := "  "
 	if focused {
 		prefix = cpuTopoFocusStyle.Render("> ")

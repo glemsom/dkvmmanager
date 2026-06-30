@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"charm.land/bubbles/v2/list"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 func TestMenuItemAdapterFilterValue(t *testing.T) {
@@ -195,7 +195,7 @@ func TestMenuItemDelegateRenderInvalidType(t *testing.T) {
 
 func TestVMListAdapterFilterValue(t *testing.T) {
 	item := VMListAdapter{
-		VM: models.VM{
+		VM: domain.VM{
 			ID:   "vm-001",
 			Name: "Test VM",
 		},
@@ -208,7 +208,7 @@ func TestVMListAdapterFilterValue(t *testing.T) {
 
 func TestVMListAdapterTitle(t *testing.T) {
 	item := VMListAdapter{
-		VM: models.VM{
+		VM: domain.VM{
 			ID:   "vm-002",
 			Name: "My Virtual Machine",
 		},
@@ -222,12 +222,12 @@ func TestVMListAdapterTitle(t *testing.T) {
 func TestVMListAdapterDescription(t *testing.T) {
 	tests := []struct {
 		name string
-		vm   models.VM
+		vm   domain.VM
 		want string
 	}{
 		{
 			name: "VM with harddisks",
-			vm: models.VM{
+			vm: domain.VM{
 				ID:        "vm-001",
 				Name:      "Test",
 				HardDisks: []string{"/dev/sda", "/dev/sdb"},
@@ -236,7 +236,7 @@ func TestVMListAdapterDescription(t *testing.T) {
 		},
 		{
 			name: "VM with cdroms",
-			vm: models.VM{
+			vm: domain.VM{
 				ID:     "vm-002",
 				Name:   "Test",
 				CDROMs: []string{"/isos/ubuntu.iso"},
@@ -245,7 +245,7 @@ func TestVMListAdapterDescription(t *testing.T) {
 		},
 		{
 			name: "VM with both",
-			vm: models.VM{
+			vm: domain.VM{
 				ID:        "vm-003",
 				Name:      "Test",
 				HardDisks: []string{"/dev/sda"},
@@ -255,7 +255,7 @@ func TestVMListAdapterDescription(t *testing.T) {
 		},
 		{
 			name: "VM with no disks",
-			vm: models.VM{
+			vm: domain.VM{
 				ID:   "vm-004",
 				Name: "Test",
 			},
@@ -275,7 +275,7 @@ func TestVMListAdapterDescription(t *testing.T) {
 
 func TestVMListAdapterImplementsListItem(t *testing.T) {
 	item := VMListAdapter{
-		VM: models.VM{ID: "vm-001", Name: "Test"},
+		VM: domain.VM{ID: "vm-001", Name: "Test"},
 	}
 
 	// Compile-time check that VMListAdapter implements list.Item
@@ -312,7 +312,7 @@ func TestVMListItemDelegateImplementsItemDelegate(t *testing.T) {
 func TestVMListItemDelegateRenderSelected(t *testing.T) {
 	d := VMListItemDelegate{}
 	item := VMListAdapter{
-		VM: models.VM{ID: "vm-001", Name: "Test VM"},
+		VM: domain.VM{ID: "vm-001", Name: "Test VM"},
 	}
 
 	items := []list.Item{item}
@@ -334,10 +334,10 @@ func TestVMListItemDelegateRenderSelected(t *testing.T) {
 func TestVMListItemDelegateRenderUnselected(t *testing.T) {
 	d := VMListItemDelegate{}
 	item1 := VMListAdapter{
-		VM: models.VM{ID: "vm-001", Name: "Item 1"},
+		VM: domain.VM{ID: "vm-001", Name: "Item 1"},
 	}
 	item2 := VMListAdapter{
-		VM: models.VM{ID: "vm-002", Name: "Item 2"},
+		VM: domain.VM{ID: "vm-002", Name: "Item 2"},
 	}
 
 	items := []list.Item{item1, item2}
@@ -368,7 +368,7 @@ func TestVMListItemDelegateRenderInvalidType(t *testing.T) {
 }
 
 func TestBuildVMListAdapter(t *testing.T) {
-	vms := []models.VM{
+	vms := []domain.VM{
 		{ID: "vm-001", Name: "Alpha"},
 		{ID: "vm-002", Name: "Beta"},
 		{ID: "vm-003", Name: "Gamma"},

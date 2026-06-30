@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/viper"
 )
@@ -56,8 +56,8 @@ func (r *Repository) save() error {
 // === VM Persistence ===
 
 // ListVMs returns all configured VMs
-func (r *Repository) ListVMs() ([]models.VM, error) {
-	var vms []models.VM
+func (r *Repository) ListVMs() ([]domain.VM, error) {
+	var vms []domain.VM
 
 	// Get all VMs from the config
 	vmsMap := r.vip.GetStringMap("vms")
@@ -79,7 +79,7 @@ func (r *Repository) ListVMs() ([]models.VM, error) {
 }
 
 // GetVM returns a VM by ID
-func (r *Repository) GetVM(id string) (*models.VM, error) {
+func (r *Repository) GetVM(id string) (*domain.VM, error) {
 	vmKey := fmt.Sprintf("vms.%s", id)
 	if !r.vip.IsSet(vmKey) {
 		return nil, fmt.Errorf("VM not found: %s", id)
@@ -92,7 +92,7 @@ func (r *Repository) GetVM(id string) (*models.VM, error) {
 }
 
 // SaveVM saves a VM to the config
-func (r *Repository) SaveVM(vm *models.VM) error {
+func (r *Repository) SaveVM(vm *domain.VM) error {
 	if vm.ID == "" {
 		return fmt.Errorf("VM ID is required")
 	}
@@ -210,8 +210,8 @@ func (r *Repository) SaveConfig(key string, src interface{}) error {
 // === Helpers ===
 
 // unmarshalVM converts a map to a VM struct
-func (r *Repository) unmarshalVM(id string, data map[string]interface{}) models.VM {
-	vm := models.VM{
+func (r *Repository) unmarshalVM(id string, data map[string]interface{}) domain.VM {
+	vm := domain.VM{
 		ID:   id,
 		Name: getString(data, "name"),
 	}

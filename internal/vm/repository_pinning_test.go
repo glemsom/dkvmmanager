@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 func TestRepositoryVCPUPinningPersistence(t *testing.T) {
@@ -13,11 +13,11 @@ func TestRepositoryVCPUPinningPersistence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRepository: %v", err)
 	}
-	in := models.VCPUPinningGlobal{Enabled: true, Mappings: []models.VCPUToHostMapping{{VCPUID: 0, HostCPUID: 4}, {VCPUID: 1, HostCPUID: 5}}}
+	in := domain.VCPUPinningGlobal{Enabled: true, Mappings: []domain.VCPUToHostMapping{{VCPUID: 0, HostCPUID: 4}, {VCPUID: 1, HostCPUID: 5}}}
 	if err := repo.SaveConfig("vcpu_pinning", in); err != nil {
 		t.Fatalf("SaveConfig: %v", err)
 	}
-	var out models.VCPUPinningGlobal
+	var out domain.VCPUPinningGlobal
 	if err := repo.GetConfig("vcpu_pinning", &out); err != nil {
 		t.Fatalf("GetConfig: %v", err)
 	}
@@ -33,7 +33,7 @@ func TestRepositoryVCPUPinningPersistence(t *testing.T) {
 	if err := mgr.Repository().SaveConfig("vcpu_pinning", in); err != nil {
 		t.Fatalf("manager SaveConfig: %v", err)
 	}
-	var mgrOut models.VCPUPinningGlobal
+	var mgrOut domain.VCPUPinningGlobal
 	if err := mgr.Repository().GetConfig("vcpu_pinning", &mgrOut); err != nil {
 		t.Fatalf("manager GetConfig: %v", err)
 	}

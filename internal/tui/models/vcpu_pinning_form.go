@@ -6,7 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -24,13 +24,13 @@ type VCPUPinningFormModel struct {
 	repo      *vm.Repository
 
 	// Host topology data (read-only, for display)
-	hostTopo models.HostCPUTopology
+	hostTopo domain.HostCPUTopology
 
 	// Global CPU topology (read-only, for computing pinning)
-	topology models.CPUTopology
+	topology domain.CPUTopology
 
 	// Global configuration
-	pinning models.VCPUPinningGlobal
+	pinning domain.VCPUPinningGlobal
 
 	// Use host topology toggle (stored in CPU topology config)
 	useHostTopology bool
@@ -66,14 +66,14 @@ func NewVCPUPinningFormModel(vmManager *vm.Manager, repo *vm.Repository) (*VCPUP
 	hostTopo, scanErr := scanner.ScanTopology()
 
 	// Load global CPU topology config (needed to compute pinning)
-	var topology models.CPUTopology
+	var topology domain.CPUTopology
 	err := repo.GetConfig("cpu_topology", &topology)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load CPU topology: %w", err)
 	}
 
 	// Load global vCPU pinning config
-	var pinning models.VCPUPinningGlobal
+	var pinning domain.VCPUPinningGlobal
 	err = repo.GetConfig("vcpu_pinning", &pinning)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load vcpu pinning: %w", err)

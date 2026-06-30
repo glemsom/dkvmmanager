@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -17,13 +17,13 @@ func (m *USBPassthroughFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd
 	m.warnings = nil
 
 	// Build config from selected devices
-	var devices []models.USBPassthroughDevice
+	var devices []domain.USBPassthroughDevice
 	for _, dev := range m.devices {
 		key := usbDeviceKey(dev.Vendor, dev.Product)
 		if !m.selected[key] {
 			continue
 		}
-		devices = append(devices, models.USBPassthroughDevice{
+		devices = append(devices, domain.USBPassthroughDevice{
 			Vendor:  dev.Vendor,
 			Product: dev.Product,
 			Name:    dev.Name,
@@ -38,7 +38,7 @@ func (m *USBPassthroughFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd
 		return form.ResultNone, nil
 	}
 
-	cfg := models.USBPassthroughConfig{
+	cfg := domain.USBPassthroughConfig{
 		Devices: devices,
 	}
 

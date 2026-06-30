@@ -1,5 +1,5 @@
-// Package models provides tests for data models
-package models
+// Package domain provides tests for domain types
+package domain
 
 import (
 	"testing"

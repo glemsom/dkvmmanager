@@ -4,7 +4,7 @@ package models
 import (
 	"strconv"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 )
 
@@ -89,7 +89,7 @@ func (m *PCIPassthroughFormModel) currentPos() form.FocusPos {
 }
 
 // getDeviceByAddr finds a device by PCI address
-func (m *PCIPassthroughFormModel) getDeviceByAddr(addr string) *models.PCIDevice {
+func (m *PCIPassthroughFormModel) getDeviceByAddr(addr string) *domain.PCIDevice {
 	for i := range m.devices {
 		if m.devices[i].Address == addr {
 			return &m.devices[i]

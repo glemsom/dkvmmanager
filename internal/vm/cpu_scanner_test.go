@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // createMockSysfs creates a fake sysfs tree for testing CPU topology detection.
@@ -301,16 +301,16 @@ func TestCPUScannerAsymmetricL3(t *testing.T) {
 
 func TestCPUIndexToTopology(t *testing.T) {
 	// Build a mock host topology matching the mock sysfs created by createMockSysfs
-	hostTopo := models.HostCPUTopology{
+	hostTopo := domain.HostCPUTopology{
 		TotalCores:      8,
 		TotalCPUs:     16,
 		ThreadsPerCore: 2,
-		Dies: []models.CPUDie{
+		Dies: []domain.CPUDie{
 			{
 				ID:     0,
 				Cores:  4,
 				Threads: 2,
-				CoreDetails: []models.CPUCore{
+				CoreDetails: []domain.CPUCore{
 					{ID: 0, DieID: 0, Threads: []int{0, 1}},
 					{ID: 1, DieID: 0, Threads: []int{2, 3}},
 					{ID: 2, DieID: 0, Threads: []int{4, 5}},
@@ -321,7 +321,7 @@ func TestCPUIndexToTopology(t *testing.T) {
 				ID:     1,
 				Cores:  4,
 				Threads: 2,
-				CoreDetails: []models.CPUCore{
+				CoreDetails: []domain.CPUCore{
 					{ID: 0, DieID: 1, Threads: []int{8, 9}},
 					{ID: 1, DieID: 1, Threads: []int{10, 11}},
 					{ID: 2, DieID: 1, Threads: []int{12, 13}},
@@ -376,7 +376,7 @@ func TestCPUIndexToTopology(t *testing.T) {
 }
 
 func TestCPUIndexToTopologyEmpty(t *testing.T) {
-	hostTopo := models.HostCPUTopology{}
+	hostTopo := domain.HostCPUTopology{}
 
 	_, _, _, err := CPUIndexToTopology(0, hostTopo)
 	if err == nil {

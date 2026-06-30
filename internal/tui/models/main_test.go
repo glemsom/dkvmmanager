@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // hasFilesRecursive returns true if dir or any of its subdirectories
@@ -271,4 +271,4 @@ func TestVMDeletedMsgStruct(t *testing.T) {
 }
 
 // Ensure the VM model used in tests is valid
-var _ models.VM = models.VM{}
+var _ domain.VM = domain.VM{}

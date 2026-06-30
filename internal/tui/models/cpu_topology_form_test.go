@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -137,7 +137,7 @@ func TestCPUTopologyFormSave(t *testing.T) {
 	}
 
 	// Verify saved config
-	var savedTopo models.CPUTopology
+	var savedTopo domain.CPUTopology
 	vmManager.Repository().GetConfig("cpu_topology", &savedTopo)
 	if !savedTopo.Enabled {
 		t.Errorf("Saved CPUTopology.Enabled = false, want true")
@@ -318,4 +318,4 @@ func TestCPUTopologyFormModelInterface(t *testing.T) {
 var _ = vm.NewManager
 
 // Ensure models package is used
-var _ = models.CPUTopology{}
+var _ = domain.CPUTopology{}

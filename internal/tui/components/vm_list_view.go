@@ -5,19 +5,19 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
 type VMListView struct {
-	vms     []models.VM
+	vms     []domain.VM
 	cursor  int
 	width   int
 	height  int
 	focused bool
 }
 
-func NewVMListView(vms []models.VM, width, height int) *VMListView {
+func NewVMListView(vms []domain.VM, width, height int) *VMListView {
 	return &VMListView{
 		vms:     vms,
 		cursor:  0,
@@ -27,7 +27,7 @@ func NewVMListView(vms []models.VM, width, height int) *VMListView {
 	}
 }
 
-func (v *VMListView) SetVMs(vms []models.VM) {
+func (v *VMListView) SetVMs(vms []domain.VM) {
 	v.vms = vms
 	if v.cursor >= len(vms) && len(vms) > 0 {
 		v.cursor = len(vms) - 1
@@ -73,7 +73,7 @@ func (v *VMListView) MoveDown() bool {
 	return false
 }
 
-func (v *VMListView) SelectedVM() *models.VM {
+func (v *VMListView) SelectedVM() *domain.VM {
 	if v.cursor >= 0 && v.cursor < len(v.vms) {
 		return &v.vms[v.cursor]
 	}

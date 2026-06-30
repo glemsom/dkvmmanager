@@ -11,7 +11,7 @@ Overview of DKVM Manager's internal architecture. Read `CONTEXT.md` first for do
 | `internal/tui/components` | Reusable UI components (tabs, status bar, breadcrumbs, dual pane, VM cards/table) |
 | `internal/tui/styles` | Lipgloss style definitions |
 | `internal/config` | Configuration file loading |
-| `internal/models` | Shared domain types (VM struct) |
+| `internal/domain` | Shared domain types (VM struct) |
 | `internal/hugepages` | Hugepage detection and configuration |
 | `internal/version` | Version constant |
 

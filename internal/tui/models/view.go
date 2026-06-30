@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 	"github.com/glemsom/dkvmmanager/internal/version"
@@ -175,7 +175,7 @@ func (m *MainModel) renderVMsTabWithWidth(width int) string {
 
 	m.menuList.SetSize(leftWidth, height)
 
-	var selectedVM *models.VM
+	var selectedVM *domain.VM
 	if m.selectedIndex >= 0 && m.selectedIndex < len(m.menuItems) {
 		selectedVM = m.menuItems[m.selectedIndex].VMData
 	}
@@ -195,7 +195,7 @@ func (m *MainModel) renderVMsTabWithWidth(width int) string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, "  ", rightPanel)
 }
 
-func renderVMDetail(vm *models.VM, width, height int) string {
+func renderVMDetail(vm *domain.VM, width, height int) string {
 	headerStyle := styles.DetailHeaderStyle()
 	labelStyle := styles.DetailLabelStyle()
 	valueStyle := styles.DetailValueStyle()

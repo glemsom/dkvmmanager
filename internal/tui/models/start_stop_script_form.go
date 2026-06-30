@@ -4,7 +4,7 @@ package models
 import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -13,8 +13,8 @@ import (
 // It implements the form.FormModel interface for use with ScrollableForm.
 type StartStopScriptFormModel struct {
 	repo        *vm.Repository
-	config      models.StartStopScript
-	pciConfig models.PCIPassthroughConfig // For displaying in builtin mode
+	config      domain.StartStopScript
+	pciConfig domain.PCIPassthroughConfig // For displaying in builtin mode
 
 	// Focus state
 	positions  []form.FocusPos
@@ -41,9 +41,9 @@ type StartStopScriptFormModel struct {
 
 // NewStartStopScriptFormModel creates a new StartStopScript form model
 func NewStartStopScriptFormModel(repo *vm.Repository) (*StartStopScriptFormModel, error) {
-	var cfg models.StartStopScript
+	var cfg domain.StartStopScript
 	repo.GetConfig("custom_script", &cfg)
-	var pciCfg models.PCIPassthroughConfig
+	var pciCfg domain.PCIPassthroughConfig
 	repo.GetConfig("pci_passthrough", &pciCfg)
 
 	m := &StartStopScriptFormModel{

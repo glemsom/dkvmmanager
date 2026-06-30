@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -17,12 +17,12 @@ func (m *PCIPassthroughFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd
 	m.warnings = nil
 
 	// Build config from selected devices
-	var devices []models.PCIPassthroughDevice
+	var devices []domain.PCIPassthroughDevice
 	for _, dev := range m.devices {
 		if !m.selected[dev.Address] {
 			continue
 		}
-		devices = append(devices, models.PCIPassthroughDevice{
+		devices = append(devices, domain.PCIPassthroughDevice{
 			Address:   dev.Address,
 			ROMPath:   "", // ROM field removed from UI; preserved for backward compatibility
 			Vendor:    dev.Vendor,
@@ -39,7 +39,7 @@ func (m *PCIPassthroughFormModel) validateAndSaveCmd() (form.FormResult, tea.Cmd
 		return form.ResultNone, nil
 	}
 
-	cfg := models.PCIPassthroughConfig{
+	cfg := domain.PCIPassthroughConfig{
 		Devices: devices,
 	}
 
@@ -63,12 +63,12 @@ func (m *PCIPassthroughFormModel) handleApplyKernelCmd() tea.Cmd {
 	m.kernelMsgErr = false
 
 	// Build config from selected devices (same as save)
-	var devices []models.PCIPassthroughDevice
+	var devices []domain.PCIPassthroughDevice
 	for _, dev := range m.devices {
 		if !m.selected[dev.Address] {
 			continue
 		}
-		devices = append(devices, models.PCIPassthroughDevice{
+		devices = append(devices, domain.PCIPassthroughDevice{
 			Address:   dev.Address,
 			ROMPath:   "",
 			Vendor:    dev.Vendor,
@@ -87,7 +87,7 @@ func (m *PCIPassthroughFormModel) handleApplyKernelCmd() tea.Cmd {
 	}
 
 	// Build the PCI passthrough config and save it first
-	cfg := models.PCIPassthroughConfig{
+	cfg := domain.PCIPassthroughConfig{
 		Devices: devices,
 	}
 	if err := m.repo.SaveConfig("pci_passthrough", cfg); err != nil {

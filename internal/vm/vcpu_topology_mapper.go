@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // vCPUDevice represents a single vCPU device declaration for QEMU.
@@ -31,7 +31,7 @@ type vCPUDevice struct {
 //  6. Returns -device declarations for all remaining CPUs (skipping the first)
 func GenerateAsymmetricCPUDevices(
 	selectedCPUs []int,
-	hostTopo models.HostCPUTopology,
+	hostTopo domain.HostCPUTopology,
 ) (deviceArgs []string, firstAPICID int, err error) {
 	if len(selectedCPUs) == 0 {
 		return nil, 0, fmt.Errorf("no CPUs selected for asymmetric topology")

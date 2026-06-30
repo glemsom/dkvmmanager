@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // TestRunConfigZeroValue verifies that a zero-valued RunConfig is safe to use
@@ -51,25 +51,25 @@ func TestRunConfigStructFields(t *testing.T) {
 	rc := RunConfig{}
 
 	// 1. PCIPassthroughConfig
-	_ = models.PCIPassthroughConfig(rc.PCIPassthroughConfig)
+	_ = domain.PCIPassthroughConfig(rc.PCIPassthroughConfig)
 
 	// 2. USBPassthroughConfig
-	_ = models.USBPassthroughConfig(rc.USBPassthroughConfig)
+	_ = domain.USBPassthroughConfig(rc.USBPassthroughConfig)
 
 	// 3. CPUOptions
-	_ = models.CPUOptions(rc.CPUOptions)
+	_ = domain.CPUOptions(rc.CPUOptions)
 
 	// 4. CPUTopology
-	_ = models.CPUTopology(rc.CPUTopology)
+	_ = domain.CPUTopology(rc.CPUTopology)
 
 	// 5. HostCPUTopology
-	_ = models.HostCPUTopology(rc.HostCPUTopology)
+	_ = domain.HostCPUTopology(rc.HostCPUTopology)
 
 	// 6. VCPUPinning
-	_ = models.VCPUPinningGlobal(rc.VCPUPinning)
+	_ = domain.VCPUPinningGlobal(rc.VCPUPinning)
 
 	// 7. StartStopScript
-	_ = models.StartStopScript(rc.StartStopScript)
+	_ = domain.StartStopScript(rc.StartStopScript)
 
 	// 8. DryRun
 	_ = bool(rc.DryRun)
@@ -120,8 +120,8 @@ func TestLoadRunConfigFromRepoPopulated(t *testing.T) {
 	}
 
 	// Save configs using the same keys that LoadRunConfigFromRepo will read
-	pciCfg := models.PCIPassthroughConfig{
-		Devices: []models.PCIPassthroughDevice{
+	pciCfg := domain.PCIPassthroughConfig{
+		Devices: []domain.PCIPassthroughDevice{
 			{Address: "0000:01:00.0", Vendor: "10de", Device: "1b80", Name: "GPU"},
 		},
 	}
@@ -129,8 +129,8 @@ func TestLoadRunConfigFromRepoPopulated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	usbCfg := models.USBPassthroughConfig{
-		Devices: []models.USBPassthroughDevice{
+	usbCfg := domain.USBPassthroughConfig{
+		Devices: []domain.USBPassthroughDevice{
 			{Vendor: "046d", Product: "c52b", Name: "Unifying Receiver"},
 		},
 	}
@@ -138,19 +138,19 @@ func TestLoadRunConfigFromRepoPopulated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cpuOpts := models.CPUOptions{HideKVM: true, HVRelaxed: true, VendorID: "GenuineIntel"}
+	cpuOpts := domain.CPUOptions{HideKVM: true, HVRelaxed: true, VendorID: "GenuineIntel"}
 	if err := repo.SaveConfig("cpu_options", cpuOpts); err != nil {
 		t.Fatal(err)
 	}
 
-	cpuTopo := models.CPUTopology{Enabled: true, SelectedCPUs: []int{0, 1, 2, 3}}
+	cpuTopo := domain.CPUTopology{Enabled: true, SelectedCPUs: []int{0, 1, 2, 3}}
 	if err := repo.SaveConfig("cpu_topology", cpuTopo); err != nil {
 		t.Fatal(err)
 	}
 
-	vcpuPin := models.VCPUPinningGlobal{
+	vcpuPin := domain.VCPUPinningGlobal{
 		Enabled: true,
-		Mappings: []models.VCPUToHostMapping{
+		Mappings: []domain.VCPUToHostMapping{
 			{VCPUID: 0, HostCPUID: 4},
 		},
 	}
@@ -158,7 +158,7 @@ func TestLoadRunConfigFromRepoPopulated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	scriptCfg := models.StartStopScript{UseBuiltin: false, StartScript: "echo start", StopScript: "echo stop"}
+	scriptCfg := domain.StartStopScript{UseBuiltin: false, StartScript: "echo start", StopScript: "echo stop"}
 	if err := repo.SaveConfig("custom_script", scriptCfg); err != nil {
 		t.Fatal(err)
 	}

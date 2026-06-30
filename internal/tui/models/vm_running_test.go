@@ -7,13 +7,13 @@ import (
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	models "github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
 
 func setupRunningModel(t *testing.T, status string) *VMRunningModel {
 	t.Helper()
-	vmObj := &models.VM{Name: "test-vm", ID: "1"}
+	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	return &VMRunningModel{
 		vm:          vmObj,
 		maxLogLines: 500,
@@ -784,7 +784,7 @@ func TestVMStartedMsgHandlerSetsRunner(t *testing.T) {
 	m := setupRunningModel(t, "starting")
 
 	// Create a real runner (with nil config, not used in this test)
-	runner := vm.NewVMRunner(&models.VM{Name: "test-vm", ID: "1"}, nil, vm.RunConfig{})
+	runner := vm.NewVMRunner(&domain.VM{Name: "test-vm", ID: "1"}, nil, vm.RunConfig{})
 
 	// Simulate receiving VMStartedMsg with a runner
 	msg := VMStartedMsg{

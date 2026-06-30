@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   topology that shows detected L3 cache associativity per die in the CPU options
   form. The CPU scanner now populates associativity alongside cache size.
   ([#86](https://github.com/glemsom/dkvmmanager/issues/86))
-  (`internal/models/models.go`, `internal/vm/cpu_scanner.go`,
+  (`internal/domain/models.go`, `internal/vm/cpu_scanner.go`,
   `internal/tui/models/cpu_options_form_navigation.go`)
 
 ### Fixed
@@ -69,7 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (9950X3D, EPYC). The CPU options form now shows per-die L3 cache size
   text fields with detected sizes from the host topology scanner.
   ([#79](https://github.com/glemsom/dkvmmanager/issues/79))
-  (`internal/models/models.go`, `internal/vm/vm_runner_config.go`,
+  (`internal/domain/models.go`, `internal/vm/vm_runner_config.go`,
   `internal/tui/models/cpu_options_form.go`,
   `internal/tui/models/cpu_options_form_navigation.go`,
   `internal/tui/models/cpu_options_form_render.go`)
@@ -224,7 +224,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added rendering for the toggle in the form view
   - Added validation and save logic to persist `UseHostTopology` in the `CPUTopology` model
   - Added comprehensive tests for toggle navigation, rendering, and validation
-- **ForceCPUID0x80000026 toggle**: New CPU option to force CPUID leaf 0x80000026 (`internal/models/models.go`, `internal/tui/models/fields/cpu_options.go`, `internal/vm/repository.go`)
+- **ForceCPUID0x80000026 toggle**: New CPU option to force CPUID leaf 0x80000026 (`internal/domain/models.go`, `internal/tui/models/fields/cpu_options.go`, `internal/vm/repository.go`)
 - **Asymmetric vCPU topology mapper**: New `GenerateAsymmetricCPUDevices` function for building per-die CPU device declarations with correct APIC IDs (`internal/vm/vcpu_topology_mapper.go`)
 
 ### Fixed
@@ -236,7 +236,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.11] - 2026-05-05
 
 ### Added
-- **PCI bridge detection**: New `IsBridge` field on `PCIDevice` to identify PCI-to-PCI bridges (class code `0604`), enabling better device classification in the PCI passthrough form (`internal/models/models.go`, `internal/vm/pci_scanner.go`, `internal/tui/models/pci_passthrough_form.go`)
+- **PCI bridge detection**: New `IsBridge` field on `PCIDevice` to identify PCI-to-PCI bridges (class code `0604`), enabling better device classification in the PCI passthrough form (`internal/domain/models.go`, `internal/vm/pci_scanner.go`, `internal/tui/models/pci_passthrough_form.go`)
 
 ## [0.1.10] - 2026-05-04
 
@@ -300,7 +300,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **CPU Power Management toggle**: New `CPUPM` option in CPU options form to enable CPU power management passthrough (`cpu-pm=on`) to QEMU (`internal/models/models.go`, `internal/vm/vm_runner_config.go`, `internal/tui/models/cpu_options_form_*.go`)
+- **CPU Power Management toggle**: New `CPUPM` option in CPU options form to enable CPU power management passthrough (`cpu-pm=on`) to QEMU (`internal/domain/models.go`, `internal/vm/vm_runner_config.go`, `internal/tui/models/cpu_options_form_*.go`)
 
 ## [0.1.2](https://github.com/glemsom/dkvmmanager/compare/v0.1.1...v0.1.2) (2026-04-30)
 

@@ -8,7 +8,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/config"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/fields"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
@@ -198,7 +198,7 @@ func TestCPUOptionsFormSave(t *testing.T) {
 	}
 
 	// Verify saved options
-	var saved models.CPUOptions
+	var saved domain.CPUOptions
 	vmManager.Repository().GetConfig("cpu_options", &saved)
 	if !saved.HideKVM {
 		t.Errorf("Saved HideKVM = false, want true")
@@ -258,7 +258,7 @@ func (m *CPUOptionsFormModel) findIndexByName(name string) int {
 // TestCPUOptionsUpdateMsg tests that Update returns correct types
 func TestCPUOptionsUpdateMsg(t *testing.T) {
 	form := &CPUOptionsFormModel{
-		options:       &models.CPUOptions{},
+		options:       &domain.CPUOptions{},
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
 	}
@@ -276,7 +276,7 @@ func TestCPUOptionsUpdateMsg(t *testing.T) {
 // TestCPUOptionsFieldLabels tests that all fields have labels
 func TestCPUOptionsFieldLabels(t *testing.T) {
 	form := &CPUOptionsFormModel{
-		options:       &models.CPUOptions{},
+		options:       &domain.CPUOptions{},
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
 	}
@@ -300,7 +300,7 @@ func TestCPUOptionsFieldLabels(t *testing.T) {
 // TestCPUOptionsPositionsCount tests that BuildPositions creates correct number of positions
 func TestCPUOptionsPositionsCount(t *testing.T) {
 	form := &CPUOptionsFormModel{
-		options:       &models.CPUOptions{},
+		options:       &domain.CPUOptions{},
 		cursorOffsets: make(map[string]int),
 		errors:        make(map[string]string),
 	}
@@ -322,8 +322,8 @@ func TestCPUOptionsFormWithL3CacheSizeDie(t *testing.T) {
 	// The form scans topology at runtime, so we mock it by creating a form and
 	// directly providing hostTopo.
 
-	f := NewCPUOptionsFormModelWithTopo(repo, models.HostCPUTopology{
-		Dies: []models.CPUDie{
+	f := NewCPUOptionsFormModelWithTopo(repo, domain.HostCPUTopology{
+		Dies: []domain.CPUDie{
 			{ID: 0, L3CacheKB: 32768},
 			{ID: 1, L3CacheKB: 98304},
 		},
@@ -393,8 +393,8 @@ func TestCPUOptionsFormWithL3CacheAssocDie(t *testing.T) {
 	vmManager := createTestVMManager(t)
 	repo := vmManager.Repository()
 
-	f := NewCPUOptionsFormModelWithTopo(repo, models.HostCPUTopology{
-		Dies: []models.CPUDie{
+	f := NewCPUOptionsFormModelWithTopo(repo, domain.HostCPUTopology{
+		Dies: []domain.CPUDie{
 			{ID: 0, L3CacheKB: 32768},
 			{ID: 1, L3CacheKB: 98304},
 		},
@@ -459,8 +459,8 @@ func TestCPUOptionsFormL3CachePersistence(t *testing.T) {
 	vmManager := createTestVMManager(t)
 	repo := vmManager.Repository()
 
-	f := NewCPUOptionsFormModelWithTopo(repo, models.HostCPUTopology{
-		Dies: []models.CPUDie{
+	f := NewCPUOptionsFormModelWithTopo(repo, domain.HostCPUTopology{
+		Dies: []domain.CPUDie{
 			{ID: 0, L3CacheKB: 32768, L3CacheAssoc: 16},
 			{ID: 1, L3CacheKB: 98304, L3CacheAssoc: 12},
 		},
@@ -502,7 +502,7 @@ func TestCPUOptionsFormL3CachePersistence(t *testing.T) {
 	}
 
 	// Verify saved options directly via repo
-	var saved models.CPUOptions
+	var saved domain.CPUOptions
 	if err := repo.GetConfig("cpu_options", &saved); err != nil {
 		t.Fatalf("Failed to GetConfig: %v", err)
 	}
@@ -562,8 +562,8 @@ func TestCPUOptionsFormL3CachePersistence(t *testing.T) {
 	}
 
 	// Simulate re-entering form: create a new form and verify values
-	f2 := NewCPUOptionsFormModelWithTopo(repo, models.HostCPUTopology{
-		Dies: []models.CPUDie{
+	f2 := NewCPUOptionsFormModelWithTopo(repo, domain.HostCPUTopology{
+		Dies: []domain.CPUDie{
 			{ID: 0, L3CacheKB: 32768, L3CacheAssoc: 16},
 			{ID: 1, L3CacheKB: 98304, L3CacheAssoc: 12},
 		},

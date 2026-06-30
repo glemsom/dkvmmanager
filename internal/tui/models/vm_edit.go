@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -28,7 +28,7 @@ func NewVMEditModel(vmManager *vm.Manager, vmID string) (*VMEditModel, error) {
 		return nil, fmt.Errorf("failed to list VMs: %w", err)
 	}
 
-	var targetVM *models.VM
+	var targetVM *domain.VM
 	for i := range vms {
 		if vms[i].ID == vmID {
 			targetVM = &vms[i]

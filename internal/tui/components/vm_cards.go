@@ -7,13 +7,13 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/styles"
 )
 
 // VMCardView renders VMs as bordered cards instead of a table
 type VMCardView struct {
-	vms    []models.VM
+	vms    []domain.VM
 	cursor int
 	width  int
 	height int
@@ -21,7 +21,7 @@ type VMCardView struct {
 }
 
 // NewVMCardView creates a new VM card view
-func NewVMCardView(vms []models.VM, width, height int) *VMCardView {
+func NewVMCardView(vms []domain.VM, width, height int) *VMCardView {
 	return &VMCardView{
 		vms:    vms,
 		cursor: 0,
@@ -78,7 +78,7 @@ func (c *VMCardView) View() tea.View {
 }
 
 // renderCard renders a single VM as a bordered card
-func (c *VMCardView) renderCard(vm models.VM, selected bool) string {
+func (c *VMCardView) renderCard(vm domain.VM, selected bool) string {
 	cardWidth := c.width - 4
 	if cardWidth < 40 {
 		cardWidth = 40
@@ -165,7 +165,7 @@ func cardBorderChars() (topLeft, topRight, bottomLeft, bottomRight, horiz, vert 
 }
 
 // SelectedVM returns the currently selected VM
-func (c *VMCardView) SelectedVM() *models.VM {
+func (c *VMCardView) SelectedVM() *domain.VM {
 	if len(c.vms) == 0 || c.cursor < 0 || c.cursor >= len(c.vms) {
 		return nil
 	}
@@ -185,7 +185,7 @@ func (c *VMCardView) SetCursor(index int) {
 }
 
 // SetVMs updates the VM list
-func (c *VMCardView) SetVMs(vms []models.VM) {
+func (c *VMCardView) SetVMs(vms []domain.VM) {
 	c.vms = vms
 	if c.cursor >= len(vms) && len(vms) > 0 {
 		c.cursor = len(vms) - 1

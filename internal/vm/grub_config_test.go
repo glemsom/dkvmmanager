@@ -6,30 +6,30 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 func TestBuildVFIOIDs(t *testing.T) {
 	tests := []struct {
 		name     string
-		devices  []models.PCIPassthroughDevice
+		devices  []domain.PCIPassthroughDevice
 		expected string
 	}{
 		{
 			name:     "empty devices",
-			devices:  []models.PCIPassthroughDevice{},
+			devices:  []domain.PCIPassthroughDevice{},
 			expected: "",
 		},
 		{
 			name: "single device",
-			devices: []models.PCIPassthroughDevice{
+			devices: []domain.PCIPassthroughDevice{
 				{Vendor: "1002", Device: "7550"},
 			},
 			expected: "1002:7550",
 		},
 		{
 			name: "multiple devices",
-			devices: []models.PCIPassthroughDevice{
+			devices: []domain.PCIPassthroughDevice{
 				{Vendor: "1002", Device: "7550"},
 				{Vendor: "1002", Device: "ab40"},
 				{Vendor: "8086", Device: "15d4"},
@@ -560,24 +560,24 @@ menuentry 'DKVM' {
 func TestBuildHostCPUList(t *testing.T) {
 	tests := []struct {
 		name     string
-		mappings []models.VCPUToHostMapping
+		mappings []domain.VCPUToHostMapping
 		expected string
 	}{
 		{
 			name:     "empty mappings",
-			mappings: []models.VCPUToHostMapping{},
+			mappings: []domain.VCPUToHostMapping{},
 			expected: "",
 		},
 		{
 			name: "single mapping",
-			mappings: []models.VCPUToHostMapping{
+			mappings: []domain.VCPUToHostMapping{
 				{VCPUID: 0, HostCPUID: 4},
 			},
 			expected: "4",
 		},
 		{
 			name: "multiple mappings sorted",
-			mappings: []models.VCPUToHostMapping{
+			mappings: []domain.VCPUToHostMapping{
 				{VCPUID: 0, HostCPUID: 6},
 				{VCPUID: 1, HostCPUID: 4},
 				{VCPUID: 2, HostCPUID: 5},
@@ -586,7 +586,7 @@ func TestBuildHostCPUList(t *testing.T) {
 		},
 		{
 			name: "deduplicates same host CPU",
-			mappings: []models.VCPUToHostMapping{
+			mappings: []domain.VCPUToHostMapping{
 				{VCPUID: 0, HostCPUID: 2},
 				{VCPUID: 1, HostCPUID: 2},
 				{VCPUID: 2, HostCPUID: 4},

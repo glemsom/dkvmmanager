@@ -4,7 +4,7 @@ package models
 import (
 	"charm.land/bubbles/v2/list"
 	"github.com/glemsom/dkvmmanager/internal/config"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -121,7 +121,7 @@ type MainModel struct {
 	runningVMID string
 
 	// VM list for selection
-	vmListForSelection []models.VM
+	vmListForSelection []domain.VM
 	vmSelectList       list.Model
 
 	// Selection mode (edit or delete)
@@ -150,5 +150,5 @@ type MenuItem struct {
 	Type     string // "VM", "INT_CONFIG", "INT_POWEROFF", "INT_SHELL"
 	VMID     string // VM ID if type is "VM"
 	Disabled bool
-	VMData   *models.VM
+	VMData   *domain.VM
 }

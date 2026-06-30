@@ -7,7 +7,7 @@ import (
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 	"github.com/glemsom/dkvmmanager/internal/tui/models/form"
 	"github.com/glemsom/dkvmmanager/internal/vm"
 )
@@ -17,7 +17,7 @@ type cpuTopoFocusData struct {
 	dieID   int
 	coreID  int
 	dieLabel string
-	coreInfo *models.CPUCore
+	coreInfo *domain.CPUCore
 }
 
 // CPUTopologyFormModel is a scrollable form for editing global CPU topology.
@@ -26,10 +26,10 @@ type CPUTopologyFormModel struct {
 	repo *vm.Repository
 
 	// Host topology data
-	hostTopo models.HostCPUTopology
+	hostTopo domain.HostCPUTopology
 
 	// Global configuration
-	topology models.CPUTopology
+	topology domain.CPUTopology
 
 	// Quick lookup: coreKey (dieID:coreID) -> selected for VM
 	coreSelected map[string]bool
@@ -66,7 +66,7 @@ func NewCPUTopologyFormModel(repo *vm.Repository) (*CPUTopologyFormModel, error)
 	hostTopo, scanErr := scanner.ScanTopology()
 
 	// Load global CPU topology config
-	var topology models.CPUTopology
+	var topology domain.CPUTopology
 	err := repo.GetConfig("cpu_topology", &topology)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load CPU topology: %w", err)
@@ -132,7 +132,7 @@ type cpuTopoPos struct {
 	dieID    int
 	coreID   int
 	dieLabel string
-	coreInfo *models.CPUCore
+	coreInfo *domain.CPUCore
 }
 
 // Constants for backward compatibility with existing tests.

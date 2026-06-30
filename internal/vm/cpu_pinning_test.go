@@ -3,7 +3,7 @@ package vm
 import (
 	"testing"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 func TestParseCPUList(t *testing.T) {
@@ -33,7 +33,7 @@ func TestParseCPUListInvalid(t *testing.T) {
 
 func TestComputePinningFromTopology(t *testing.T) {
 	host := testHostTopoSingleDie()
-	topo := models.CPUTopology{Enabled: true, SelectedCPUs: []int{4, 5, 6, 7}}
+	topo := domain.CPUTopology{Enabled: true, SelectedCPUs: []int{4, 5, 6, 7}}
 	pin, err := ComputePinningFromTopology(topo, host)
 	if err != nil {
 		t.Fatalf("ComputePinningFromTopology: %v", err)
@@ -51,7 +51,7 @@ func TestComputePinningFromTopology(t *testing.T) {
 
 func TestComputePinningFromTopologyMixedDies(t *testing.T) {
 	host := testHostTopoTwoDies()
-	topo := models.CPUTopology{Enabled: true, SelectedCPUs: []int{0, 1, 8, 9}}
+	topo := domain.CPUTopology{Enabled: true, SelectedCPUs: []int{0, 1, 8, 9}}
 	pin, err := ComputePinningFromTopology(topo, host)
 	if err != nil {
 		t.Fatalf("ComputePinningFromTopology: %v", err)
@@ -72,13 +72,13 @@ func TestComputePinningFromTopologyMixedDies(t *testing.T) {
 	}
 }
 
-func testHostTopoSingleDie() models.HostCPUTopology {
-	return models.HostCPUTopology{Dies: []models.CPUDie{{ID: 0, CoreDetails: []models.CPUCore{{ID: 2, DieID: 0, Threads: []int{4, 5}}, {ID: 3, DieID: 0, Threads: []int{6, 7}}}}}}
+func testHostTopoSingleDie() domain.HostCPUTopology {
+	return domain.HostCPUTopology{Dies: []domain.CPUDie{{ID: 0, CoreDetails: []domain.CPUCore{{ID: 2, DieID: 0, Threads: []int{4, 5}}, {ID: 3, DieID: 0, Threads: []int{6, 7}}}}}}
 }
 
-func testHostTopoTwoDies() models.HostCPUTopology {
-	return models.HostCPUTopology{Dies: []models.CPUDie{
-		{ID: 0, CoreDetails: []models.CPUCore{{ID: 0, DieID: 0, Threads: []int{0, 1}}}},
-		{ID: 1, CoreDetails: []models.CPUCore{{ID: 4, DieID: 1, Threads: []int{8, 9}}}},
+func testHostTopoTwoDies() domain.HostCPUTopology {
+	return domain.HostCPUTopology{Dies: []domain.CPUDie{
+		{ID: 0, CoreDetails: []domain.CPUCore{{ID: 0, DieID: 0, Threads: []int{0, 1}}}},
+		{ID: 1, CoreDetails: []domain.CPUCore{{ID: 4, DieID: 1, Threads: []int{8, 9}}}},
 	}}
 }

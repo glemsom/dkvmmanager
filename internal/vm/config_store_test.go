@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/glemsom/dkvmmanager/internal/models"
+	"github.com/glemsom/dkvmmanager/internal/domain"
 )
 
 // TestConfigStore_RoundTrip verifies each config type survives a save-and-reload cycle
@@ -17,11 +17,11 @@ func TestConfigStore_RoundTrip(t *testing.T) {
 	}
 
 	t.Run("CPUOptions", func(t *testing.T) {
-		in := models.CPUOptions{HideKVM: true, HVRelaxed: true, VendorID: "GenuineIntel"}
+		in := domain.CPUOptions{HideKVM: true, HVRelaxed: true, VendorID: "GenuineIntel"}
 		if err := repo.SaveConfig("cpu_options", in); err != nil {
 			t.Fatal(err)
 		}
-		var out models.CPUOptions
+		var out domain.CPUOptions
 		if err := repo.GetConfig("cpu_options", &out); err != nil {
 			t.Fatal(err)
 		}
@@ -31,15 +31,15 @@ func TestConfigStore_RoundTrip(t *testing.T) {
 	})
 
 	t.Run("PCIPassthroughConfig", func(t *testing.T) {
-		in := models.PCIPassthroughConfig{
-			Devices: []models.PCIPassthroughDevice{
+		in := domain.PCIPassthroughConfig{
+			Devices: []domain.PCIPassthroughDevice{
 				{Address: "0000:01:00.0", Vendor: "10de", Device: "1b80", Name: "GPU"},
 			},
 		}
 		if err := repo.SaveConfig("pci_passthrough", in); err != nil {
 			t.Fatal(err)
 		}
-		var out models.PCIPassthroughConfig
+		var out domain.PCIPassthroughConfig
 		if err := repo.GetConfig("pci_passthrough", &out); err != nil {
 			t.Fatal(err)
 		}
@@ -49,15 +49,15 @@ func TestConfigStore_RoundTrip(t *testing.T) {
 	})
 
 	t.Run("USBPassthroughConfig", func(t *testing.T) {
-		in := models.USBPassthroughConfig{
-			Devices: []models.USBPassthroughDevice{
+		in := domain.USBPassthroughConfig{
+			Devices: []domain.USBPassthroughDevice{
 				{Vendor: "046d", Product: "c52b", Name: "Unifying Receiver"},
 			},
 		}
 		if err := repo.SaveConfig("usb_passthrough", in); err != nil {
 			t.Fatal(err)
 		}
-		var out models.USBPassthroughConfig
+		var out domain.USBPassthroughConfig
 		if err := repo.GetConfig("usb_passthrough", &out); err != nil {
 			t.Fatal(err)
 		}
@@ -67,11 +67,11 @@ func TestConfigStore_RoundTrip(t *testing.T) {
 	})
 
 	t.Run("CPUTopology", func(t *testing.T) {
-		in := models.CPUTopology{Enabled: true, SelectedCPUs: []int{0, 1, 2, 3}}
+		in := domain.CPUTopology{Enabled: true, SelectedCPUs: []int{0, 1, 2, 3}}
 		if err := repo.SaveConfig("cpu_topology", in); err != nil {
 			t.Fatal(err)
 		}
-		var out models.CPUTopology
+		var out domain.CPUTopology
 		if err := repo.GetConfig("cpu_topology", &out); err != nil {
 			t.Fatal(err)
 		}
@@ -81,16 +81,16 @@ func TestConfigStore_RoundTrip(t *testing.T) {
 	})
 
 	t.Run("VCPUPinningGlobal", func(t *testing.T) {
-		in := models.VCPUPinningGlobal{
+		in := domain.VCPUPinningGlobal{
 			Enabled: true,
-			Mappings: []models.VCPUToHostMapping{
+			Mappings: []domain.VCPUToHostMapping{
 				{VCPUID: 0, HostCPUID: 4},
 			},
 		}
 		if err := repo.SaveConfig("vcpu_pinning", in); err != nil {
 			t.Fatal(err)
 		}
-		var out models.VCPUPinningGlobal
+		var out domain.VCPUPinningGlobal
 		if err := repo.GetConfig("vcpu_pinning", &out); err != nil {
 			t.Fatal(err)
 		}
@@ -100,11 +100,11 @@ func TestConfigStore_RoundTrip(t *testing.T) {
 	})
 
 	t.Run("StartStopScript", func(t *testing.T) {
-		in := models.StartStopScript{UseBuiltin: false, StartScript: "echo start", StopScript: "echo stop"}
+		in := domain.StartStopScript{UseBuiltin: false, StartScript: "echo start", StopScript: "echo stop"}
 		if err := repo.SaveConfig("custom_script", in); err != nil {
 			t.Fatal(err)
 		}
-		var out models.StartStopScript
+		var out domain.StartStopScript
 		if err := repo.GetConfig("custom_script", &out); err != nil {
 			t.Fatal(err)
 		}
@@ -114,7 +114,7 @@ func TestConfigStore_RoundTrip(t *testing.T) {
 	})
 
 	t.Run("GetUnsetKeyReturnsZeroValue", func(t *testing.T) {
-		var opts models.CPUOptions
+		var opts domain.CPUOptions
 		if err := repo.GetConfig("nonexistent_key", &opts); err != nil {
 			t.Fatal(err)
 		}
@@ -122,15 +122,15 @@ func TestConfigStore_RoundTrip(t *testing.T) {
 	})
 
 	t.Run("OverwriteExistingKey", func(t *testing.T) {
-		in1 := models.CPUOptions{HideKVM: true}
-		in2 := models.CPUOptions{HVRelaxed: true}
+		in1 := domain.CPUOptions{HideKVM: true}
+		in2 := domain.CPUOptions{HVRelaxed: true}
 		if err := repo.SaveConfig("cpu_options", in1); err != nil {
 			t.Fatal(err)
 		}
 		if err := repo.SaveConfig("cpu_options", in2); err != nil {
 			t.Fatal(err)
 		}
-		var out models.CPUOptions
+		var out domain.CPUOptions
 		if err := repo.GetConfig("cpu_options", &out); err != nil {
 			t.Fatal(err)
 		}
