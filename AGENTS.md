@@ -23,7 +23,7 @@ make build   # via Docker (golang:1.26-alpine)
 ## Project layout
 
 - `main.go` — entry point
-- `internal/` — core packages (config, vm, tui)
+- `internal/` — core packages (config, domain, hugepages, version, vm, tui)
 - `examples/` — example scripts
 - `VERSION` — current version
 

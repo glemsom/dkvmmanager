@@ -4,7 +4,7 @@ This file stores all VM definitions and global hardware configuration for DKVM M
 
 > **⚠️ Two configuration files — don't confuse them.** DKVM Manager uses **two separate YAML files** for different purposes. This document describes the VM config file. See [App Config Schema](app-config.md) for the application settings file at `~/.dkvmmanager.yaml`.
 
-> **Source:** `internal/vm/repository.go` — `Repository` (Viper-backed YAML store); `internal/domain/models.go` — data model structs; `internal/vm/run_config.go` — `LoadRunConfigFromRepo()`.
+> **Source:** `internal/vm/repository.go` — `Repository` (Viper-backed YAML store); `internal/domain/types.go` — data model structs; `internal/vm/run_config.go` — `LoadRunConfigFromRepo()`.
 
 ---
 
@@ -77,7 +77,7 @@ vms:
     tpm_enabled: true
 ```
 
-> **Source:** `internal/domain/models.go` — `VM` struct; `internal/vm/repository.go` — `SaveVM()`, `unmarshalVM()`.
+> **Source:** `internal/domain/types.go` — `VM` struct; `internal/vm/repository.go` — `SaveVM()`, `unmarshalVM()`.
 
 ---
 
@@ -112,7 +112,7 @@ pci_passthrough:
       class_code: "0403"
 ```
 
-> **Source:** `internal/domain/models.go` — `PCIPassthroughDevice`, `PCIPassthroughConfig` structs.
+> **Source:** `internal/domain/types.go` — `PCIPassthroughDevice`, `PCIPassthroughConfig` structs.
 
 ---
 
@@ -142,7 +142,7 @@ usb_passthrough:
       bus_id: "1-3"
 ```
 
-> **Source:** `internal/domain/models.go` — `USBPassthroughDevice`, `USBPassthroughConfig` structs.
+> **Source:** `internal/domain/types.go` — `USBPassthroughDevice`, `USBPassthroughConfig` structs.
 
 ---
 
@@ -165,7 +165,7 @@ cpu_topology:
   use_host_topology: true
 ```
 
-> **Source:** `internal/domain/models.go` — `CPUTopology` struct.
+> **Source:** `internal/domain/types.go` — `CPUTopology` struct.
 
 ---
 
@@ -203,7 +203,7 @@ vcpu_pinning:
       host_cpu_id: 3
 ```
 
-> **Source:** `internal/domain/models.go` — `VCPUPinningGlobal`, `VCPUToHostMapping` structs.
+> **Source:** `internal/domain/types.go` — `VCPUPinningGlobal`, `VCPUToHostMapping` structs.
 
 ---
 
@@ -257,7 +257,7 @@ cpu_options:
   rtc_utc: true
 ```
 
-> **Source:** `internal/domain/models.go` — `CPUOptions` struct.
+> **Source:** `internal/domain/types.go` — `CPUOptions` struct.
 
 ---
 
@@ -280,7 +280,7 @@ custom_script:
   stop_script: /media/dkvmdata/vms/0/stop.sh
 ```
 
-> **Source:** `internal/domain/models.go` — `StartStopScript` struct.
+> **Source:** `internal/domain/types.go` — `StartStopScript` struct.
 
 ---
 

@@ -117,7 +117,7 @@ DKVM Manager's `hugepages.Ensure()` can auto-configure if run as root.
 apk add lbu
 ```
 
-> **Source:** `internal/tui/models/power_and_save.go` → LBU commit logic
+> **Source:** `internal/tui/models/debug.go` → LBU commit logic
 
 ---
 

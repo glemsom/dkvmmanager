@@ -147,14 +147,16 @@ dkvmmanager/
 │   ├── tui/                   # BubbleTea TUI entry point
 │   │   ├── models/            # View plane — BubbleTea models, forms, key handlers
 │   │   ├── components/        # Reusable UI components
-│   │   └── styles/            # Lipgloss style definitions
+│   │   ├── styles/            # Lipgloss style definitions
+│   │   └── theme/             # Theme and contrast utilities
 │   ├── config/                # Configuration file loading
-│   ├── models/                # Shared domain types (VM struct)
+│   ├── domain/                # Shared domain types (VM struct)
 │   ├── hugepages/             # Hugepage detection and configuration
 │   └── version/               # Version constant
 ├── docs/                      # Documentation
 │   ├── user/                  # End-user documentation
 │   ├── dev/                   # Developer documentation
+│   ├── explanation/           # Architecture explanations
 │   ├── adr/                   # Architecture Decision Records
 │   └── agents/                # Agent workflow documentation
 ├── examples/                  # Example scripts
@@ -162,7 +164,9 @@ dkvmmanager/
 ├── CHANGELOG.md               # Release changelog
 ├── CONTEXT.md                 # Domain glossary
 ├── CONTRIBUTING.md            # Contribution workflow
-└── Makefile                   # Build targets
+├── go.mod / go.sum            # Go module files
+├── Makefile                   # Build targets
+└── Dockerfile                 # Containerized build
 ```
 
 ## License

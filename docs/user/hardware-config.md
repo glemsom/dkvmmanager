@@ -372,7 +372,7 @@ A `.bak` backup is created before writing. The filesystem must be writable (remo
 - Bridges filtered by `IsBridge` flag from PCI class code detection
 - IOMMU groups indexed by `buildIOMMUGroups()` for fast group-based operations
 
-> **Source**: `internal/vm/host_discovery.go` → `ScanPCIDevices()`.
+> **Source**: `internal/vm/discovery.go` → `ScanPCIDevices()`.
 
 ---
 
@@ -424,7 +424,7 @@ See [Keybindings](keybindings.md) for the full reference.
 - Config stored in `usb_passthrough` key as `USBPassthroughConfig{Devices: []USBPassthroughDevice}`
 - Device key: `vendor:product` (e.g., `046d:c332`)
 
-> **Source**: `internal/vm/host_discovery.go` → `ScanUSBDevices()`.
+> **Source**: `internal/vm/discovery.go` → `ScanUSBDevices()`.
 
 ---
 

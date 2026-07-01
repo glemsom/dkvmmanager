@@ -10,6 +10,7 @@ Overview of DKVM Manager's internal architecture. Read `CONTEXT.md` first for do
 | `internal/tui/models` | View plane — BubbleTea models, forms, key handlers, view registry |
 | `internal/tui/components` | Reusable UI components (tabs, status bar, breadcrumbs, dual pane, VM cards/table) |
 | `internal/tui/styles` | Lipgloss style definitions |
+| `internal/tui/theme` | Theme colors and WCAG contrast utilities |
 | `internal/config` | Configuration file loading |
 | `internal/domain` | Shared domain types (VM struct) |
 | `internal/hugepages` | Hugepage detection and configuration |
@@ -193,7 +194,7 @@ return handling.
 1. **LV Create**: `LVCreateFormModel` validates → `createCmd()` runs `lvcreate` → `LVCreateUpdatedMsg` or `lvCreateErrorMsg` → handled via `form.MessageHandler` interface
 2. **Disk Add**: `AddDiskModel` delegates to sub-model (file browser, block device, LVM volume) → sub-model sends `FileSelectedMsg` → `AddDiskModel.handleFileSelected()` → `DiskAddedMsg` → `VMFormModel.HandleMessage()`
 
-> **Source**: `internal/tui/models/lv_create.go`; `internal/tui/models/lv_create_form.go`; `internal/tui/models/disk_add.go`.
+> **Source**: `internal/tui/models/lv_create.go`; `internal/tui/models/lv_create_form.go`; `internal/tui/models/disk_selector.go`.
 
 ### Power & Save message flow
 
@@ -348,7 +349,7 @@ The Power tab is one of three top-level tabs:
 
 `Tab` cycles through them; each has its own list model (`powerList`, `configList`, `menuList`).
 
-> **Source**: `internal/tui/models/init.go` → `NewMainModelWithConfig()`; `internal/tui/components/tab_model.go`
+> **Source**: `internal/tui/models/init.go` → `NewMainModelWithConfig()`; `internal/tui/components/tabs.go`
 
 
 ## Testing Patterns

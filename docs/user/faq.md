@@ -26,7 +26,7 @@ DKVM runs on Alpine Linux in **diskless mode**. The entire filesystem lives in R
 
 `lbu commit` writes the overlay changes to persistent storage. See [Power & Save](power-and-save.md) for details.
 
-> **Source:** `internal/tui/models/power_and_save.go` — LBU commit logic
+> **Source:** `internal/tui/models/debug.go` — LBU commit logic
 
 ---
 

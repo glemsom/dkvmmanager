@@ -205,7 +205,7 @@ Space/Enter Select  ESC Cancel
 
 **Step 3 — LVM volume lister** (LVM selected): Lists LVM logical volumes discovered via `lvs --noheadings`.
 
-> **Source**: `internal/tui/models/disk_selector.go` → `AddDiskModel`, `NewAddDiskModel()`, `renderSourceSelect()`; `internal/tui/models/block_device.go` (block device listing); `internal/tui/models/lvm_volume.go` (LVM volume listing).
+> **Source**: `internal/tui/models/disk_selector.go` → `AddDiskModel`, `NewAddDiskModel()`, `renderSourceSelect()`; `internal/tui/models/disk_selector_scanner.go` (block device listing); `internal/tui/models/lvm_volume.go` (LVM volume listing).
 
 ### Block device listing
 
