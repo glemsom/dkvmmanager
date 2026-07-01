@@ -43,9 +43,15 @@ func (m *VMFormModel) RenderPosition(pos form.FocusPos, focused bool, cursorOffs
 		return rendered
 
 	case "save":
-		saveText := styles.MutedTextStyle().Render("[Space/Enter] Save  [ESC] Cancel")
+		mutedBgStyle := lipgloss.NewStyle().
+			Foreground(styles.Colors.Muted).
+			Background(styles.Colors.Background)
+		saveText := mutedBgStyle.Render("[Space/Enter] Save  [ESC] Cancel")
 		if focused {
-			saveText = styles.SuccessTextStyle().Render("[Space/Enter] Save") + "  " + styles.MutedTextStyle().Render("[ESC] Cancel")
+			successBgStyle := lipgloss.NewStyle().
+				Foreground(styles.Colors.Success).
+				Background(styles.Colors.Background)
+			saveText = successBgStyle.Bold(true).Render("[Space/Enter] Save") + "  " + mutedBgStyle.Render("[ESC] Cancel")
 		}
 		return "\n" + saveText
 
@@ -54,16 +60,24 @@ func (m *VMFormModel) RenderPosition(pos form.FocusPos, focused bool, cursorOffs
 	// Handle list items (hardDisks_N, cdroms_N) and add buttons
 	if strings.HasPrefix(pos.Key, "hardDisks_") || strings.HasPrefix(pos.Key, "cdroms_") {
 		if strings.HasSuffix(pos.Key, "_add") {
-			// Add button
-			btnText := styles.MutedTextStyle().Render("[+ Add]")
+			// Add button — use explicit Background on all parts to prevent
+			// ANSI Bold bleed between concatenated Render() calls.
+			btnStyle := lipgloss.NewStyle().
+				Foreground(styles.Colors.Primary).
+				Background(styles.Colors.Background)
+			mutedBgStyle := lipgloss.NewStyle().
+				Foreground(styles.Colors.Muted).
+				Background(styles.Colors.Background)
+
+			btnText := mutedBgStyle.Render("[+ Add]")
 			if focused {
-				btnText = styles.SelectedTextStyle().Render("[+ Add]")
+				btnText = btnStyle.Bold(true).Render("[+ Add]")
 			}
 			fieldLabel := "Disk"
 			if strings.HasPrefix(pos.Key, "cdroms_") {
 				fieldLabel = "CD/DVD"
 			}
-			return "  " + btnText + " " + styles.MutedTextStyle().Render(fieldLabel)
+			return "  " + btnText + " " + mutedBgStyle.Render(fieldLabel)
 		}
 
 		// List item - extract index from key like "hardDisks_0" or "cdroms_0"
@@ -96,17 +110,30 @@ func (m *VMFormModel) RenderPosition(pos form.FocusPos, focused bool, cursorOffs
 
 // renderTextInput renders a labeled text input with an optional cursor
 func (m *VMFormModel) renderTextInput(label, value string, cursor int, focused bool) string {
+	// Shared styles with explicit Background to prevent ANSI bleed on 16-color terms
+	textStyle := lipgloss.NewStyle().
+		Foreground(styles.Colors.Primary).
+		Background(styles.Colors.Background)
+	mutedStyle := lipgloss.NewStyle().
+		Foreground(styles.Colors.Muted).
+		Background(styles.Colors.Background)
+	// Cursor uses explicit foreground/background swap instead of Reverse(true)
+	// (SGR 7 reverse-video resets unreliably on 16-color consoles).
+	cursorStyle := lipgloss.NewStyle().
+		Foreground(styles.Colors.Background).
+		Background(styles.Colors.Primary)
+
 	prefix := "  "
 	if focused {
-		prefix = styles.SelectedTextStyle().Render("> ")
+		prefix = textStyle.Bold(true).Render("> ")
 	}
 
-	labelPart := styles.FormLabelStyle().Render(label + ": ")
+	labelPart := mutedStyle.Render(label + ": ")
 
 	// Build value with cursor indicator
 	var valPart string
 	if focused {
-		// Show cursor as highlighted character or underscore at end
+		// Show cursor as inverted-color character or underscore at end
 		if cursor < len(value) {
 			before := value[:cursor]
 			at := string(value[cursor])
@@ -114,17 +141,17 @@ func (m *VMFormModel) renderTextInput(label, value string, cursor int, focused b
 			if cursor+1 < len(value) {
 				after = value[cursor+1:]
 			}
-			valPart = lipgloss.NewStyle().Foreground(styles.Colors.Primary).Render(before) +
-				lipgloss.NewStyle().Reverse(true).Render(at) +
-				lipgloss.NewStyle().Foreground(styles.Colors.Primary).Render(after)
+			valPart = textStyle.Render(before) +
+				cursorStyle.Render(at) +
+				textStyle.Render(after)
 		} else {
-			valPart = lipgloss.NewStyle().Foreground(styles.Colors.Primary).Render(value) + styles.SelectedTextStyle().Render("_")
+			valPart = textStyle.Render(value) + cursorStyle.Render("_")
 		}
 	} else {
 		if value == "" {
-			valPart = styles.MutedTextStyle().Render("(empty)")
+			valPart = mutedStyle.Render("(empty)")
 		} else {
-			valPart = lipgloss.NewStyle().Foreground(styles.Colors.Primary).Render(value)
+			valPart = textStyle.Render(value)
 		}
 	}
 
@@ -139,7 +166,20 @@ func (m *VMFormModel) renderTextInput(label, value string, cursor int, focused b
 
 // renderListItem renders a single item in a list field
 func (m *VMFormModel) renderListItem(index int, value string, cursor int, focused bool) string {
-	numPart := styles.MutedTextStyle().Render(fmt.Sprintf("  [%d] ", index+1))
+	// Shared styles with explicit Background to prevent ANSI bleed on 16-color terms
+	textStyle := lipgloss.NewStyle().
+		Foreground(styles.Colors.Primary).
+		Background(styles.Colors.Background)
+	mutedStyle := lipgloss.NewStyle().
+		Foreground(styles.Colors.Muted).
+		Background(styles.Colors.Background)
+	// Cursor uses explicit foreground/background swap instead of Reverse(true)
+	// (SGR 7 reverse-video resets unreliably on 16-color consoles).
+	cursorStyle := lipgloss.NewStyle().
+		Foreground(styles.Colors.Background).
+		Background(styles.Colors.Primary)
+
+	numPart := mutedStyle.Render(fmt.Sprintf("  [%d] ", index+1))
 
 	var valPart string
 	if focused {
@@ -150,17 +190,17 @@ func (m *VMFormModel) renderListItem(index int, value string, cursor int, focuse
 			if cursor+1 < len(value) {
 				after = value[cursor+1:]
 			}
-			valPart = lipgloss.NewStyle().Foreground(styles.Colors.Primary).Render(before) +
-				lipgloss.NewStyle().Reverse(true).Render(at) +
-				lipgloss.NewStyle().Foreground(styles.Colors.Primary).Render(after)
+			valPart = textStyle.Render(before) +
+				cursorStyle.Render(at) +
+				textStyle.Render(after)
 		} else {
-			valPart = lipgloss.NewStyle().Foreground(styles.Colors.Primary).Render(value) + styles.SelectedTextStyle().Render("_")
+			valPart = textStyle.Render(value) + cursorStyle.Render("_")
 		}
 	} else {
 		if value == "" {
-			valPart = styles.MutedTextStyle().Render("(enter path)")
+			valPart = mutedStyle.Render("(enter path)")
 		} else {
-			valPart = lipgloss.NewStyle().Foreground(styles.Colors.Primary).Render(value)
+			valPart = textStyle.Render(value)
 		}
 	}
 
@@ -191,27 +231,35 @@ func (m *VMFormModel) fieldLabel(name string) string {
 
 // renderToggle renders a toggle field (on/off)
 func (m *VMFormModel) renderToggle(label, fieldName string, focused bool) string {
+	// Styles with explicit Background for consistent 16-color rendering
+	onStyle := lipgloss.NewStyle().
+		Foreground(styles.Colors.Primary).
+		Background(styles.Colors.Background)
+	offStyle := lipgloss.NewStyle().
+		Foreground(styles.Colors.Muted).
+		Background(styles.Colors.Background)
+
 	prefix := "  "
 	if focused {
-		prefix = styles.SelectedTextStyle().Render("> ")
+		prefix = onStyle.Bold(true).Render("> ")
 	}
 
-	labelPart := styles.FormLabelStyle().Render(label + ": ")
+	labelPart := offStyle.Render(label + ": ")
 
 	var valPart string
 	switch fieldName {
 	case "networkMode":
 		if m.networkMode == "bridge" {
 			if focused {
-				valPart = styles.SelectedTextStyle().Render("[Bridge]")
+				valPart = onStyle.Bold(true).Render("[Bridge]")
 			} else {
-				valPart = lipgloss.NewStyle().Foreground(styles.Colors.Primary).Render("[Bridge]")
+				valPart = onStyle.Render("[Bridge]")
 			}
 		} else {
 			if focused {
-				valPart = styles.SelectedTextStyle().Render("[NAT]")
+				valPart = offStyle.Bold(true).Render("[NAT]")
 			} else {
-				valPart = styles.MutedTextStyle().Render("[NAT]")
+				valPart = offStyle.Render("[NAT]")
 			}
 		}
 	default:
@@ -225,15 +273,15 @@ func (m *VMFormModel) renderToggle(label, fieldName string, focused bool) string
 
 		if on {
 			if focused {
-				valPart = styles.SelectedTextStyle().Render("[ON]")
+				valPart = onStyle.Bold(true).Render("[ON]")
 			} else {
-				valPart = lipgloss.NewStyle().Foreground(styles.Colors.Primary).Render("[ON]")
+				valPart = onStyle.Render("[ON]")
 			}
 		} else {
 			if focused {
-				valPart = styles.SelectedTextStyle().Render("[OFF]")
+				valPart = offStyle.Bold(true).Render("[OFF]")
 			} else {
-				valPart = styles.MutedTextStyle().Render("[OFF]")
+				valPart = offStyle.Render("[OFF]")
 			}
 		}
 	}
