@@ -18,7 +18,7 @@ func TestSSHPasswordForm_ImplementsFormModel(t *testing.T) {
 // creates a form through the framework, types characters, and verifies
 // the framework correctly dispatches input to the form.
 func TestSSHPasswordForm_Integration_TextInput(t *testing.T) {
-	fm := NewSSHPasswordFormModel()
+	fm := NewSSHPasswordFormModel(false)
 	sf := form.NewScrollableForm(fm)
 	sf.SetSize(80, 24)
 
@@ -46,7 +46,7 @@ func TestSSHPasswordForm_Integration_TextInput(t *testing.T) {
 // TestSSHPasswordForm_Integration_Navigation verifies that the framework
 // handles Tab/Shift+Tab navigation correctly through the SSH form.
 func TestSSHPasswordForm_Integration_Navigation(t *testing.T) {
-	fm := NewSSHPasswordFormModel()
+	fm := NewSSHPasswordFormModel(false)
 	sf := form.NewScrollableForm(fm)
 	sf.SetSize(80, 24)
 
@@ -86,7 +86,7 @@ func TestSSHPasswordForm_Integration_Navigation(t *testing.T) {
 
 // TestSSHPasswordForm_Integration_Backspace verifies backspace deletes characters.
 func TestSSHPasswordForm_Integration_Backspace(t *testing.T) {
-	fm := NewSSHPasswordFormModel()
+	fm := NewSSHPasswordFormModel(false)
 	sf := form.NewScrollableForm(fm)
 	sf.SetSize(80, 24)
 
@@ -111,7 +111,7 @@ func TestSSHPasswordForm_Integration_Backspace(t *testing.T) {
 
 // TestSSHPasswordForm_Integration_Delete verifies delete removes characters ahead.
 func TestSSHPasswordForm_Integration_Delete(t *testing.T) {
-	fm := NewSSHPasswordFormModel()
+	fm := NewSSHPasswordFormModel(false)
 	sf := form.NewScrollableForm(fm)
 	sf.SetSize(80, 24)
 
@@ -151,7 +151,7 @@ func TestSSHPasswordForm_Integration_Delete(t *testing.T) {
 // TestSSHPasswordForm_Integration_HandleEnter_Save verifies that pressing
 // Enter on the Apply button with valid input triggers a save.
 func TestSSHPasswordForm_Integration_HandleEnter_Save(t *testing.T) {
-	fm := NewSSHPasswordFormModel()
+	fm := NewSSHPasswordFormModel(true)
 	sf := form.NewScrollableForm(fm)
 	sf.SetSize(80, 24)
 
@@ -169,10 +169,6 @@ func TestSSHPasswordForm_Integration_HandleEnter_Save(t *testing.T) {
 	}
 
 	// Press Enter to apply
-	origDryRun := dryRunMode
-	dryRunMode = true
-	defer func() { dryRunMode = origDryRun }()
-
 	result, cmd := sf.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	sf = result.(*form.ScrollableForm)
 
@@ -190,7 +186,7 @@ func TestSSHPasswordForm_Integration_HandleEnter_Save(t *testing.T) {
 // TestSSHPasswordForm_Integration_HandleEnter_ValidationError verifies
 // that validation errors prevent saving.
 func TestSSHPasswordForm_Integration_HandleEnter_ValidationError(t *testing.T) {
-	fm := NewSSHPasswordFormModel()
+	fm := NewSSHPasswordFormModel(false)
 	sf := form.NewScrollableForm(fm)
 	sf.SetSize(80, 24)
 
@@ -226,7 +222,7 @@ func TestSSHPasswordUpdatedMsg_ImplementsFormSavedMsg(t *testing.T) {
 // TestSSHPasswordForm_Integration_CustomMessage verifies that custom messages
 // (like sshPasswordErrorMsg) are correctly handled through the framework.
 func TestSSHPasswordForm_Integration_CustomMessage(t *testing.T) {
-	fm := NewSSHPasswordFormModel()
+	fm := NewSSHPasswordFormModel(false)
 	sf := form.NewScrollableForm(fm)
 	sf.SetSize(80, 24)
 
@@ -241,7 +237,7 @@ func TestSSHPasswordForm_Integration_CustomMessage(t *testing.T) {
 
 // TestSSHPasswordForm_BuildPositions verifies the position list is correct.
 func TestSSHPasswordForm_BuildPositions(t *testing.T) {
-	fm := NewSSHPasswordFormModel()
+	fm := NewSSHPasswordFormModel(false)
 	positions := fm.BuildPositions()
 
 	if len(positions) != 3 {
@@ -261,7 +257,7 @@ func TestSSHPasswordForm_BuildPositions(t *testing.T) {
 
 // TestSSHPasswordForm_Integration_Render verifies the form renders through the framework.
 func TestSSHPasswordForm_Integration_Render(t *testing.T) {
-	fm := NewSSHPasswordFormModel()
+	fm := NewSSHPasswordFormModel(false)
 	sf := form.NewScrollableForm(fm)
 	sf.SetSize(80, 24)
 
@@ -279,7 +275,7 @@ func TestSSHPasswordForm_Integration_Render(t *testing.T) {
 // TestSSHPasswordForm_ApplyButtonFormat verifies the Apply button follows standard format
 // with [Space/Enter] Apply  [ESC] Cancel pattern.
 func TestSSHPasswordForm_ApplyButtonFormat(t *testing.T) {
-	fm := NewSSHPasswordFormModel()
+	fm := NewSSHPasswordFormModel(false)
 	sf := form.NewScrollableForm(fm)
 	sf.SetSize(80, 24)
 

@@ -43,7 +43,7 @@ func setupDeleteTest(t *testing.T) (*vm.Manager, string) {
 func TestNewVMDeleteModel(t *testing.T) {
 	mgr, vmID := setupDeleteTest(t)
 
-	model, err := NewVMDeleteModel(mgr, vmID)
+	model, err := NewVMDeleteModel(mgr, vmID, false)
 	if err != nil {
 		t.Fatalf("NewVMDeleteModel() returned error: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestNewVMDeleteModel(t *testing.T) {
 func TestNewVMDeleteModelNotFound(t *testing.T) {
 	mgr, _ := setupDeleteTest(t)
 
-	model, err := NewVMDeleteModel(mgr, "nonexistent")
+	model, err := NewVMDeleteModel(mgr, "nonexistent", false)
 	if err == nil {
 		t.Error("Expected error for nonexistent VM")
 	}
@@ -79,7 +79,7 @@ func TestNewVMDeleteModelNotFound(t *testing.T) {
 func TestVMDeleteModelInit(t *testing.T) {
 	mgr, vmID := setupDeleteTest(t)
 
-	model, err := NewVMDeleteModel(mgr, vmID)
+	model, err := NewVMDeleteModel(mgr, vmID, false)
 	if err != nil {
 		t.Fatalf("NewVMDeleteModel() returned error: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestVMDeleteModelInit(t *testing.T) {
 func TestVMDeleteModelView(t *testing.T) {
 	mgr, vmID := setupDeleteTest(t)
 
-	model, err := NewVMDeleteModel(mgr, vmID)
+	model, err := NewVMDeleteModel(mgr, vmID, false)
 	if err != nil {
 		t.Fatalf("NewVMDeleteModel() returned error: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestVMDeleteModelView(t *testing.T) {
 func TestVMDeleteModelSelectNo(t *testing.T) {
 	mgr, vmID := setupDeleteTest(t)
 
-	model, err := NewVMDeleteModel(mgr, vmID)
+	model, err := NewVMDeleteModel(mgr, vmID, false)
 	if err != nil {
 		t.Fatalf("NewVMDeleteModel() returned error: %v", err)
 	}
@@ -142,7 +142,7 @@ func TestVMDeleteModelSelectNo(t *testing.T) {
 func TestVMDeleteModelSelectYes(t *testing.T) {
 	mgr, vmID := setupDeleteTest(t)
 
-	model, err := NewVMDeleteModel(mgr, vmID)
+	model, err := NewVMDeleteModel(mgr, vmID, false)
 	if err != nil {
 		t.Fatalf("NewVMDeleteModel() returned error: %v", err)
 	}
@@ -181,7 +181,7 @@ func TestVMDeleteModelSelectYes(t *testing.T) {
 func TestVMDeleteModelNavigation(t *testing.T) {
 	mgr, vmID := setupDeleteTest(t)
 
-	model, err := NewVMDeleteModel(mgr, vmID)
+	model, err := NewVMDeleteModel(mgr, vmID, false)
 	if err != nil {
 		t.Fatalf("NewVMDeleteModel() returned error: %v", err)
 	}

@@ -78,7 +78,7 @@ func GenerateAsymmetricCPUDevices(
 	// For each die, collect unique host core IDs from selected CPUs and sort them.
 	// This creates the hostCoreID → guestCoreID mapping (sequential among selected).
 	type dieCoreInfo struct {
-		dieID            int
+		dieID             int
 		selectedHostCores []int // sorted unique host core IDs on this die
 	}
 	dieCoreMap := make(map[int]*dieCoreInfo) // dieID → info

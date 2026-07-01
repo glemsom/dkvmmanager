@@ -15,6 +15,6 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *MainModel) View() tea.View {
 	v := tea.NewView(m.view())
 	// AltScreen is disabled in debug mode so log output remains visible.
-	v.AltScreen = !debugMode
+	v.AltScreen = !m.debugMode
 	return v
 }

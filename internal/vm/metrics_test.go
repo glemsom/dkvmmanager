@@ -62,14 +62,14 @@ func (m *mockQMPClient) QueryBalloon() (uint64, error) {
 	return m.balloon, nil
 }
 
-func (m *mockQMPClient) Close() error          { return nil }
-func (m *mockQMPClient) Quit() error            { return nil }
+func (m *mockQMPClient) Close() error            { return nil }
+func (m *mockQMPClient) Quit() error             { return nil }
 func (m *mockQMPClient) Events() <-chan QMPEvent { return nil }
 
 func TestSnapshotColdSnapshot(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	// Set up mock QMP client
 	mock := &mockQMPClient{
@@ -116,7 +116,7 @@ func TestSnapshotColdSnapshot(t *testing.T) {
 func TestSnapshotWarmSnapshot(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	mock := &mockQMPClient{
 		status: "running",
@@ -178,7 +178,7 @@ func TestSnapshotWarmSnapshot(t *testing.T) {
 func TestSnapshotNoQMPClient(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	// No QMP client set (nil)
 
@@ -197,7 +197,7 @@ func TestSnapshotNoQMPClient(t *testing.T) {
 func TestSnapshotQMPError(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	mock := &mockQMPClient{
 		qError: fmt.Errorf("mock failure"),
@@ -216,7 +216,7 @@ func TestSnapshotQMPError(t *testing.T) {
 func TestSnapshotBlockAndBalloonPopulated(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	mock := &mockQMPClient{
 		status: "running",
@@ -272,13 +272,13 @@ func TestSnapshotBlockAndBalloonPopulated(t *testing.T) {
 func TestSnapshotBlockAndBalloonGracefulNoBalloon(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	mock := &mockQMPClient{
 		status:  "running",
 		cpus:    []VCPUInfo{{CPU: 0, ThreadID: 100}},
 		blocks:  nil, // no disks attached / empty
-		balloon: 0,    // no balloon driver
+		balloon: 0,   // no balloon driver
 	}
 	runner.qmpClient = mock
 
@@ -307,7 +307,7 @@ func TestSnapshotBlockAndBalloonGracefulNoBalloon(t *testing.T) {
 func TestSnapshotBlockDelta(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	var blockCall int
 	mock := &mockQMPClient{
@@ -411,23 +411,23 @@ func TestSnapshotBlockDelta(t *testing.T) {
 // to the inner mock except QueryBlockStats, which builds the array from
 // per-call functions so we can simulate counter growth across snapshots.
 type countingBlockClient struct {
-	mock   *mockQMPClient
-	onCall func()
+	mock    *mockQMPClient
+	onCall  func()
 	rdBytes func() uint64
 	wrBytes func() uint64
 	rdOps   func() uint64
 	wrOps   func() uint64
 }
 
-func (c *countingBlockClient) QueryStatus() (string, error) { return c.mock.QueryStatus() }
+func (c *countingBlockClient) QueryStatus() (string, error)   { return c.mock.QueryStatus() }
 func (c *countingBlockClient) QueryCPUs() ([]VCPUInfo, error) { return c.mock.QueryCPUs() }
 func (c *countingBlockClient) QueryCPUsFast() ([]QMPVCPUInfo, error) {
 	return c.mock.QueryCPUsFast()
 }
 func (c *countingBlockClient) QueryBalloon() (uint64, error) { return c.mock.QueryBalloon() }
-func (c *countingBlockClient) Close() error { return nil }
-func (c *countingBlockClient) Quit() error { return nil }
-func (c *countingBlockClient) Events() <-chan QMPEvent { return nil }
+func (c *countingBlockClient) Close() error                  { return nil }
+func (c *countingBlockClient) Quit() error                   { return nil }
+func (c *countingBlockClient) Events() <-chan QMPEvent       { return nil }
 func (c *countingBlockClient) QueryBlockStats() ([]QMPBlockDeviceStats, error) {
 	c.onCall()
 	return []QMPBlockDeviceStats{
@@ -446,7 +446,7 @@ func (c *countingBlockClient) QueryBlockStats() ([]QMPBlockDeviceStats, error) {
 func TestSnapshotBalloonNotActivatedGraceful(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	// The mock's QueryBalloon returns 0 with no error, mirroring the
 	// production "Balloon is not activated" graceful-degradation path.
@@ -484,7 +484,7 @@ func TestSnapshotBalloonNotActivatedGraceful(t *testing.T) {
 func TestPID(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	if pid := runner.PID(); pid != 0 {
 		t.Errorf("expected PID=0 for unstarted runner, got %d", pid)
@@ -496,7 +496,7 @@ func TestPID(t *testing.T) {
 func TestSnapshotHostFieldsZeroOnNoPID(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	mock := &mockQMPClient{
 		status: "running",
@@ -552,7 +552,7 @@ func TestSnapshotHostFieldsZeroOnNoPID(t *testing.T) {
 func TestSnapshotHostFieldsZeroOnUnreadableProc(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	mock := &mockQMPClient{
 		status: "running",
@@ -586,7 +586,7 @@ func TestSnapshotHostFieldsZeroOnUnreadableProc(t *testing.T) {
 func TestSnapshotHostFieldsPopulatedOnValidPID(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	mock := &mockQMPClient{
 		status: "running",
@@ -624,7 +624,7 @@ func TestSnapshotHostFieldsPopulatedOnValidPID(t *testing.T) {
 func TestSnapshotHostCPUDelta(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	mock := &mockQMPClient{
 		status: "running",
@@ -687,7 +687,7 @@ func TestSnapshotHostCPUDelta(t *testing.T) {
 func TestSnapshotReadThreadCPUTimeCalledOncePerVCPU(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	mock := &mockQMPClient{
 		status: "running",
@@ -745,7 +745,7 @@ func TestSnapshotReadThreadCPUTimeCalledOncePerVCPU(t *testing.T) {
 func TestSnapshotReadThreadCPUTimeNotCalledWhenNoPID(t *testing.T) {
 	vmObj := &domain.VM{Name: "test-vm", ID: "1"}
 	cfg := &config.Config{}
-	runner := NewVMRunner(vmObj, cfg, RunConfig{})
+	runner := NewVMRunner(vmObj, cfg, RunConfig{}, false)
 
 	mock := &mockQMPClient{
 		status: "running",

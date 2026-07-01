@@ -164,7 +164,7 @@ func TestScenarioESCFromVMDelete(t *testing.T) {
 	m := setupTestModelForScenarios(t)
 
 	vms, _ := m.vmManager.ListVMs()
-	deleteModel, err := NewVMDeleteModel(m.vmManager, vms[0].ID)
+	deleteModel, err := NewVMDeleteModel(m.vmManager, vms[0].ID, false)
 	if err != nil {
 		t.Fatalf("Failed to create delete model: %v", err)
 	}
@@ -232,8 +232,7 @@ func TestScenarioVMDeletedMsg(t *testing.T) {
 // TestScenarioLBUCommitDryRun verifies LBU commit through Update() with dry-run mode.
 func TestScenarioLBUCommitDryRun(t *testing.T) {
 	m := setupTestModelForScenarios(t)
-	dryRunMode = true
-	defer func() { dryRunMode = false }()
+	m.dryRunMode = true
 
 	// Switch to Configuration tab, select "Save changes" (index 11)
 	m = sendKeys(t, m, tea.KeyTab)

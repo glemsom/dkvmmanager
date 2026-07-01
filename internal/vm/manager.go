@@ -22,6 +22,8 @@ import (
 type Manager struct {
 	cfg        *config.Config
 	repository *Repository
+	debugMode  bool
+	dryRunMode bool
 }
 
 // NewManager creates a new VM manager
@@ -31,14 +33,17 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 		return nil, fmt.Errorf("failed to create VM repository: %w", err)
 	}
 
-	return NewManagerWithRepository(cfg, repo)
+	return NewManagerWithRepository(cfg, repo, false, false)
 }
 
 // NewManagerWithRepository creates a Manager with an existing repository.
-func NewManagerWithRepository(cfg *config.Config, repo *Repository) (*Manager, error) {
+// debugMode and dryRunMode control logging and dry-run behavior for the vm package.
+func NewManagerWithRepository(cfg *config.Config, repo *Repository, debugMode, dryRunMode bool) (*Manager, error) {
 	return &Manager{
 		cfg:        cfg,
 		repository: repo,
+		debugMode:  debugMode,
+		dryRunMode: dryRunMode,
 	}, nil
 }
 
@@ -162,20 +167,20 @@ func (m *Manager) GenerateMAC() string {
 // vfio-pci.ids parameter string, and writes it to the grub.cfg file.
 // It returns an error if the config cannot be read, or the grub.cfg cannot be updated.
 func (m *Manager) ApplyVFIOIDsToKernel() error {
-	if debugMode {
+	if m.debugMode {
 		log.Println("[DEBUG] ApplyVFIOIDsToKernel: starting")
 	}
 
 	// Get current PCI passthrough config
 	var pciCfg domain.PCIPassthroughConfig
 	if err := m.repository.GetConfig("pci_passthrough", &pciCfg); err != nil {
-		if debugMode {
+		if m.debugMode {
 			log.Printf("[DEBUG] ApplyVFIOIDsToKernel: failed to get PCI config: %v", err)
 		}
 		return fmt.Errorf("get PCI passthrough config: %w", err)
 	}
 
-	if debugMode {
+	if m.debugMode {
 		log.Printf("[DEBUG] ApplyVFIOIDsToKernel: got %d PCI devices from config", len(pciCfg.Devices))
 		for i, dev := range pciCfg.Devices {
 			log.Printf("[DEBUG] ApplyVFIOIDsToKernel: device[%d] = %s:%s (%s)", i, dev.Vendor, dev.Device, dev.Address)
@@ -185,7 +190,7 @@ func (m *Manager) ApplyVFIOIDsToKernel() error {
 	// Build vfio-pci.ids string
 	vfioIDs := BuildVFIOIDs(pciCfg.Devices)
 
-	if debugMode {
+	if m.debugMode {
 		log.Printf("[DEBUG] ApplyVFIOIDsToKernel: built vfioIDs = %q", vfioIDs)
 	}
 
@@ -195,7 +200,7 @@ func (m *Manager) ApplyVFIOIDsToKernel() error {
 		grubPath = "/media/usb/boot/grub/grub.cfg"
 	}
 
-	if debugMode {
+	if m.debugMode {
 		log.Printf("[DEBUG] ApplyVFIOIDsToKernel: grubPath = %s", grubPath)
 	}
 
@@ -203,26 +208,26 @@ func (m *Manager) ApplyVFIOIDsToKernel() error {
 	// DKVM Hypervisor keeps the USB filesystem read-only by default.
 	remountPath := detectMountPath(grubPath)
 	if remountPath != "" {
-		if err := remountFilesystem(remountPath, "rw"); err != nil {
+		if err := remountFilesystem(remountPath, "rw", m.debugMode); err != nil {
 			return fmt.Errorf("remount %s as rw: %w", remountPath, err)
 		}
 		// Always restore read-only after the update, regardless of outcome.
 		defer func() {
-			if err := remountFilesystem(remountPath, "ro"); err != nil {
+			if err := remountFilesystem(remountPath, "ro", m.debugMode); err != nil {
 				log.Printf("[WARN] ApplyVFIOIDsToKernel: failed to remount %s as ro: %v", remountPath, err)
 			}
 		}()
 	}
 
 	// Update grub.cfg
-	if err := UpdateGrubVFIOIDs(vfioIDs, grubPath); err != nil {
-		if debugMode {
+	if err := UpdateGrubVFIOIDs(vfioIDs, grubPath, m.debugMode); err != nil {
+		if m.debugMode {
 			log.Printf("[DEBUG] ApplyVFIOIDsToKernel: UpdateGrubVFIOIDs failed: %v", err)
 		}
 		return fmt.Errorf("update grub.cfg: %w", err)
 	}
 
-	if debugMode {
+	if m.debugMode {
 		log.Println("[DEBUG] ApplyVFIOIDsToKernel: completed successfully")
 	}
 	return nil
@@ -232,20 +237,20 @@ func (m *Manager) ApplyVFIOIDsToKernel() error {
 // parameter strings (isolcpus, nohz_full, rcu_nocbs), and writes them to grub.cfg.
 // It returns an error if the config cannot be read, or the grub.cfg cannot be updated.
 func (m *Manager) ApplyCPUParamsToKernel() error {
-	if debugMode {
+	if m.debugMode {
 		log.Println("[DEBUG] ApplyCPUParamsToKernel: starting")
 	}
 
 	// Get current vCPU pinning config
 	var pinning domain.VCPUPinningGlobal
 	if err := m.repository.GetConfig("vcpu_pinning", &pinning); err != nil {
-		if debugMode {
+		if m.debugMode {
 			log.Printf("[DEBUG] ApplyCPUParamsToKernel: failed to get vCPU pinning config: %v", err)
 		}
 		return fmt.Errorf("get vCPU pinning config: %w", err)
 	}
 
-	if debugMode {
+	if m.debugMode {
 		log.Printf("[DEBUG] ApplyCPUParamsToKernel: pinning enabled=%v, mappings=%d",
 			pinning.Enabled, len(pinning.Mappings))
 	}
@@ -261,7 +266,7 @@ func (m *Manager) ApplyCPUParamsToKernel() error {
 		rcuNoCBS = cpuList
 	}
 
-	if debugMode {
+	if m.debugMode {
 		log.Printf("[DEBUG] ApplyCPUParamsToKernel: cpuList=%q, isolcpus=%q, nohzFull=%q, rcuNoCBS=%q",
 			cpuList, isolcpus, nohzFull, rcuNoCBS)
 	}
@@ -272,32 +277,32 @@ func (m *Manager) ApplyCPUParamsToKernel() error {
 		grubPath = "/media/usb/boot/grub/grub.cfg"
 	}
 
-	if debugMode {
+	if m.debugMode {
 		log.Printf("[DEBUG] ApplyCPUParamsToKernel: grubPath = %s", grubPath)
 	}
 
 	// Remount /media/usb as rw before modifying grub.cfg.
 	remountPath := detectMountPath(grubPath)
 	if remountPath != "" {
-		if err := remountFilesystem(remountPath, "rw"); err != nil {
+		if err := remountFilesystem(remountPath, "rw", m.debugMode); err != nil {
 			return fmt.Errorf("remount %s as rw: %w", remountPath, err)
 		}
 		defer func() {
-			if err := remountFilesystem(remountPath, "ro"); err != nil {
+			if err := remountFilesystem(remountPath, "ro", m.debugMode); err != nil {
 				log.Printf("[WARN] ApplyCPUParamsToKernel: failed to remount %s as ro: %v", remountPath, err)
 			}
 		}()
 	}
 
 	// Update grub.cfg
-	if err := UpdateGrubCPUParams(isolcpus, nohzFull, rcuNoCBS, grubPath); err != nil {
-		if debugMode {
+	if err := UpdateGrubCPUParams(isolcpus, nohzFull, rcuNoCBS, grubPath, m.debugMode); err != nil {
+		if m.debugMode {
 			log.Printf("[DEBUG] ApplyCPUParamsToKernel: UpdateGrubCPUParams failed: %v", err)
 		}
 		return fmt.Errorf("update grub.cfg: %w", err)
 	}
 
-	if debugMode {
+	if m.debugMode {
 		log.Println("[DEBUG] ApplyCPUParamsToKernel: completed successfully")
 	}
 	return nil
@@ -334,14 +339,12 @@ func copyFile(src, dst string) error {
 	}
 	defer srcFile.Close()
 
-
 	// Create destination file
 	dstFile, err := os.Create(dst)
 	if err != nil {
 		return fmt.Errorf("failed to create destination file %s: %w", dst, err)
 	}
 	defer dstFile.Close()
-
 
 	// Copy content
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
@@ -404,7 +407,7 @@ func detectMountPath(filePath string) string {
 
 // remountFilesystem remounts the given mount point with the specified options
 // (e.g., "rw" or "ro"). It uses the mount command with the remount flag.
-func remountFilesystem(mountPath, mode string) error {
+func remountFilesystem(mountPath, mode string, debugMode bool) error {
 	if debugMode {
 		log.Printf("[DEBUG] remountFilesystem: mount -o remount,%s %s", mode, mountPath)
 	}

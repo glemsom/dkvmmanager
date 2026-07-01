@@ -37,7 +37,7 @@ func (m *VMDeleteModel) SetSize(width, height int) {}
 func (m *VMDeleteModel) FileBrowserActive() bool { return false }
 
 // NewVMDeleteModel creates a new VM delete model
-func NewVMDeleteModel(vmManager *vm.Manager, vmID string) (*VMDeleteModel, error) {
+func NewVMDeleteModel(vmManager *vm.Manager, vmID string, debugMode bool) (*VMDeleteModel, error) {
 	// Get VM details
 	vm, err := vmManager.GetVM(vmID)
 	if err != nil {
@@ -45,7 +45,6 @@ func NewVMDeleteModel(vmManager *vm.Manager, vmID string) (*VMDeleteModel, error
 	}
 
 	if debugMode {
-		log.Printf("[DEBUG] NewVMDeleteModel created for VM: %s (ID: %s)", vm.Name, vm.ID)
 	}
 
 	return &VMDeleteModel{

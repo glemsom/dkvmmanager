@@ -10,7 +10,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func PinThreadToCores(pid int, cores []int) error {
+func PinThreadToCores(pid int, cores []int, debugMode bool) error {
 	if pid <= 0 {
 		return fmt.Errorf("invalid pid: %d", pid)
 	}

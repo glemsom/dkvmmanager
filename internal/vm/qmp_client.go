@@ -333,9 +333,9 @@ type BalloonInfo struct {
 // QMPBlockDeviceStats is one element of the query-blockstats return
 // array. The QMP wire format nests the counters under "stats".
 type QMPBlockDeviceStats struct {
-	Device  string             `json:"device"`
-	NodeName string            `json:"node-name"`
-	Stats   QMPBlockDeviceIO   `json:"stats"`
+	Device   string           `json:"device"`
+	NodeName string           `json:"node-name"`
+	Stats    QMPBlockDeviceIO `json:"stats"`
 }
 
 // QMPBlockDeviceIO is the per-device I/O counter object inside

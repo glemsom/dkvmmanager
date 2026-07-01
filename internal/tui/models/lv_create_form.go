@@ -64,13 +64,17 @@ type LVCreateFormModel struct {
 
 	// ScrollableForm wrapper (for backward-compatible Update/View/Init/SetSize)
 	form *form.ScrollableForm
+	dryRunMode bool
+	debugMode    bool
 }
 
-func NewLVCreateFormModel() *LVCreateFormModel {
+func NewLVCreateFormModel(dryRunMode, debugMode bool) *LVCreateFormModel {
 	m := &LVCreateFormModel{
 		volumeName:    "my-data-volume",
 		sizeValue:     "100",
 		errors:        map[string]string{},
+		dryRunMode:   dryRunMode,
+		debugMode:    debugMode,
 		cursorOffsets: make(map[string]int),
 	}
 	m.form = form.NewScrollableForm(m)
@@ -578,7 +582,7 @@ func (m *LVCreateFormModel) validate() bool {
 
 func (m *LVCreateFormModel) createCmd() tea.Cmd {
 	cmdStr := m.buildCommand()
-	if dryRunMode {
+	if m.dryRunMode {
 		m.preview = "Would execute: " + cmdStr
 		return func() tea.Msg { return LVCreateUpdatedMsg{} }
 	}
@@ -600,7 +604,7 @@ func (m *LVCreateFormModel) createCmd() tea.Cmd {
 
 func (m *LVCreateFormModel) loadVolumeGroupsCmd() tea.Cmd {
 	return func() tea.Msg {
-		if debugMode {
+		if m.debugMode {
 			if p, err := exec.LookPath("vgs"); err == nil {
 				log.Printf("[DEBUG] LV create: vgs path=%s", p)
 			} else {
@@ -623,13 +627,13 @@ func (m *LVCreateFormModel) loadVolumeGroupsCmd() tea.Cmd {
 		cmd := exec.Command("vgs", argsPrimary...)
 		cmd.Env = append(os.Environ(), "LVM_SUPPRESS_FD_WARNINGS=1")
 		out, err := cmd.CombinedOutput()
-		if debugMode {
+		if m.debugMode {
 			log.Printf("[DEBUG] LV create: running: vgs %s", strings.Join(argsPrimaryDisplay, " "))
 			log.Printf("[DEBUG] LV create: primary output raw=%q", strings.TrimSpace(string(out)))
 		}
 		if err != nil {
 			stderr := strings.TrimSpace(string(out))
-			if debugMode {
+			if m.debugMode {
 				log.Printf("[DEBUG] LV create: primary vgs failed: %v", err)
 			}
 			if stderr != "" {
@@ -638,12 +642,12 @@ func (m *LVCreateFormModel) loadVolumeGroupsCmd() tea.Cmd {
 			return lvVGsLoadedMsg{err: err}
 		}
 
-		vgs, pErr := parseVGSOutput(string(out))
+		vgs, pErr := parseVGSOutput(string(out), m.debugMode)
 		if pErr != nil {
 			return lvVGsLoadedMsg{err: pErr}
 		}
 		if len(vgs) > 0 {
-			if debugMode {
+			if m.debugMode {
 				log.Printf("[DEBUG] LV create: parsed %d volume groups (primary)", len(vgs))
 			}
 			return lvVGsLoadedMsg{vgs: vgs}
@@ -654,7 +658,7 @@ func (m *LVCreateFormModel) loadVolumeGroupsCmd() tea.Cmd {
 		fallbackCmd := exec.Command("vgs", argsFallback...)
 		fallbackCmd.Env = append(os.Environ(), "LVM_SUPPRESS_FD_WARNINGS=1")
 		fallbackOut, fallbackErr := fallbackCmd.CombinedOutput()
-		if debugMode {
+		if m.debugMode {
 			log.Printf("[DEBUG] LV create: running fallback: vgs %s", strings.Join(argsFallback, " "))
 			log.Printf("[DEBUG] LV create: fallback output raw=%q", strings.TrimSpace(string(fallbackOut)))
 		}
@@ -666,18 +670,18 @@ func (m *LVCreateFormModel) loadVolumeGroupsCmd() tea.Cmd {
 			return lvVGsLoadedMsg{err: fallbackErr}
 		}
 
-		fallbackVGS, fallbackParseErr := parseVGSOutput(string(fallbackOut))
+		fallbackVGS, fallbackParseErr := parseVGSOutput(string(fallbackOut), m.debugMode)
 		if fallbackParseErr != nil {
 			return lvVGsLoadedMsg{err: fallbackParseErr}
 		}
-		if debugMode {
+		if m.debugMode {
 			log.Printf("[DEBUG] LV create: parsed %d volume groups (fallback)", len(fallbackVGS))
 		}
 		return lvVGsLoadedMsg{vgs: fallbackVGS}
 	}
 }
 
-func parseVGSOutput(output string) ([]VolumeGroup, error) {
+func parseVGSOutput(output string, debugMode bool) ([]VolumeGroup, error) {
 	lines := strings.Split(output, "\n")
 	out := make([]VolumeGroup, 0, len(lines))
 	for _, line := range lines {
@@ -687,7 +691,7 @@ func parseVGSOutput(output string) ([]VolumeGroup, error) {
 		}
 
 		parts := splitVGSLine(line)
-		if debugMode {
+	if debugMode {
 			log.Printf("[DEBUG] LV create: parse line=%q parts=%q", line, parts)
 		}
 		if len(parts) < 5 {

@@ -16,28 +16,27 @@ import (
 	"golang.org/x/sys/unix"
 )
 func NewMainModel() (*MainModel, error) {
-	return NewMainModelWithConfig(config.Load())
+	return NewMainModelWithConfig(MainModelConfig{Config: config.Load()})
 }
 
 // NewMainModelWithConfig creates a new main model with the given configuration
-func NewMainModelWithConfig(cfg *config.Config) (*MainModel, error) {
+func NewMainModelWithConfig(cfg MainModelConfig) (*MainModel, error) {
 
 	// Create config repository
-	repo, err := vm.NewRepository(cfg.VMsConfigFile)
+	repo, err := vm.NewRepository(cfg.Config.VMsConfigFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create VM repository: %w", err)
 	}
 
 	// Create VM manager
-	vmMgr, err := vm.NewManagerWithRepository(cfg, repo)
+	vmMgr, err := vm.NewManagerWithRepository(cfg.Config, repo, cfg.DebugMode, cfg.DryRunMode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create VM manager: %w", err)
 	}
 
 	// Build menu items
-	menuItems := buildMenuItems(vmMgr)
-
-	if debugMode {
+	menuItems := buildMenuItems(vmMgr, cfg.DebugMode)
+	if cfg.DebugMode {
 		log.Printf("[DEBUG] MainModel created with %d menu items", len(menuItems))
 	}
 
@@ -47,14 +46,14 @@ func NewMainModelWithConfig(cfg *config.Config) (*MainModel, error) {
 
 	// Check if /media/dkvmdata is a mount point
 	initialView := ViewMainMenu
-	if !skipMountPointCheck {
+	if !cfg.SkipMountPointCheck {
 		if mounted, err := isMountPoint(dkvmDataMountPath); err == nil && !mounted {
-			if debugMode {
+			if cfg.DebugMode {
 				log.Printf("[DEBUG] %s is not a mount point, showing warning", dkvmDataMountPath)
 			}
 			initialView = ViewMountPointWarning
 		} else if err != nil {
-			if debugMode {
+			if cfg.DebugMode {
 				log.Printf("[DEBUG] Error checking mount point %s: %v", dkvmDataMountPath, err)
 			}
 		}
@@ -101,7 +100,7 @@ func NewMainModelWithConfig(cfg *config.Config) (*MainModel, error) {
 	m := &MainModel{
 		currentView:   initialView,
 		viewRegistry:  viewReg,
-		cfg:           cfg,
+		cfg:           cfg.Config,
 		vmManager:     vmMgr,
 		configRepo:    repo,
 		hostDiscovery: &vm.DefaultHostDiscovery{},
@@ -110,7 +109,9 @@ func NewMainModelWithConfig(cfg *config.Config) (*MainModel, error) {
 		menuList:      menuList,
 		configList:    configList,
 		powerList:     powerList,
-		debugMode:     debugMode,
+		dryRunMode:           cfg.DryRunMode,
+		skipMountPointCheck:  cfg.SkipMountPointCheck,
+		debugMode:     cfg.DebugMode,
 		tabModel:      tabModel,
 		statusBar:     statusBar,
 		breadcrumbs:   breadcrumbs,
@@ -119,7 +120,7 @@ func NewMainModelWithConfig(cfg *config.Config) (*MainModel, error) {
 	// Activate mount point warning through the registry if needed
 	if initialView == ViewMountPointWarning {
 		if _, err := viewReg.Activate(ViewMountPointWarning, m); err != nil {
-			if debugMode {
+			if m.debugMode {
 				log.Printf("[DEBUG] Failed to activate mount point warning: %v", err)
 			}
 			m.currentView = ViewMainMenu
@@ -181,12 +182,12 @@ func registerAllViews(reg *ViewRegistry, vmManager *vm.Manager, configRepo *vm.R
 
 	// 9: SSH Password
 	reg.Register(&ViewDef{Name: ViewSSHPassword, Factory: func(m *MainModel) (SubViewModel, error) {
-		return NewSSHPasswordModel(), nil
+		return NewSSHPasswordModel(m.dryRunMode), nil
 	}, BreadcrumbLabel: "Set SSH Password", ParentTab: components.TabConfiguration, ConfigMenuIndex: 9})
 
 	// 10: Create Logical Volume
 	reg.Register(&ViewDef{Name: ViewLVCreate, Factory: func(m *MainModel) (SubViewModel, error) {
-		return NewLVCreateModel(), nil
+		return NewLVCreateModel(m.dryRunMode, m.debugMode), nil
 	}, BreadcrumbLabel: "Create Logical Volume", ParentTab: components.TabConfiguration, ConfigMenuIndex: 10})
 
 	// Mount point warning (not in config menu)
@@ -253,35 +254,9 @@ func buildPowerListAdapter() []list.Item {
 	return listItems
 }
 
-// SetDebugMode enables or disables debug mode for the models and vm packages
-func SetDebugMode(enabled bool) {
-	debugMode = enabled
-	vm.SetDebugMode(enabled)
-	if debugMode {
-		log.Println("[DEBUG] Debug mode enabled for models package")
-	}
-}
-
-// SetDryRunMode enables or disables dry-run mode for the models and vm packages
-func SetDryRunMode(enabled bool) {
-	dryRunMode = enabled
-	vm.SetDryRunMode(enabled)
-	if dryRunMode {
-		log.Println("[DRY-RUN] Dry-run mode enabled for models package")
-	}
-}
-
-// SetSkipMountPointCheck enables or disables the mount point check
-// When enabled, the mount point warning is bypassed (useful for testing)
-func SetSkipMountPointCheck(enabled bool) {
-	skipMountPointCheck = enabled
-	if skipMountPointCheck {
-		log.Println("[TEST] Mount point check skipped for testing")
-	}
-}
 
 // buildMenuItems builds the menu items from VM configurations
-func buildMenuItems(mgr *vm.Manager) []MenuItem {
+func buildMenuItems(mgr *vm.Manager, debugMode bool) []MenuItem {
 	items := []MenuItem{}
 
 	// Get all VMs
@@ -312,7 +287,7 @@ func buildMenuItems(mgr *vm.Manager) []MenuItem {
 
 // rebuildMenuList refreshes menu items and syncs the list component
 func (m *MainModel) rebuildMenuList() {
-	m.menuItems = buildMenuItems(m.vmManager)
+	m.menuItems = buildMenuItems(m.vmManager, m.debugMode)
 	m.menuList.SetItems(buildMenuListAdapter(m.menuItems))
 	
 	// Check if the VM that was running is still running

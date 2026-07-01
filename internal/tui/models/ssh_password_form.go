@@ -64,12 +64,14 @@ type SSHPasswordFormModel struct {
 
 	// Rendering cache
 	renderedLines []string
+	dryRunMode bool
 }
 
 // NewSSHPasswordFormModel creates a new SSH password form model.
-func NewSSHPasswordFormModel() *SSHPasswordFormModel {
+func NewSSHPasswordFormModel(dryRunMode bool) *SSHPasswordFormModel {
 	m := &SSHPasswordFormModel{
 		cursorOffsets: make(map[string]int),
+		dryRunMode:   dryRunMode,
 		errors:        make(map[string]string),
 	}
 	m.positions = m.buildPositions()

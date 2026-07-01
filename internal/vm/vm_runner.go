@@ -18,48 +18,26 @@ import (
 	"time"
 
 	"github.com/glemsom/dkvmmanager/internal/config"
-	"github.com/glemsom/dkvmmanager/internal/hugepages"
 	"github.com/glemsom/dkvmmanager/internal/domain"
+	"github.com/glemsom/dkvmmanager/internal/hugepages"
 )
-
-// Package-level debug mode flag for the vm package
-var debugMode bool
-
-// Package-level dry-run mode flag for the vm package
-var dryRunMode bool
-
-// SetDebugMode enables or disables debug mode for the vm package
-func SetDebugMode(enabled bool) {
-	debugMode = enabled
-	if debugMode {
-		log.Println("[DEBUG] Debug mode enabled for vm package")
-	}
-}
-
-// SetDryRunMode enables or disables dry-run mode for the vm package
-func SetDryRunMode(enabled bool) {
-	dryRunMode = enabled
-	if dryRunMode {
-		log.Println("[DRY-RUN] Dry-run mode enabled for vm package")
-	}
-}
 
 // VMRunner manages the lifecycle of a running QEMU virtual machine
 type VMRunner struct {
-	vm         *domain.VM
-	cfg        *config.Config
-	runCfg     RunConfig
-	cmd        *exec.Cmd
-	cmdProcess *os.Process // Cached for race-safe access
-	qmpClient  QMPClientInterface
-	socketPath string
-	logChan    chan string
-	done       chan struct{}
-	mu         sync.Mutex
-	running    bool
-	exitErr    error
-	startTime  time.Time
-	memMB      int64       // Memory in MB for VM (dynamically allocated)
+	vm           *domain.VM
+	cfg          *config.Config
+	runCfg       RunConfig
+	cmd          *exec.Cmd
+	cmdProcess   *os.Process // Cached for race-safe access
+	qmpClient    QMPClientInterface
+	socketPath   string
+	logChan      chan string
+	done         chan struct{}
+	mu           sync.Mutex
+	running      bool
+	exitErr      error
+	startTime    time.Time
+	memMB        int64       // Memory in MB for VM (dynamically allocated)
 	swtpmProcess *os.Process // swtpm process, if TPM is enabled
 
 	// Subscriber-based log dispatch (S2: replaces single viewChan)
@@ -71,55 +49,45 @@ type VMRunner struct {
 	stagingMax int
 
 	// Persisted log (qemu.log on disk)
-	persistFile  *os.File
+	persistFile *os.File
 	persistBuf  *bufio.Writer
 	persistQuit chan struct{}
 	persistWg   sync.WaitGroup
 
 	// Metrics snapshot state (for delta computation)
-	prevVCPUTime     map[int]int64 // ThreadID -> previous CPUTimeNs (absolute, in ns)
-	prevHostJiffies  uint64        // previous utime+stime for the QEMU process (raw jiffies)
-	prevSnapshotTime time.Time     // wall clock of previous snapshot
+	prevVCPUTime     map[int]int64               // ThreadID -> previous CPUTimeNs (absolute, in ns)
+	prevHostJiffies  uint64                      // previous utime+stime for the QEMU process (raw jiffies)
+	prevSnapshotTime time.Time                   // wall clock of previous snapshot
 	prevBlockStats   map[string]QMPBlockDeviceIO // Device -> previous raw counters
-	prevBlockTime    time.Time     // wall clock of previous block snapshot (delta math)
+	prevBlockTime    time.Time                   // wall clock of previous block snapshot (delta math)
 
 	// Proc reader function (overridable for tests)
-	readThreadCPUTime       func(pid, tid int) (int64, error)
-	readProcessRSS          func(pid int) (uint64, error)
-	readProcessCPUJiffies   func(pid int) (uint64, error)
+	readThreadCPUTime     func(pid, tid int) (int64, error)
+	readProcessRSS        func(pid int) (uint64, error)
+	readProcessCPUJiffies func(pid int) (uint64, error)
+	dbgMode               bool // debug mode flag
 }
 
 // NewVMRunner creates a new VM runner for the given VM with the provided RunConfig.
 // runCfg aggregates all optional configuration (PCI/USB passthrough, CPU options,
 // topology, pinning, scripts, dry-run). A zero-valued RunConfig is safe to use.
-func NewVMRunner(vm *domain.VM, cfg *config.Config, runCfg RunConfig) *VMRunner {
+func NewVMRunner(vm *domain.VM, cfg *config.Config, runCfg RunConfig, debugMode bool) *VMRunner {
 	r := &VMRunner{
-		vm:          vm,
-		cfg:         cfg,
-		runCfg:      runCfg,
-		logChan:     make(chan string, 256),
-		done:        make(chan struct{}),
-		memMB:       hugepages.DefaultMemoryMB, // default, overridden by Start()
-		subscribers: make(map[chan string]struct{}),
-		stagingMax:  256,
+		vm:                    vm,
+		cfg:                   cfg,
+		runCfg:                runCfg,
+		logChan:               make(chan string, 256),
+		done:                  make(chan struct{}),
+		memMB:                 hugepages.DefaultMemoryMB, // default, overridden by Start()
+		subscribers:           make(map[chan string]struct{}),
+		stagingMax:            256,
 		readThreadCPUTime:     readThreadCPUTime,     // production per-thread proc reader
 		readProcessRSS:        readProcessRSS,        // production per-process RSS reader
 		readProcessCPUJiffies: readProcessCPUJiffies, // production per-process CPU jiffies reader
-	}
-	// Package-level dry-run flag (e.g. from CLI --dry-run) overrides RunConfig
-	if dryRunMode {
-		r.runCfg.DryRun = true
+		dbgMode:               debugMode,
 	}
 	return r
 }
-
-
-
-
-
-
-
-
 
 // Subscribe returns a fresh buffered channel that receives new log lines.
 // The channel is closed when the runner exits. This replaces LogChan().
@@ -137,7 +105,10 @@ func (r *VMRunner) Subscribe() <-chan string {
 		select {
 		case ch <- line:
 		default:
-			select { case <-ch: default: }
+			select {
+			case <-ch:
+			default:
+			}
 			ch <- line
 		}
 	}
@@ -425,11 +396,17 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 	// Uses QueryCPUsFast which is supported on all QEMU >= 2.5; avoids the
 	// deprecated query-cpus command which is removed in QEMU 7.1+.
 	var cpus []QMPVCPUInfo
+	var snapshotErr error
 	if client != nil {
 		var err error
 		cpus, err = client.QueryCPUsFast()
 		if err != nil {
-			return m, fmt.Errorf("Snapshot: query-cpus-fast failed: %w", err)
+			// Graceful degradation: skip vCPU data on transient QMP failure.
+			// pollMetrics preserves the last-good snapshot on error.
+			if r.dbgMode {
+				log.Printf("[DEBUG] Snapshot: query-cpus-fast failed: %v", err)
+			}
+			snapshotErr = fmt.Errorf("Snapshot: query-cpus-fast failed: %w", err)
 		}
 	}
 
@@ -442,17 +419,29 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 	if client != nil {
 		bs, err := client.QueryBlockStats()
 		if err != nil {
-			return m, fmt.Errorf("Snapshot: query-blockstats failed: %w", err)
+			// Graceful degradation on transient QMP failure.
+			if r.dbgMode {
+				log.Printf("[DEBUG] Snapshot: query-blockstats failed: %v", err)
+			}
+			if snapshotErr == nil {
+				snapshotErr = fmt.Errorf("Snapshot: query-blockstats failed: %w", err)
+			}
+		} else {
+			blockStats = bs
 		}
-		blockStats = bs
 
 		balloon, err := client.QueryBalloon()
 		if err != nil {
-			// QueryBalloon already swallows "not activated" internally; any
-			// other error is unexpected and surfaces to the caller.
-			return m, fmt.Errorf("Snapshot: query-balloon failed: %w", err)
+			// Graceful degradation on transient QMP failure.
+			if r.dbgMode {
+				log.Printf("[DEBUG] Snapshot: query-balloon failed: %v", err)
+			}
+			if snapshotErr == nil {
+				snapshotErr = fmt.Errorf("Snapshot: query-balloon failed: %w", err)
+			}
+		} else {
+			m.BalloonBytes = balloon
 		}
-		m.BalloonBytes = balloon
 	}
 
 	// All delta math + previous-state updates happen in a single critical
@@ -595,7 +584,7 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 		m.BlockDevices = derived
 	}
 
-	return m, nil
+	return m, snapshotErr
 }
 
 // PCIPassthroughDevices returns the PCI passthrough devices
@@ -701,7 +690,7 @@ func (r *VMRunner) startTPM(vmDataDir string) error {
 	r.mu.Unlock()
 
 	_ = os.WriteFile(pidPath, []byte(strconv.Itoa(cmd.Process.Pid)), 0600)
-	if debugMode {
+	if r.dbgMode {
 		log.Printf("[DEBUG] TPM PID file written: %s", pidPath)
 	}
 
@@ -787,7 +776,7 @@ func (r *VMRunner) cleanupTPM() {
 	// ctrlSock was removed — now tpm.sock is used for both control and TPM
 	os.Remove(pidPath)
 
-	if debugMode {
+	if r.dbgMode {
 		log.Printf("[DEBUG] TPM cleaned up for VM %s (state preserved)", r.vm.Name)
 	}
 }
@@ -800,7 +789,7 @@ func (r *VMRunner) shutdownTPMControl(tpmDir string) error {
 
 	conn, err := net.DialTimeout("unix", ctrlPath, 500*time.Millisecond)
 	if err != nil {
-		if debugMode {
+		if r.dbgMode {
 			log.Printf("[DEBUG] TPM control socket not available: %v", err)
 		}
 		return err
@@ -810,7 +799,7 @@ func (r *VMRunner) shutdownTPMControl(tpmDir string) error {
 	// CMD_SHUTDOWN = 0x00000003 (big-endian)
 	cmd := []byte{0x00, 0x00, 0x00, 0x03}
 	if err := binary.Write(conn, binary.BigEndian, cmd); err != nil {
-		if debugMode {
+		if r.dbgMode {
 			log.Printf("[DEBUG] Failed to send CMD_SHUTDOWN: %v", err)
 		}
 		return err
@@ -819,7 +808,7 @@ func (r *VMRunner) shutdownTPMControl(tpmDir string) error {
 	// Read response (1 byte status)
 	var status byte
 	if err := binary.Read(conn, binary.BigEndian, &status); err != nil {
-		if debugMode {
+		if r.dbgMode {
 			log.Printf("[DEBUG] Failed to read CMD_SHUTDOWN response: %v", err)
 		}
 		return err
@@ -830,7 +819,7 @@ func (r *VMRunner) shutdownTPMControl(tpmDir string) error {
 		return fmt.Errorf("shutdown failed, status=0x%02x", status)
 	}
 
-	if debugMode {
+	if r.dbgMode {
 		log.Printf("[DEBUG] TPM control shutdown successful for VM %s", r.vm.Name)
 	}
 	return nil
@@ -947,7 +936,7 @@ func (r *VMRunner) Start() error {
 	// Build QEMU arguments
 	args := r.buildQEMUArgs(vmDataDir)
 
-	if debugMode {
+	if r.dbgMode {
 		log.Printf("[DEBUG] QEMU command: %s %s", r.cfg.QEMUPath, strings.Join(args, " "))
 	}
 
@@ -971,7 +960,7 @@ func (r *VMRunner) Start() error {
 		return fmt.Errorf("failed to start QEMU: %w", err)
 	}
 
-	if debugMode {
+	if r.dbgMode {
 		log.Printf("[DEBUG] QEMU process started: PID=%d, socket=%s", cmd.Process.Pid, r.socketPath)
 	}
 
@@ -995,7 +984,7 @@ func (r *VMRunner) Start() error {
 	go r.monitorProcess()
 
 	// Start QMP watchdog to diagnose connection issues
-	if debugMode {
+	if r.dbgMode {
 		go r.qmpWatchdog()
 	}
 
@@ -1087,7 +1076,7 @@ func (r *VMRunner) readOutput(pipe io.Reader, source string) {
 			prefix = "[stderr] "
 		}
 		// Log output when debug mode is enabled
-		if debugMode {
+		if r.dbgMode {
 			log.Printf("[DEBUG] [%s] %s", source, line)
 		}
 		select {
@@ -1135,7 +1124,7 @@ func (r *VMRunner) readScriptOutput(pipe io.Reader, source string) {
 			r.logChan <- prefix + line
 		}
 		// Also log in debug mode
-		if debugMode {
+		if r.dbgMode {
 			log.Printf("[DEBUG] %s: %s", source, line)
 		}
 	}
@@ -1171,7 +1160,7 @@ func (r *VMRunner) monitorProcess() {
 
 	close(r.done)
 
-	if debugMode {
+	if r.dbgMode {
 		log.Printf("[DEBUG] QEMU process exited for VM %s: %v", r.vm.Name, err)
 	}
 }
@@ -1227,14 +1216,14 @@ func (r *VMRunner) connectQMP() {
 		running := r.running
 		proc := r.cmdProcess
 		r.mu.Unlock()
-		
+
 		if !running || proc == nil {
-			if debugMode {
+			if r.dbgMode {
 				log.Printf("[DEBUG] QMP connect aborted: VM no longer running or process nil")
 			}
 			return
 		}
-		
+
 		// Verify QEMU process is still alive (signal 0)
 		if err := proc.Signal(syscall.Signal(0)); err != nil {
 			log.Printf("[DEBUG] QMP connect aborted: QEMU process died")
@@ -1247,7 +1236,7 @@ func (r *VMRunner) connectQMP() {
 
 			client, err := NewQMPClient(r.socketPath)
 			if err != nil {
-				if debugMode {
+				if r.dbgMode {
 					log.Printf("[DEBUG] QMP connect attempt %d failed: %v", i+1, err)
 				}
 				time.Sleep(1 * time.Second)
@@ -1258,14 +1247,14 @@ func (r *VMRunner) connectQMP() {
 			greeting, err := client.Negotiate()
 			if err != nil {
 				client.Close()
-				if debugMode {
+				if r.dbgMode {
 					log.Printf("[DEBUG] QMP negotiate attempt %d failed: %v", i+1, err)
 				}
 				time.Sleep(1 * time.Second)
 				continue
 			}
 
-			if debugMode {
+			if r.dbgMode {
 				log.Printf("[DEBUG] QMP connected: QEMU %d.%d.%d",
 					greeting.QMP.Version.QEMU.Major,
 					greeting.QMP.Version.QEMU.Minor,
@@ -1364,7 +1353,7 @@ func (r *VMRunner) executeStartScript() error {
 		}()
 
 		if err := cmd.Wait(); err != nil {
-			if debugMode {
+			if r.dbgMode {
 				log.Printf("[DEBUG] start script failed: %v", err)
 			}
 			// Wait for output goroutines to finish capturing remaining output
@@ -1379,7 +1368,7 @@ func (r *VMRunner) executeStartScript() error {
 		<-done
 
 		r.logChan <- fmt.Sprintf("[start script] executed builtin script: %s", scriptPath)
-		if debugMode {
+		if r.dbgMode {
 			log.Printf("[DEBUG] start script executed builtin script: %s", scriptPath)
 		}
 
@@ -1417,7 +1406,7 @@ func (r *VMRunner) executeStartScript() error {
 		}()
 
 		if err := cmd.Wait(); err != nil {
-			if debugMode {
+			if r.dbgMode {
 				log.Printf("[DEBUG] start script failed: %v", err)
 			}
 			// Wait for output goroutines to finish capturing remaining output
@@ -1432,15 +1421,13 @@ func (r *VMRunner) executeStartScript() error {
 		<-done2
 
 		r.logChan <- fmt.Sprintf("[start script] executed: %s", r.runCfg.StartStopScript.StartScript)
-		if debugMode {
+		if r.dbgMode {
 			log.Printf("[DEBUG] start script executed: %s", r.runCfg.StartStopScript.StartScript)
 		}
 	}
 
 	return nil
 }
-
-
 
 // executeStopScript executes the stop script after QEMU exits (non-blocking)
 func (r *VMRunner) executeStopScript() {
@@ -1485,7 +1472,7 @@ func (r *VMRunner) executeStopScript() {
 		go r.readScriptOutput(stderr, "stop script stderr")
 
 		if err := cmd.Wait(); err != nil {
-			if debugMode {
+			if r.dbgMode {
 				log.Printf("[DEBUG] stop script failed: %v", err)
 			}
 			r.logChan <- fmt.Sprintf("[stop script] WARNING: %v", err)
@@ -1503,20 +1490,20 @@ func (r *VMRunner) executeStopScript() {
 		cmd := exec.Command(args[0], args[1:]...)
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
-			if debugMode {
+			if r.dbgMode {
 				log.Printf("[DEBUG] stop script stdout pipe error: %v", err)
 			}
 			return
 		}
 		stderr, err := cmd.StderrPipe()
 		if err != nil {
-			if debugMode {
+			if r.dbgMode {
 				log.Printf("[DEBUG] stop script stderr pipe error: %v", err)
 			}
 			return
 		}
 		if err := cmd.Start(); err != nil {
-			if debugMode {
+			if r.dbgMode {
 				log.Printf("[DEBUG] stop script start error: %v", err)
 			}
 			return
@@ -1527,7 +1514,7 @@ func (r *VMRunner) executeStopScript() {
 		go r.readScriptOutput(stderr, "stop script stderr")
 
 		if err := cmd.Wait(); err != nil {
-			if debugMode {
+			if r.dbgMode {
 				log.Printf("[DEBUG] stop script failed: %v", err)
 			}
 			r.logChan <- fmt.Sprintf("[stop script] WARNING: %v", err)

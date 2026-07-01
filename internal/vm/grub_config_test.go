@@ -65,8 +65,8 @@ menuentry 'DKVM' {
 	}
 
 	newIDs := "10de:1b80,10de:10f0"
-	if err := UpdateGrubVFIOIDs(newIDs, grubPath); err != nil {
-		t.Fatalf("UpdateGrubVFIOIDs() error: %v", err)
+	if err := UpdateGrubVFIOIDs(newIDs, grubPath, false); err != nil {
+		t.Fatalf("UpdateGrubVFIOIDs(, false) error: %v", err)
 	}
 
 	content, err := os.ReadFile(grubPath)
@@ -106,8 +106,8 @@ menuentry 'DKVM' {
 	}
 
 	newIDs := "10de:1b80"
-	if err := UpdateGrubVFIOIDs(newIDs, grubPath); err != nil {
-		t.Fatalf("UpdateGrubVFIOIDs() error: %v", err)
+	if err := UpdateGrubVFIOIDs(newIDs, grubPath, false); err != nil {
+		t.Fatalf("UpdateGrubVFIOIDs(, false) error: %v", err)
 	}
 
 	content, err := os.ReadFile(grubPath)
@@ -136,8 +136,8 @@ menuentry 'DKVM' {
 		t.Fatal(err)
 	}
 
-	if err := UpdateGrubVFIOIDs("", grubPath); err != nil {
-		t.Fatalf("UpdateGrubVFIOIDs() error: %v", err)
+	if err := UpdateGrubVFIOIDs("", grubPath, false); err != nil {
+		t.Fatalf("UpdateGrubVFIOIDs(, false) error: %v", err)
 	}
 
 	content, err := os.ReadFile(grubPath)
@@ -151,7 +151,7 @@ menuentry 'DKVM' {
 }
 
 func TestUpdateGrubVFIOIDs_ReadError(t *testing.T) {
-	err := UpdateGrubVFIOIDs("1002:7550", "/nonexistent/path/grub.cfg")
+	err := UpdateGrubVFIOIDs("1002:7550", "/nonexistent/path/grub.cfg", false)
 	if err == nil {
 		t.Error("Expected error for nonexistent file, got nil")
 	}
@@ -174,8 +174,8 @@ menuentry 'DKVM' {
 		t.Fatal(err)
 	}
 
-	if err := UpdateGrubVFIOIDs("8086:15d4", grubPath); err != nil {
-		t.Fatalf("UpdateGrubVFIOIDs() error: %v", err)
+	if err := UpdateGrubVFIOIDs("8086:15d4", grubPath, false); err != nil {
+		t.Fatalf("UpdateGrubVFIOIDs(, false) error: %v", err)
 	}
 
 	content, err := os.ReadFile(grubPath)
@@ -216,8 +216,8 @@ menuentry 'DKVM Recovery' {
 		t.Fatal(err)
 	}
 
-	if err := UpdateGrubVFIOIDs("10de:1b80", grubPath); err != nil {
-		t.Fatalf("UpdateGrubVFIOIDs() error: %v", err)
+	if err := UpdateGrubVFIOIDs("10de:1b80", grubPath, false); err != nil {
+		t.Fatalf("UpdateGrubVFIOIDs(, false) error: %v", err)
 	}
 
 	content, err := os.ReadFile(grubPath)
@@ -260,8 +260,8 @@ menuentry 'DKVM' {
 		t.Fatal(err)
 	}
 
-	if err := UpdateGrubVFIOIDs("10de:1b80", grubPath); err != nil {
-		t.Fatalf("UpdateGrubVFIOIDs() error: %v", err)
+	if err := UpdateGrubVFIOIDs("10de:1b80", grubPath, false); err != nil {
+		t.Fatalf("UpdateGrubVFIOIDs(, false) error: %v", err)
 	}
 
 	content, err := os.ReadFile(grubPath)
@@ -298,8 +298,8 @@ menuentry 'DKVM' {
 		t.Fatal(err)
 	}
 
-	if err := UpdateGrubVFIOIDs("8086:15d4", grubPath); err != nil {
-		t.Fatalf("UpdateGrubVFIOIDs() error: %v", err)
+	if err := UpdateGrubVFIOIDs("8086:15d4", grubPath, false); err != nil {
+		t.Fatalf("UpdateGrubVFIOIDs(, false) error: %v", err)
 	}
 
 	content, err := os.ReadFile(grubPath)
@@ -337,8 +337,8 @@ menuentry 'DKVM' {
 		t.Fatal(err)
 	}
 
-	if err := UpdateGrubCPUParams("domain,managed_irq,0,1,2,3", "0,1,2,3", "0,1,2,3", grubPath); err != nil {
-		t.Fatalf("UpdateGrubCPUParams() error: %v", err)
+	if err := UpdateGrubCPUParams("domain,managed_irq,0,1,2,3", "0,1,2,3", "0,1,2,3", grubPath, false); err != nil {
+		t.Fatalf("UpdateGrubCPUParams(, false) error: %v", err)
 	}
 
 	content, err := os.ReadFile(grubPath)
@@ -374,8 +374,8 @@ menuentry 'DKVM' {
 		t.Fatal(err)
 	}
 
-	if err := UpdateGrubCPUParams("domain,managed_irq,2,3", "2,3", "2,3", grubPath); err != nil {
-		t.Fatalf("UpdateGrubCPUParams() error: %v", err)
+	if err := UpdateGrubCPUParams("domain,managed_irq,2,3", "2,3", "2,3", grubPath, false); err != nil {
+		t.Fatalf("UpdateGrubCPUParams(, false) error: %v", err)
 	}
 
 	content, err := os.ReadFile(grubPath)
@@ -408,8 +408,8 @@ menuentry 'DKVM' {
 		t.Fatal(err)
 	}
 
-	if err := UpdateGrubCPUParams("", "", "", grubPath); err != nil {
-		t.Fatalf("UpdateGrubCPUParams() error: %v", err)
+	if err := UpdateGrubCPUParams("", "", "", grubPath, false); err != nil {
+		t.Fatalf("UpdateGrubCPUParams(, false) error: %v", err)
 	}
 
 	content, err := os.ReadFile(grubPath)
@@ -441,8 +441,8 @@ menuentry 'DKVM' {
 	}
 
 	// Add CPU params
-	if err := UpdateGrubCPUParams("domain,managed_irq,0,1", "0,1", "0,1", grubPath); err != nil {
-		t.Fatalf("UpdateGrubCPUParams() error: %v", err)
+	if err := UpdateGrubCPUParams("domain,managed_irq,0,1", "0,1", "0,1", grubPath, false); err != nil {
+		t.Fatalf("UpdateGrubCPUParams(, false) error: %v", err)
 	}
 
 	content, err := os.ReadFile(grubPath)
@@ -460,8 +460,8 @@ menuentry 'DKVM' {
 	}
 
 	// Now add VFIO params - both should coexist
-	if err := UpdateGrubVFIOIDs("8086:15d4", grubPath); err != nil {
-		t.Fatalf("UpdateGrubVFIOIDs() error: %v", err)
+	if err := UpdateGrubVFIOIDs("8086:15d4", grubPath, false); err != nil {
+		t.Fatalf("UpdateGrubVFIOIDs(, false) error: %v", err)
 	}
 
 	content, err = os.ReadFile(grubPath)
@@ -495,8 +495,8 @@ menuentry 'DKVM' {
 		t.Fatal(err)
 	}
 
-	if err := UpdateGrubCPUParams("domain,managed_irq,4,5", "4,5", "4,5", grubPath); err != nil {
-		t.Fatalf("UpdateGrubCPUParams() error: %v", err)
+	if err := UpdateGrubCPUParams("domain,managed_irq,4,5", "4,5", "4,5", grubPath, false); err != nil {
+		t.Fatalf("UpdateGrubCPUParams(, false) error: %v", err)
 	}
 
 	content, err := os.ReadFile(grubPath)
@@ -531,8 +531,8 @@ menuentry 'DKVM' {
 		t.Fatal(err)
 	}
 
-	if err := UpdateGrubCPUParams("domain,managed_irq,2,3", "2,3", "2,3", grubPath); err != nil {
-		t.Fatalf("UpdateGrubCPUParams() error: %v", err)
+	if err := UpdateGrubCPUParams("domain,managed_irq,2,3", "2,3", "2,3", grubPath, false); err != nil {
+		t.Fatalf("UpdateGrubCPUParams(, false) error: %v", err)
 	}
 
 	content, err := os.ReadFile(grubPath)

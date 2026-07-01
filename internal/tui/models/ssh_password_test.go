@@ -10,7 +10,7 @@ import (
 
 // TestNewSSHPasswordFormModel tests form initialization
 func TestNewSSHPasswordFormModel(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 
 	if form == nil {
 		t.Fatal("NewSSHPasswordFormModel returned nil")
@@ -28,7 +28,7 @@ func TestNewSSHPasswordFormModel(t *testing.T) {
 
 // TestSSHPasswordFormRebuildPositions tests correct number of positions
 func TestSSHPasswordFormRebuildPositions(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 
 	// 2 text fields + 1 apply button = 3
 	if len(form.positions) != 3 {
@@ -47,7 +47,7 @@ func TestSSHPasswordFormRebuildPositions(t *testing.T) {
 
 // TestSSHPasswordFormCharInput tests typing characters into password fields
 func TestSSHPasswordFormCharInput(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	// Focus is on newPassword (index 0)
@@ -65,7 +65,7 @@ func TestSSHPasswordFormCharInput(t *testing.T) {
 
 // TestSSHPasswordFormBackspace tests backspace in password fields
 func TestSSHPasswordFormBackspace(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	// Type "abc"
@@ -87,7 +87,7 @@ func TestSSHPasswordFormBackspace(t *testing.T) {
 
 // TestSSHPasswordFormNavigation tests Tab navigation between fields
 func TestSSHPasswordFormNavigation(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	// Start at newPassword (index 0)
@@ -119,7 +119,7 @@ func TestSSHPasswordFormNavigation(t *testing.T) {
 
 // TestSSHPasswordFormDelete tests delete key in password fields
 func TestSSHPasswordFormDelete(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	// Type "abc"
@@ -144,7 +144,7 @@ func TestSSHPasswordFormDelete(t *testing.T) {
 
 // TestSSHPasswordValidationEmptyFields tests validation with empty fields
 func TestSSHPasswordValidationEmptyFields(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	// Navigate to apply and press Enter
@@ -162,7 +162,7 @@ func TestSSHPasswordValidationEmptyFields(t *testing.T) {
 
 // TestSSHPasswordValidationMismatch tests validation with mismatched passwords
 func TestSSHPasswordValidationMismatch(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	form.newPassword = "password123"
@@ -181,7 +181,7 @@ func TestSSHPasswordValidationMismatch(t *testing.T) {
 
 // TestSSHPasswordValidationTooShort tests validation with short password
 func TestSSHPasswordValidationTooShort(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	form.newPassword = "abc"
@@ -200,7 +200,7 @@ func TestSSHPasswordValidationTooShort(t *testing.T) {
 
 // TestSSHPasswordValidationSuccess tests that valid input passes validation
 func TestSSHPasswordValidationSuccess(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	form.newPassword = "validpass"
@@ -256,7 +256,7 @@ func TestSSHPasswordStrengthStrong(t *testing.T) {
 
 // TestPasswordMasking tests that passwords are masked in the view
 func TestPasswordMasking(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	// Type some characters
@@ -280,7 +280,7 @@ func TestPasswordMasking(t *testing.T) {
 
 // TestSSHPasswordFieldLabels tests that fields have correct labels
 func TestSSHPasswordFieldLabels(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 
 	if label := form.fieldLabel("newPassword"); label != "New Password" {
 		t.Errorf("newPassword label = %q, want %q", label, "New Password")
@@ -292,7 +292,7 @@ func TestSSHPasswordFieldLabels(t *testing.T) {
 
 // TestSSHPasswordFormWindowSize tests viewport initialization
 func TestSSHPasswordFormWindowSize(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 
 	if form.ready {
 		t.Error("Form should not be ready before WindowSizeMsg")
@@ -314,7 +314,7 @@ func TestSSHPasswordFormWindowSize(t *testing.T) {
 
 // TestSSHPasswordFormSetSize tests the SetSize method
 func TestSSHPasswordFormSetSize(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 
 	form.SetSize(100, 30)
 
@@ -337,7 +337,7 @@ func TestSSHPasswordFormSetSize(t *testing.T) {
 
 // TestSSHPasswordFormESCWhileApplying tests that ESC is ignored during apply
 func TestSSHPasswordFormESCWhileApplying(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	form.newPassword = "validpass"
@@ -356,7 +356,7 @@ func TestSSHPasswordFormESCWhileApplying(t *testing.T) {
 
 // TestSSHPasswordFormEmptyViewBeforeReady tests View before ready
 func TestSSHPasswordFormEmptyViewBeforeReady(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 
 	viewContent := form.View().Content
 	if viewContent != "Loading form..." {
@@ -368,7 +368,7 @@ func TestSSHPasswordFormEmptyViewBeforeReady(t *testing.T) {
 
 // TestNewSSHPasswordModel tests wrapper model creation
 func TestNewSSHPasswordModel(t *testing.T) {
-	m := NewSSHPasswordModel()
+	m := NewSSHPasswordModel(false)
 
 	if m == nil {
 		t.Fatal("NewSSHPasswordModel returned nil")
@@ -380,7 +380,7 @@ func TestNewSSHPasswordModel(t *testing.T) {
 
 // TestSSHPasswordModelInit tests Init delegation
 func TestSSHPasswordModelInit(t *testing.T) {
-	m := NewSSHPasswordModel()
+	m := NewSSHPasswordModel(false)
 
 	cmd := m.Init()
 	if cmd != nil {
@@ -390,7 +390,7 @@ func TestSSHPasswordModelInit(t *testing.T) {
 
 // TestSSHPasswordModelUpdate tests Update delegation
 func TestSSHPasswordModelUpdate(t *testing.T) {
-	m := NewSSHPasswordModel()
+	m := NewSSHPasswordModel(false)
 
 	updated, cmd := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	if updated == nil {
@@ -412,7 +412,7 @@ func TestSSHPasswordModelUpdate(t *testing.T) {
 
 // TestSSHPasswordModelView tests View delegation
 func TestSSHPasswordModelView(t *testing.T) {
-	m := NewSSHPasswordModel()
+	m := NewSSHPasswordModel(false)
 
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	m = updated.(*SSHPasswordModel)
@@ -425,7 +425,7 @@ func TestSSHPasswordModelView(t *testing.T) {
 
 // TestSSHPasswordModelUpdateDelegatesKeyPress tests key delegation
 func TestSSHPasswordModelUpdateDelegatesKeyPress(t *testing.T) {
-	m := NewSSHPasswordModel()
+	m := NewSSHPasswordModel(false)
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	m = updated.(*SSHPasswordModel)
 
@@ -442,11 +442,7 @@ func TestSSHPasswordModelUpdateDelegatesKeyPress(t *testing.T) {
 
 // TestSSHPasswordFormApplyDryRun tests dry-run mode
 func TestSSHPasswordFormApplyDryRun(t *testing.T) {
-	origDryRun := dryRunMode
-	dryRunMode = true
-	defer func() { dryRunMode = origDryRun }()
-
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(true)
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	form.newPassword = "validpass"
@@ -468,11 +464,7 @@ func TestSSHPasswordFormApplyDryRun(t *testing.T) {
 
 // TestSSHPasswordFormApplyInvalidChars tests handling of special characters in passwords
 func TestSSHPasswordFormApplyInvalidChars(t *testing.T) {
-	origDryRun := dryRunMode
-	dryRunMode = true
-	defer func() { dryRunMode = origDryRun }()
-
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(true)
 	form.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	// Special characters should be accepted
@@ -534,7 +526,7 @@ func TestStrengthLabelBoundaries(t *testing.T) {
 
 // TestSSHPasswordCursorOffset tests cursor offset management
 func TestSSHPasswordCursorOffset(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 
 	// Default offset should be -1 (end)
 	if off := form.cursorOffset("newPassword"); off != -1 {
@@ -550,7 +542,7 @@ func TestSSHPasswordCursorOffset(t *testing.T) {
 
 // TestSSHPasswordEffectiveCursor tests effective cursor calculation
 func TestSSHPasswordEffectiveCursor(t *testing.T) {
-	form := NewSSHPasswordFormModel()
+	form := NewSSHPasswordFormModel(false)
 
 	// Offset -1 means end
 	form.newPassword = "hello"

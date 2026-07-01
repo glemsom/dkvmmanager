@@ -28,7 +28,7 @@ func (m *MainModel) UnifiedViewReturn(statusMessage string) (tea.Model, tea.Cmd)
 
 // handleViewChangeMsg handles ViewChangeMsg from sub-models
 func (m *MainModel) handleViewChangeMsg(vcm ViewChangeMsg) (tea.Model, tea.Cmd) {
-	if debugMode {
+	if m.debugMode {
 		log.Printf("[DEBUG] View change: %s -> %s", m.currentView, vcm.View)
 	}
 	m.currentView = vcm.View

@@ -77,7 +77,7 @@ func (m *SSHPasswordFormModel) validate() bool {
 func (m *SSHPasswordFormModel) apply() tea.Cmd {
 	pw := m.newPassword
 	return func() tea.Msg {
-		if dryRunMode {
+	if m.dryRunMode {
 			log.Printf("[DEBUG] Dry-run mode: would execute: echo \"%s:***\" | chpasswd", os.Getenv("USER"))
 			return SSHPasswordUpdatedMsg{}
 		}

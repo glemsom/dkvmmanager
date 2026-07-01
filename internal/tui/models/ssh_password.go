@@ -24,8 +24,8 @@ type SSHPasswordModel struct {
 }
 
 // NewSSHPasswordModel creates a new SSH password model.
-func NewSSHPasswordModel() *SSHPasswordModel {
-	fm := NewSSHPasswordFormModel()
+func NewSSHPasswordModel(dryRunMode bool) *SSHPasswordModel {
+	fm := NewSSHPasswordFormModel(dryRunMode)
 	return &SSHPasswordModel{
 		form: form.NewScrollableForm(fm),
 	}

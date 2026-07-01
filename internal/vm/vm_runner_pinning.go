@@ -39,7 +39,7 @@ func (r *VMRunner) ApplyVCPUPinning(pinning domain.VCPUPinningGlobal) error {
 		mappingByVCPU[m.VCPUID] = m.HostCPUID
 	}
 
-	if debugMode {
+	if r.dbgMode {
 		log.Printf("[DEBUG] vCPU pinning: starting for VM %q with %d vCPUs, %d mappings",
 			r.vm.Name, len(vcpus), len(pinning.Mappings))
 	}
@@ -56,17 +56,17 @@ func (r *VMRunner) ApplyVCPUPinning(pinning domain.VCPUPinningGlobal) error {
 			guestDie = v.Props.DieID
 		}
 
-		if debugMode {
+		if r.dbgMode {
 			log.Printf("[DEBUG] vCPU pinning: vCPU %d (ThreadID=%d) -> host CPU %d",
 				idx, v.ThreadID, hostCPU)
 		}
 
-		if err := PinThreadToCores(v.ThreadID, []int{hostCPU}); err != nil {
+		if err := PinThreadToCores(v.ThreadID, []int{hostCPU}, r.dbgMode); err != nil {
 			return fmt.Errorf("vcpu %d thread %d pin to host cpu %d: %w", idx, v.ThreadID, hostCPU, err)
 		}
 	}
 
-	if debugMode {
+	if r.dbgMode {
 		log.Printf("[DEBUG] vCPU pinning: completed for VM %q", r.vm.Name)
 	}
 

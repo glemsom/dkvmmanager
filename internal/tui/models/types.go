@@ -33,14 +33,13 @@ const (
 	ViewMountPointWarning = "mount_point_warning"
 )
 
-// Package-level debug mode flag
-var debugMode bool
-
-// Package-level dry-run mode flag
-var dryRunMode bool
-
-// Package-level skip mount point check flag (for testing)
-var skipMountPointCheck bool
+// MainModelConfig holds configuration for creating a MainModel
+type MainModelConfig struct {
+	Config              *config.Config
+	DebugMode           bool
+	DryRunMode          bool
+	SkipMountPointCheck bool
+}
 
 // ViewChangeMsg is sent by sub-models to request a view transition
 type ViewChangeMsg struct {
@@ -129,6 +128,12 @@ type MainModel struct {
 
 	// Debug mode flag
 	debugMode bool
+
+	// Dry-run mode flag
+	dryRunMode bool
+
+	// Skip mount point check flag (for testing)
+	skipMountPointCheck bool
 
 	// Tab navigation
 	tabModel *components.TabModel

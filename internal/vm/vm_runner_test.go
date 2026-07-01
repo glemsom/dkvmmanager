@@ -34,7 +34,7 @@ func TestValidateOVMFFiles(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 
 	// Should fail - no OVMF files
 	if err := runner.ValidateOVMFFiles(); err == nil {
@@ -90,7 +90,7 @@ func TestBuildQEMUArgs(t *testing.T) {
 			Enabled:      true,
 			SelectedCPUs: []int{4, 5, 6, 7},
 		},
-	})
+	}, false)
 	args := runner.buildQEMUArgs(vmDir)
 
 	// Verify essential args are present
@@ -169,7 +169,7 @@ func TestBuildQEMUArgsWithNAT(t *testing.T) {
 		NetworkMode: "nat",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	args := runner.buildQEMUArgs(vmDir)
 
 	argStr := string(joinArgs(args))
@@ -215,7 +215,7 @@ func TestBuildQEMUArgsWithNATDefault(t *testing.T) {
 		MAC:  "de:ad:be:ef:00:01",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	args := runner.buildQEMUArgs(vmDir)
 
 	argStr := string(joinArgs(args))
@@ -254,7 +254,7 @@ func TestBuildQEMUArgsBridgeFallbackToNAT(t *testing.T) {
 		NetworkMode: "bridge",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	args := runner.buildQEMUArgs(vmDir)
 
 	argStr := string(joinArgs(args))
@@ -292,7 +292,7 @@ func TestBuildQEMUArgsUnknownModeDefaultsToNAT(t *testing.T) {
 		NetworkMode: "invalid",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	args := runner.buildQEMUArgs(vmDir)
 
 	argStr := string(joinArgs(args))
@@ -321,7 +321,7 @@ func TestBuildQEMUArgsWithVNC(t *testing.T) {
 		VNCListen: "0.0.0.0:0",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	args := runner.buildQEMUArgs(vmDir)
 
 	argStr := string(joinArgs(args))
@@ -345,7 +345,7 @@ func TestNewVMRunner(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 
 	if runner.VM() != vm {
 		t.Error("VM() should return the original VM")
@@ -398,7 +398,7 @@ func TestNewVMRunnerWithRunConfig(t *testing.T) {
 		},
 	}
 
-	runner := NewVMRunner(vm, cfg, runCfg)
+	runner := NewVMRunner(vm, cfg, runCfg, false)
 
 	// Verify all config sections propagated through getters
 	if !runner.VCPUPinning().Enabled {
@@ -436,7 +436,7 @@ func TestCleanupStaleSocket(t *testing.T) {
 	}
 
 	vm := &domain.VM{ID: "1", Name: "test"}
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	runner.socketPath = socketPath
 	runner.Cleanup()
 
@@ -526,7 +526,7 @@ func TestPersistLogWritesLines(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 
 	// Start the persist log directly
 	if err := runner.startPersistLog(); err != nil {
@@ -575,7 +575,7 @@ func TestPersistLogAppendsOnRestart(t *testing.T) {
 	}
 
 	// First run
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	if err := runner.startPersistLog(); err != nil {
 		t.Fatalf("startPersistLog() failed: %v", err)
 	}
@@ -583,7 +583,7 @@ func TestPersistLogAppendsOnRestart(t *testing.T) {
 	runner.closePersistLog()
 
 	// Second run — same VM, same file
-	runner2 := NewVMRunner(vm, cfg, RunConfig{})
+	runner2 := NewVMRunner(vm, cfg, RunConfig{}, false)
 	if err := runner2.startPersistLog(); err != nil {
 		t.Fatalf("startPersistLog() for second run failed: %v", err)
 	}
@@ -630,7 +630,7 @@ func TestPersistLogSlowFlushDoesNotBlock(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	if err := runner.startPersistLog(); err != nil {
 		t.Fatalf("startPersistLog() failed: %v", err)
 	}
@@ -686,7 +686,7 @@ func TestPersistLogDryRunWritesToFile(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{DryRun: true})
+	runner := NewVMRunner(vm, cfg, RunConfig{DryRun: true}, false)
 	if err := runner.Start(); err != nil {
 		t.Fatalf("Start() should succeed in dry-run: %v", err)
 	}
@@ -743,7 +743,7 @@ func TestPersistLogWriteErrorDoesNotCrash(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	if err := runner.startPersistLog(); err != nil {
 		t.Fatalf("startPersistLog() failed: %v", err)
 	}
@@ -830,7 +830,7 @@ func TestBuildQEMUArgsWithUSBPassthrough(t *testing.T) {
 				{Vendor: "045e", Product: "028e", Name: "Xbox Controller", BusID: "3-2"},
 			},
 		},
-	})
+	}, false)
 
 	args := runner.buildQEMUArgs(vmDir)
 	argStr := string(joinArgs(args))
@@ -868,7 +868,7 @@ func TestBuildQEMUArgsWithoutUSBPassthrough(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	// No USB passthrough config set
 
 	args := runner.buildQEMUArgs(vmDir)
@@ -938,7 +938,7 @@ func TestBuildQEMUArgsWithCPUPM(t *testing.T) {
 
 	runner := NewVMRunner(vm, cfg, RunConfig{
 		CPUOptions: domain.CPUOptions{CPUPM: true},
-	})
+	}, false)
 	args := runner.buildQEMUArgs(vmDir)
 	argStr := string(joinArgs(args))
 
@@ -975,7 +975,7 @@ func TestBuildQEMUArgsWithoutCPUPM(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	// CPUPM not set (defaults to false)
 	args := runner.buildQEMUArgs(vmDir)
 	argStr := string(joinArgs(args))
@@ -1028,7 +1028,7 @@ func TestBuildQEMUArgsWithCPUTopology(t *testing.T) {
 			Enabled:      true,
 			SelectedCPUs: []int{4, 5, 6, 7},
 		},
-	})
+	}, false)
 	args := runner.buildQEMUArgs(vmDir)
 	argStr := string(joinArgs(args))
 
@@ -1056,7 +1056,7 @@ func TestBuildQEMUArgsWithoutCPUTopology(t *testing.T) {
 		// No CPU topology enabled
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	args := runner.buildQEMUArgs(vmDir)
 	argStr := string(joinArgs(args))
 
@@ -1268,7 +1268,7 @@ func TestBuildQEMUArgsWithHostTopology(t *testing.T) {
 			SelectedCPUs:    []int{0, 1, 2, 3},
 			UseHostTopology: true,
 		},
-	})
+	}, false)
 
 	args := runner.buildQEMUArgs(vmDir)
 	argStr := string(joinArgs(args))
@@ -1329,7 +1329,7 @@ func TestBuildQEMUArgsWithHostTopologyInvalidCPU(t *testing.T) {
 			SelectedCPUs:    []int{0, 99},
 			UseHostTopology: true,
 		},
-	})
+	}, false)
 
 	// Should not panic - just skip invalid CPU and continue
 	args := runner.buildQEMUArgs(vmDir)
@@ -1381,7 +1381,7 @@ func TestCleanupPreservesTPMState(t *testing.T) {
 		QEMUPath:   "/usr/bin/qemu-system-x86_64",
 	}
 	vm := &domain.VM{ID: "1", Name: "test"}
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	// Inject fake swtpm process
 	runner.swtpmProcess = fakeProc
 
@@ -1438,7 +1438,7 @@ func TestStartTPMErrorDoesNotDeleteState(t *testing.T) {
 		TPMBinary:  "/nonexistent/swtpm-binary", // will fail to start
 	}
 	vm := &domain.VM{ID: "1", Name: "test"}
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 
 	// startTPM should fail
 	err := runner.startTPM(vmDir)
@@ -1476,7 +1476,7 @@ func TestSubscribeDrainsBufferedLines(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	if err := runner.startPersistLog(); err != nil {
 		t.Fatalf("startPersistLog() failed: %v", err)
 	}
@@ -1542,7 +1542,7 @@ func TestSubscribeChannelClosedOnExit(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	if err := runner.startPersistLog(); err != nil {
 		t.Fatalf("startPersistLog() failed: %v", err)
 	}
@@ -1582,7 +1582,7 @@ func TestSubscribeNoDuplicationWithRecentLog(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 	if err := runner.startPersistLog(); err != nil {
 		t.Fatalf("startPersistLog() failed: %v", err)
 	}
@@ -1663,7 +1663,7 @@ func TestStartTPMOrphanKill(t *testing.T) {
 		TPMBinary:  "/nonexistent/swtpm-binary", // will fail to start
 	}
 	vm := &domain.VM{ID: "1", Name: "test"}
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 
 	// startTPM should fail (bad binary) but should have killed the orphan first
 	err = runner.startTPM(vmDir)
@@ -1695,7 +1695,7 @@ func TestVMRunnerCmdRaceDocumentation(t *testing.T) {
 	// The actual race detection is done by `go test -race`.
 
 	runner := NewVMRunner(&domain.VM{ID: "1", Name: "test"},
-		&config.Config{QEMUPath: "/bin/true"}, RunConfig{})
+		&config.Config{QEMUPath: "/bin/true"}, RunConfig{}, false)
 
 	var wg sync.WaitGroup
 
@@ -1755,7 +1755,7 @@ func TestStartForceStopConcurrent(t *testing.T) {
 		Name: "test-vm",
 	}
 
-	runner := NewVMRunner(vm, cfg, RunConfig{})
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
 
 	// Override hugepages: set memMB small so we skip hugepages checks
 	runner.memMB = 64

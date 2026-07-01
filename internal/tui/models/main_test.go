@@ -33,7 +33,6 @@ func setupTestModel(t *testing.T) *MainModel {
 	t.Helper()
 
 	// Skip mount point check for testing
-	SetSkipMountPointCheck(true)
 
 	tmpDir := t.TempDir()
 
@@ -42,12 +41,14 @@ func setupTestModel(t *testing.T) *MainModel {
 		t.Fatalf("Failed to create config dir: %v", err)
 	}
 
-	cfg := &config.Config{
+	cfgObj := &config.Config{
 		DataFolder:    tmpDir,
 		VMsConfigFile: filepath.Join(tmpDir, "dkvmmanager", "vms.yaml"),
 	}
-
-	m, err := NewMainModelWithConfig(cfg)
+	m, err := NewMainModelWithConfig(MainModelConfig{
+		Config:              cfgObj,
+		SkipMountPointCheck: true,
+	})
 	if err != nil {
 		t.Fatalf("Failed to create MainModel: %v", err)
 	}
@@ -60,7 +61,6 @@ func setupTestModelWithVMs(t *testing.T) *MainModel {
 	t.Helper()
 
 	// Skip mount point check for testing
-	SetSkipMountPointCheck(true)
 
 	tmpDir := t.TempDir()
 
@@ -68,12 +68,14 @@ func setupTestModelWithVMs(t *testing.T) *MainModel {
 		t.Fatalf("Failed to create config dir: %v", err)
 	}
 
-	cfg := &config.Config{
+	cfgObj := &config.Config{
 		DataFolder:    tmpDir,
 		VMsConfigFile: filepath.Join(tmpDir, "dkvmmanager", "vms.yaml"),
 	}
-
-	m, err := NewMainModelWithConfig(cfg)
+	m, err := NewMainModelWithConfig(MainModelConfig{
+		Config:              cfgObj,
+		SkipMountPointCheck: true,
+	})
 	if err != nil {
 		t.Fatalf("Failed to create MainModel: %v", err)
 	}
@@ -199,18 +201,6 @@ func TestMainModelInit(t *testing.T) {
 	if cmd != nil {
 		t.Error("Init() should return nil command")
 	}
-}
-
-func TestSetDebugMode(t *testing.T) {
-	// Just verify it doesn't panic
-	SetDebugMode(true)
-	SetDebugMode(false)
-}
-
-func TestSetSkipMountPointCheck(t *testing.T) {
-	// Just verify it doesn't panic
-	SetSkipMountPointCheck(true)
-	SetSkipMountPointCheck(false)
 }
 
 func TestMenuItemStruct(t *testing.T) {

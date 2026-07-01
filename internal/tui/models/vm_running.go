@@ -91,6 +91,11 @@ type VMRunningModel struct {
 
 	// Info panel height (calculated)
 	infoHeight int
+
+	// startupDispatched guards against duplicate command batches.
+	// Set to true once the first poll/seed/exit batch has been returned
+	// from either Init or a VMStartedMsg handler.
+	startupDispatched bool
 }
 
 // NewVMRunningModel creates a new VM running model
@@ -102,8 +107,11 @@ func NewVMRunningModel(vmObj *domain.VM, runner *vm.VMRunner) *VMRunningModel {
 	}
 }
 
-// Init initializes the model
+// Init initializes the model. Commands that require a runner (polling,
+// exit-watch) no-op when the runner is nil and kick in once VMStartedMsg
+// sets the runner. startupDispatched guards against duplicate batches.
 func (m *VMRunningModel) Init() tea.Cmd {
+	m.startupDispatched = true
 	return tea.Batch(
 		m.seedAndSubscribe(), // seed from persisted log, then subscribe
 		m.waitForVMExit(),
@@ -243,16 +251,20 @@ func (m *VMRunningModel) pollStatus() tea.Cmd {
 // pollMetrics returns a tea.Cmd that polls VM metrics on a 2 s cadence,
 // decoupled from the 500 ms status poll. The metrics tick bypasses the
 // view registry (same pattern as VMStatusUpdateMsg).
+// On Snapshot error, the previous metrics are preserved rather than cleared,
+// preventing transient QMP hiccups from wiping the stats display.
 func (m *VMRunningModel) pollMetrics() tea.Cmd {
 	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
 		if m.runner == nil {
-			return VMMetricsUpdateMsg{}
+			// Keep previous metrics if runner disappeared between ticks.
+			return VMMetricsUpdateMsg{Metrics: m.metrics}
 		}
 
 		snap, err := m.runner.Snapshot()
 		if err != nil {
-			// Degraded: return empty metrics; view will show N/A
-			return VMMetricsUpdateMsg{}
+			// Degraded: keep previous snapshot; prevents transient QMP
+			// failures from blanking the stats panel.
+			return VMMetricsUpdateMsg{Metrics: m.metrics}
 		}
 		return VMMetricsUpdateMsg{Metrics: snap}
 	})

@@ -16,13 +16,13 @@ type Metrics struct {
 	Status    string // from query-status
 
 	// Guest / QMP
-	VCPUs        []VCPUStat   // per-vCPU thread id + total CPU time in ns
-	BlockDevices []BlockStat  // per-block r/w bytes, r/w operations (raw counters)
-	BalloonBytes uint64       // from query-balloon; 0 if not available
+	VCPUs        []VCPUStat  // per-vCPU thread id + total CPU time in ns
+	BlockDevices []BlockStat // per-block r/w bytes, r/w operations (raw counters)
+	BalloonBytes uint64      // from query-balloon; 0 if not available
 
 	// Host /proc/<qemu-pid>
-	HostRSSBytes     uint64 // VmRSS from /proc/<pid>/status
-	HostCPUJiffies   uint64 // utime+stime from /proc/<pid>/stat
+	HostRSSBytes   uint64 // VmRSS from /proc/<pid>/status
+	HostCPUJiffies uint64 // utime+stime from /proc/<pid>/stat
 }
 
 // VCPUStat holds per-vCPU statistics for a single snapshot.

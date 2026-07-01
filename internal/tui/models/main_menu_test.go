@@ -208,8 +208,7 @@ func TestHandleConfigMenuSelectionSave(t *testing.T) {
 	// 12 items: "Add VM" (0), "Edit VM" (1), "Delete VM" (2), ..., "Save changes" (11)
 	m.configSelectedIndex = 11
 
-	dryRunMode = true
-	defer func() { dryRunMode = false }()
+	m.dryRunMode = true
 
 	model, cmd := m.handleMenuSelection()
 	m = model.(*MainModel)
@@ -237,8 +236,7 @@ func TestHandleConfigMenuSelectionLBUCommitDryRun(t *testing.T) {
 	// 12 items: "Add VM" (0), "Edit VM" (1), "Delete VM" (2), ..., "Save changes" (11)
 	m.configSelectedIndex = 11
 
-	dryRunMode = true
-	defer func() { dryRunMode = false }()
+	m.dryRunMode = true
 
 	_, cmd := m.handleMenuSelection()
 	if cmd == nil {

@@ -26,7 +26,7 @@ func BuildVFIOIDs(devices []domain.PCIPassthroughDevice) string {
 // UpdateGrubVFIOIDs updates the vfio-pci.ids parameter in the grub.cfg file.
 // It creates a backup before modification and writes the updated content.
 // The caller must ensure the filesystem is writable (e.g., remounted rw for /media/usb).
-func UpdateGrubVFIOIDs(vfioIDs, grubPath string) error {
+func UpdateGrubVFIOIDs(vfioIDs, grubPath string, debugMode bool) error {
 	// Debug logging
 	if debugMode {
 		log.Printf("[DEBUG] UpdateGrubVFIOIDs: grubPath=%s, vfioIDs=%q", grubPath, vfioIDs)
@@ -110,7 +110,7 @@ func UpdateGrubVFIOIDs(vfioIDs, grubPath string) error {
 //   - nohzFull:  value for nohz_full= (e.g., "0,1,2,3") or "" to remove
 //   - rcuNoCBS:  value for rcu_nocbs= (e.g., "0,1,2,3") or "" to remove
 //   - grubPath:  path to grub.cfg
-func UpdateGrubCPUParams(isolcpus, nohzFull, rcuNoCBS, grubPath string) error {
+func UpdateGrubCPUParams(isolcpus, nohzFull, rcuNoCBS, grubPath string, debugMode bool) error {
 	if debugMode {
 		log.Printf("[DEBUG] UpdateGrubCPUParams: grubPath=%s, isolcpus=%q, nohzFull=%q, rcuNoCBS=%q",
 			grubPath, isolcpus, nohzFull, rcuNoCBS)

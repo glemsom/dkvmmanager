@@ -12,7 +12,7 @@ import (
 
 func TestParseVGSOutput(t *testing.T) {
 	out := "ubuntu-vg\t500.00g\t300.00g\t2\t1\nvg0\t100.00g\t10.00g\t5\t3\n"
-	vgs, err := parseVGSOutput(out)
+	vgs, err := parseVGSOutput(out, false)
 	if err != nil {
 		t.Fatalf("parseVGSOutput() error: %v", err)
 	}
@@ -29,7 +29,7 @@ func TestParseVGSOutput(t *testing.T) {
 
 func TestParseVGSOutputWhitespaceAndEmptyLines(t *testing.T) {
 	out := "\n  ubuntu-vg\t500.00g\t300.00g\t2\t2\n\t\ninvalid line\n  vg0\t100.00g\t10.00g\t5\t1\n"
-	vgs, err := parseVGSOutput(out)
+	vgs, err := parseVGSOutput(out, false)
 	if err != nil {
 		t.Fatalf("parseVGSOutput() error: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestParseVGSOutputWhitespaceAndEmptyLines(t *testing.T) {
 
 func TestParseVGSOutputLiteralEscapedTabSeparator(t *testing.T) {
 	out := "vg_nvme\\t7452.04g\\t2798.04g\\t6\\t4\n"
-	vgs, err := parseVGSOutput(out)
+	vgs, err := parseVGSOutput(out, false)
 	if err != nil {
 		t.Fatalf("parseVGSOutput() error: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestParseVGSOutputLiteralEscapedTabSeparator(t *testing.T) {
 // --- FormModel interface tests ---
 
 func TestLVCreateBuildPositions(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "100.00g", PVCount: 1}}
 	m.vgIndex = 0
 
@@ -88,7 +88,7 @@ func TestLVCreateBuildPositions(t *testing.T) {
 }
 
 func TestLVCreateBuildPositionsMultiPV(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "100.00g", PVCount: 2}}
 	m.vgIndex = 0
 
@@ -116,7 +116,7 @@ func TestLVCreateBuildPositionsMultiPV(t *testing.T) {
 // --- Validation tests ---
 
 func TestLVCreateValidate(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "10.00g", PVCount: 1}}
 	m.vgIndex = 0
 	m.volumeName = "ok-name"
@@ -139,7 +139,7 @@ func TestLVCreateValidate(t *testing.T) {
 // --- Navigation and interaction tests (via ScrollableForm Update) ---
 
 func TestLVCreateFormNavigationAndToggle(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.SetSize(76, 18)
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "100.00g", PVCount: 1}}
 	m.vgIndex = 0
@@ -163,11 +163,7 @@ func TestLVCreateFormNavigationAndToggle(t *testing.T) {
 }
 
 func TestLVCreateDryRunCreate(t *testing.T) {
-	orig := dryRunMode
-	dryRunMode = true
-	defer func() { dryRunMode = orig }()
-
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(true, false)
 	m.SetSize(76, 18)
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "100.00g", PVCount: 1}}
 	m.vgIndex = 0
@@ -193,11 +189,7 @@ func TestLVCreateDryRunCreate(t *testing.T) {
 }
 
 func TestLVCreateEnterSubmitsFromNonCreateFocus(t *testing.T) {
-	orig := dryRunMode
-	dryRunMode = true
-	defer func() { dryRunMode = orig }()
-
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(true, false)
 	m.SetSize(76, 18)
 	m.volumeGroups = []VolumeGroup{{Name: "vg0", Free: "100.00g", PVCount: 1}}
 	m.vgIndex = 0
@@ -221,7 +213,7 @@ func TestLVCreateEnterSubmitsFromNonCreateFocus(t *testing.T) {
 }
 
 func TestLVCreateEnterOnVGOpensDropdown(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.SetSize(76, 18)
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 1}, {Name: "vg0", Free: "10.00g", PVCount: 1}}
 	m.vgIndex = 0
@@ -237,7 +229,7 @@ func TestLVCreateEnterOnVGOpensDropdown(t *testing.T) {
 }
 
 func TestLVCreateEnterOnVGWhenOpenConfirmsSelection(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.SetSize(76, 18)
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 2}, {Name: "vg0", Free: "10.00g", PVCount: 1}}
 	m.vgIndex = 0
@@ -259,7 +251,7 @@ func TestLVCreateEscIsNoOp(t *testing.T) {
 	// the form. MainModel calls returnFromSubView() for all sub-views including
 	// ViewLVCreate. This test verifies the form's Update is a no-op for ESC,
 	// which is expected since ESC handling is done at the MainModel level.
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.SetSize(76, 18)
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 1}}
 	m.focusIndex = 0
@@ -273,7 +265,7 @@ func TestLVCreateEscIsNoOp(t *testing.T) {
 }
 
 func TestLVCreateUpDownNavigatesVGDropdown(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.SetSize(76, 18)
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 1}, {Name: "vg0", Free: "10.00g", PVCount: 1}}
 	m.focusIndex = 0
@@ -295,7 +287,7 @@ func TestLVCreateUpDownNavigatesVGDropdown(t *testing.T) {
 }
 
 func TestLVCreateUnitCycling(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.SetSize(76, 18)
 
 	// Navigate to unit position: VG(0) → name(1) → size(2) → unit(3)
@@ -330,7 +322,7 @@ func TestLVCreateUnitCycling(t *testing.T) {
 }
 
 func TestLVCreateTextInput(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.SetSize(76, 18)
 
 	// Tab to name position (one tab from VG at index 0)
@@ -370,7 +362,7 @@ func TestLVCreateTextInput(t *testing.T) {
 }
 
 func TestLVCreateToggleBehavior(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.SetSize(76, 18)
 
 	// Navigate to thin toggle: VG(0) → name(1) → size(2) → unit(3) → thin(4)
@@ -399,7 +391,7 @@ func TestLVCreateToggleBehavior(t *testing.T) {
 // --- Render tests ---
 
 func TestLVCreateRenderNoHardcodedVGFallback(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.SetSize(76, 18)
 
 	viewContent := m.View().Content
@@ -413,7 +405,7 @@ func TestLVCreateRenderNoHardcodedVGFallback(t *testing.T) {
 }
 
 func TestLVCreateStrippedNotShownWithSinglePV(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.SetSize(76, 18)
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 1}}
 	m.vgIndex = 0
@@ -433,7 +425,7 @@ func TestLVCreateStrippedNotShownWithSinglePV(t *testing.T) {
 }
 
 func TestLVCreateStrippedShownWithMultiplePVs(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.SetSize(76, 18)
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 2, LVCount: 3}}
 	m.vgIndex = 0
@@ -451,7 +443,7 @@ func TestLVCreateStrippedShownWithMultiplePVs(t *testing.T) {
 // --- Async message handling ---
 
 func TestLVCreateStrippedAutoEnabledWithMultiplePVs(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.SetSize(76, 18)
 	m.volumeGroups = []VolumeGroup{{Name: "ubuntu-vg", Free: "300.00g", PVCount: 2}}
 	m.vgIndex = 0
@@ -466,7 +458,7 @@ func TestLVCreateStrippedAutoEnabledWithMultiplePVs(t *testing.T) {
 }
 
 func TestLVCreateHandleMessageError(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.HandleMessage(lvVGsLoadedMsg{err: fmt.Errorf("vgs failed")})
 	if m.errors["vg"] == "" {
 		t.Fatal("expected VG error after failed load")
@@ -476,7 +468,7 @@ func TestLVCreateHandleMessageError(t *testing.T) {
 // --- Command building tests ---
 
 func TestLVCreateBuildCommandWithStripes(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.volumeGroups = []VolumeGroup{{Name: "vg0", Free: "100.00g", PVCount: 2}}
 	m.vgIndex = 0
 	m.volumeName = "mylv"
@@ -490,7 +482,7 @@ func TestLVCreateBuildCommandWithStripes(t *testing.T) {
 }
 
 func TestLVCreateBuildCommandWithoutStripes(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.volumeGroups = []VolumeGroup{{Name: "vg0", Free: "100.00g", PVCount: 1}}
 	m.vgIndex = 0
 	m.volumeName = "mylv"
@@ -504,7 +496,7 @@ func TestLVCreateBuildCommandWithoutStripes(t *testing.T) {
 }
 
 func TestLVCreateBuildCommandThinAndContiguous(t *testing.T) {
-	m := NewLVCreateFormModel()
+	m := NewLVCreateFormModel(false, false)
 	m.volumeGroups = []VolumeGroup{{Name: "vg0", Free: "100.00g", PVCount: 1}}
 	m.vgIndex = 0
 	m.volumeName = "thinvol"

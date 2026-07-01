@@ -18,7 +18,7 @@ func (m *MainModel) init() tea.Cmd {
 
 func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Debug log all messages
-	if debugMode {
+	if m.debugMode {
 		log.Printf("[DEBUG] Update received: %T", msg)
 	}
 
@@ -47,7 +47,7 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Handle view change messages from sub-models
 	if vcm, ok := msg.(ViewChangeMsg); ok {
-		if debugMode {
+		if m.debugMode {
 			log.Printf("[DEBUG] View change: %s -> %s", m.currentView, vcm.View)
 		}
 		m.currentView = vcm.View
@@ -103,13 +103,18 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.vmRunningModel.runner = vsm.Runner
 			m.vmRunningModel.status = "starting" // will be updated by initialStatus
 			m.vmRunningModel.pollingSince = time.Now()
-			return m, tea.Batch(
-				m.vmRunningModel.seedAndSubscribe(),
-				m.vmRunningModel.waitForVMExit(),
-				m.vmRunningModel.pollStatus(),
-				m.vmRunningModel.initialStatus(),
-				m.vmRunningModel.pollMetrics(),
-			)
+			// Init() already dispatched the startup batch; avoid duplicate
+			// tick chains that interleave and double QMP traffic.
+			if !m.vmRunningModel.startupDispatched {
+				m.vmRunningModel.startupDispatched = true
+				return m, tea.Batch(
+					m.vmRunningModel.seedAndSubscribe(),
+					m.vmRunningModel.waitForVMExit(),
+					m.vmRunningModel.pollStatus(),
+					m.vmRunningModel.initialStatus(),
+					m.vmRunningModel.pollMetrics(),
+				)
+			}
 		}
 		return m, nil
 	}
@@ -322,7 +327,7 @@ func (m *MainModel) handleMenuSelection() (tea.Model, tea.Cmd) {
 
 // handleConfigMenuSelection handles selections in the Configuration tab
 func (m *MainModel) handleConfigMenuSelection() (tea.Model, tea.Cmd) {
-	if debugMode {
+	if m.debugMode {
 		log.Printf("[DEBUG] handleConfigMenuSelection called, selectedIndex: %d", m.configSelectedIndex)
 	}
 
@@ -348,7 +353,7 @@ func (m *MainModel) handleConfigMenuSelection() (tea.Model, tea.Cmd) {
 
 	// "Save changes" is always the last item in the config list
 	if len(m.configList.Items()) > 0 && m.configSelectedIndex == len(m.configList.Items())-1 {
-		return m, runLBUCommit()
+		return m, runLBUCommit(m.dryRunMode)
 	}
 
 	return m, nil
@@ -361,7 +366,7 @@ func (m *MainModel) handleVMSelection() (tea.Model, tea.Cmd) {
 	}
 	item := m.menuItems[m.selectedIndex]
 
-	if debugMode {
+	if m.debugMode {
 		log.Printf("[DEBUG] handleVMSelection: %s (%s)", item.Title, item.Type)
 	}
 
@@ -387,7 +392,10 @@ func (m *MainModel) handleVMSelection() (tea.Model, tea.Cmd) {
 			runCfg.HostCPUTopology = hostTopo
 		}
 		// Create runner with RunConfig (replaces individual Set* calls)
-		runner := vm.NewVMRunner(vmObj, m.cfg, runCfg)
+		if m.dryRunMode {
+			runCfg.DryRun = true
+		}
+		runner := vm.NewVMRunner(vmObj, m.cfg, runCfg, m.debugMode)
 
 		// Create running model immediately (runner will be set async)
 		vmRunningModel := NewVMRunningModel(vmObj, nil) // nil runner
@@ -409,7 +417,7 @@ func (m *MainModel) handleVMSelection() (tea.Model, tea.Cmd) {
 		m.runningVMID = vmObj.ID
 
 		// Start VM asynchronously — view is already visible
-		if debugMode {
+		if m.debugMode {
 			log.Printf("[DEBUG] VM starting async: %s (ID: %s)", vmObj.Name, vmObj.ID)
 		}
 
@@ -427,10 +435,10 @@ func (m *MainModel) handlePowerSelection() (tea.Model, tea.Cmd) {
 	switch selectedIndex {
 	case 0:
 		// Power off system
-		return m, runPowerOff()
+		return m, runPowerOff(m.dryRunMode)
 	case 1:
 		// Reboot system
-		return m, runReboot()
+		return m, runReboot(m.dryRunMode)
 	}
 	return m, nil
 }
@@ -554,7 +562,7 @@ func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if selectedIndex >= 0 && selectedIndex < len(m.vmListForSelection) {
 				selectedVM := m.vmListForSelection[selectedIndex]
 				if m.selectionMode == "delete" {
-					if deleteModel, err := NewVMDeleteModel(m.vmManager, selectedVM.ID); err == nil {
+				if deleteModel, err := NewVMDeleteModel(m.vmManager, selectedVM.ID, m.debugMode); err == nil {
 						m.vmDeleteModel = deleteModel
 						if m.viewRegistry != nil && m.viewRegistry.GetDef(ViewVMDelete) != nil {
 							m.viewRegistry.SetActiveModel(m.viewRegistry.GetDef(ViewVMDelete), deleteModel)

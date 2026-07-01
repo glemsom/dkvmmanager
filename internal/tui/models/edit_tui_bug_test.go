@@ -13,7 +13,6 @@ func setupTestModelWithTwoVMs(t *testing.T) *MainModel {
 	t.Helper()
 
 	// Skip mount point check for testing
-	SetSkipMountPointCheck(true)
 
 	tmpDir := t.TempDir()
 
@@ -21,12 +20,14 @@ func setupTestModelWithTwoVMs(t *testing.T) *MainModel {
 		t.Fatalf("Failed to create config dir: %v", err)
 	}
 
-	cfg := &config.Config{
+	cfgObj := &config.Config{
 		DataFolder:    tmpDir,
 		VMsConfigFile: filepath.Join(tmpDir, "dkvmmanager", "vms.yaml"),
 	}
-
-	m, err := NewMainModelWithConfig(cfg)
+	m, err := NewMainModelWithConfig(MainModelConfig{
+		Config:              cfgObj,
+		SkipMountPointCheck: true,
+	})
 	if err != nil {
 		t.Fatalf("Failed to create MainModel: %v", err)
 	}

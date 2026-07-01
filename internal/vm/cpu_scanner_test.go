@@ -302,13 +302,13 @@ func TestCPUScannerAsymmetricL3(t *testing.T) {
 func TestCPUIndexToTopology(t *testing.T) {
 	// Build a mock host topology matching the mock sysfs created by createMockSysfs
 	hostTopo := domain.HostCPUTopology{
-		TotalCores:      8,
-		TotalCPUs:     16,
+		TotalCores:     8,
+		TotalCPUs:      16,
 		ThreadsPerCore: 2,
 		Dies: []domain.CPUDie{
 			{
-				ID:     0,
-				Cores:  4,
+				ID:      0,
+				Cores:   4,
 				Threads: 2,
 				CoreDetails: []domain.CPUCore{
 					{ID: 0, DieID: 0, Threads: []int{0, 1}},
@@ -318,8 +318,8 @@ func TestCPUIndexToTopology(t *testing.T) {
 				},
 			},
 			{
-				ID:     1,
-				Cores:  4,
+				ID:      1,
+				Cores:   4,
 				Threads: 2,
 				CoreDetails: []domain.CPUCore{
 					{ID: 0, DieID: 1, Threads: []int{8, 9}},
@@ -334,10 +334,10 @@ func TestCPUIndexToTopology(t *testing.T) {
 	tests := []struct {
 		name       string
 		cpuID      int
-		wantDie   int
-		wantCore  int
+		wantDie    int
+		wantCore   int
 		wantThread int
-		wantErr   bool
+		wantErr    bool
 	}{
 		{"CPU 0", 0, 0, 0, 0, false},
 		{"CPU 1", 1, 0, 0, 1, false},

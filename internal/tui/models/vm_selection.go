@@ -57,7 +57,7 @@ func (m *MainModel) showVMSelectionWithMode(mode string, emptyMessage string) (t
 		m.breadcrumbs.AddItem("Edit VM", "vm_edit", 1)
 	}
 
-	if debugMode {
+	if m.debugMode {
 		log.Printf("[DEBUG] showVMSelectionWithMode(%s): switching to ViewVMSelect with %d VMs", mode, len(vms))
 		for i, vm := range vms {
 			log.Printf("[DEBUG] VM[%d]: %s (ID: %s)", i, vm.Name, vm.ID)

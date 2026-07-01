@@ -12,8 +12,8 @@ type LVCreateModel struct {
 }
 
 // NewLVCreateModel creates a new LVCreateModel.
-func NewLVCreateModel() *LVCreateModel {
-	fm := NewLVCreateFormModel()
+func NewLVCreateModel(dryRunMode, debugMode bool) *LVCreateModel {
+	fm := NewLVCreateFormModel(dryRunMode, debugMode)
 	return &LVCreateModel{form: form.NewScrollableForm(fm)}
 }
 

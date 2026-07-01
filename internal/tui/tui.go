@@ -23,27 +23,25 @@ func Run(debug bool, dryRun bool, testRun string, skipMountCheck bool) {
 		fmt.Println("Press Enter to continue anyway...")
 		fmt.Scanln()
 	}
+	// Create model config (replaces Set* functions)
+	modelCfg := models.MainModelConfig{
+		DebugMode:           debug,
+		DryRunMode:          dryRun,
+		SkipMountPointCheck: skipMountCheck,
+	}
 
-	// Set debug mode in models package
 	if debug {
-		models.SetDebugMode(true)
 		log.Printf("[DEBUG] Starting TUI with debug=%v, dryRun=%v, testRun=%q, skipMountCheck=%v", debug, dryRun, testRun, skipMountCheck)
 	}
-
-	// Set dry-run mode in models package
 	if dryRun {
-		models.SetDryRunMode(true)
 		log.Printf("[DRY-RUN] Dry-run mode enabled")
 	}
-
-	// Set skip mount point check mode
 	if skipMountCheck {
-		models.SetSkipMountPointCheck(true)
 		log.Printf("[TEST] Mount point check skipped")
 	}
 
 	// Create the initial model
-	m, err := models.NewMainModel()
+	m, err := models.NewMainModelWithConfig(modelCfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize: %v\n", err)
 		os.Exit(1)

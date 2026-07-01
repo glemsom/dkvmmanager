@@ -10,7 +10,7 @@ import (
 )
 
 // runLBUCommit executes lbu commit asynchronously and returns the result
-func runLBUCommit() tea.Cmd {
+func runLBUCommit(dryRunMode bool) tea.Cmd {
 	return func() tea.Msg {
 		if dryRunMode {
 			return LBUCommitMsg{
@@ -28,7 +28,7 @@ func runLBUCommit() tea.Cmd {
 }
 
 // runReboot executes the reboot command asynchronously
-func runReboot() tea.Cmd {
+func runReboot(dryRunMode bool) tea.Cmd {
 	return func() tea.Msg {
 		if dryRunMode {
 			return RebootMsg{
@@ -46,7 +46,7 @@ func runReboot() tea.Cmd {
 }
 
 // runPowerOff executes the poweroff command asynchronously
-func runPowerOff() tea.Cmd {
+func runPowerOff(dryRunMode bool) tea.Cmd {
 	return func() tea.Msg {
 		if dryRunMode {
 			return PowerOffMsg{

@@ -30,7 +30,7 @@ func (r *VMRunner) buildQEMUArgs(vmDataDir string) []string {
 	)
 
 	// Debug logging to file if debug mode enabled
-	if debugMode {
+	if r.dbgMode {
 		debugLog := filepath.Join(vmDataDir, "qemu-debug.log")
 		args = append(args, "-D", debugLog)
 	}
@@ -407,10 +407,6 @@ func (r *VMRunner) buildCPUOptsString() string {
 
 	return strings.Join(flags, ",")
 }
-
-
-
-
 
 // extractBaseDevice extracts the base device address (domain:bus:device) from a PCI address
 // by removing the function number. E.g., "0000:03:00.1" -> "0000:03:00"

@@ -14,19 +14,20 @@ import (
 // Then verify VMs tab shows both VMs
 func TestFullTUIEditFlowReproducingBug(t *testing.T) {
 	// Skip mount point check for testing
-	SetSkipMountPointCheck(true)
 
 	tmpDir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(tmpDir, "dkvmmanager"), 0755); err != nil {
 		t.Fatal(err)
 	}
 
-	cfg := &config.Config{
+	cfgObj := &config.Config{
 		DataFolder:    tmpDir,
 		VMsConfigFile: filepath.Join(tmpDir, "dkvmmanager", "vms.yaml"),
 	}
-
-	m, err := NewMainModelWithConfig(cfg)
+	m, err := NewMainModelWithConfig(MainModelConfig{
+		Config:              cfgObj,
+		SkipMountPointCheck: true,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
