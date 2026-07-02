@@ -6,12 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## [0.2.1] - 2026-07-02
+
+### Fixed
+- Persist L3 cache size/assoc per-die override values across saves.
+  ([#94](https://github.com/glemsom/dkvmmanager/pull/94))
+- Convert L3 cache size human string to bytes for QEMU UINT32 property.
+- Skip bold text on selected list items when `TERM=linux` (16-color console).
+- Prevent ANSI attribute bleed on 16-color consoles.
+- Standardize VM form footer help text to match other forms.
+- Start/Stop Script Cancel button now highlights Cancel when focused.
 
 ### Changed
-- **User docs**: Added `docs/user/storage.md` covering LVM logical volume creation
-  and disk management for VMs.
-  ([#100](https://github.com/glemsom/dkvmmanager/issues/100))
+- Rename `internal/models` → `internal/domain`.
+  ([#128](https://github.com/glemsom/dkvmmanager/issues/128))
+- Remove package-level globals; use explicit config/fields instead.
+- Unify message dispatch; remove `init()` and global registry.
+  ([#129](https://github.com/glemsom/dkvmmanager/issues/129),
+  [#133](https://github.com/glemsom/dkvmmanager/pull/133))
+
+### Added
+- Comprehensive user documentation: setup, VM management, running VMs, keybindings,
+  hardware config, storage, power & save, scripts & SSH.
+  ([#99](https://github.com/glemsom/dkvmmanager/issues/99),
+  [#100](https://github.com/glemsom/dkvmmanager/issues/100))
+- Developer architecture guide with Mermaid lifecycle/message flow diagrams.
+- Backup and restore guide.
+- Upgrade and migration guide.
+- Config file schema reference.
+- Learning path in user README.
+- Fix Alpine Linux installation instructions in README.
+- Deduplicate keybindings tables to single source of truth.
+- Link CHANGELOG.md from README documentation table.
 
 ## [0.2.0] - 2026-06-22
 
