@@ -7,6 +7,7 @@ import (
 	"os"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/glemsom/dkvmmanager/internal/config"
 	"github.com/glemsom/dkvmmanager/internal/tui/models"
 )
 
@@ -25,6 +26,7 @@ func Run(debug bool, dryRun bool, testRun string, skipMountCheck bool) {
 	}
 	// Create model config (replaces Set* functions)
 	modelCfg := models.MainModelConfig{
+		Config:              config.Load(),
 		DebugMode:           debug,
 		DryRunMode:          dryRun,
 		SkipMountPointCheck: skipMountCheck,
