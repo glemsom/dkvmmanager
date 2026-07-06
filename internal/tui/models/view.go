@@ -101,20 +101,9 @@ func (m *MainModel) renderActiveContentWithWidth(width int) string {
 		return m.viewRegistry.ActiveModel().View().Content
 	}
 
-	// Fallback: render non-registry sub-views
-	switch m.currentView {
-	case ViewVMDelete:
-		if m.vmDeleteModel != nil {
-			return m.vmDeleteModel.View().Content
-		}
-		return "Loading..."
-	case ViewVMSelect:
-		return m.renderVMSelectView()
-	case ViewVMRunning:
-		if m.vmRunningModel != nil {
-			return m.vmRunningModel.View().Content
-		}
-		return "Loading..."
+	// Fallback for VMRunning (safety net during view transitions)
+	if m.currentView == ViewVMRunning && m.vmRunningModel != nil {
+		return m.vmRunningModel.View().Content
 	}
 
 	switch m.tabModel.GetActiveTab() {

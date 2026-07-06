@@ -49,6 +49,48 @@ func (m *MainModel) handleVMStoppedMsg(vsm VMStoppedMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// handleVMSelected handles VMSelectedMsg from VMSelectModel.
+// Creates the appropriate edit or delete model and activates it via registry.
+func (m *MainModel) handleVMSelected(msg VMSelectedMsg) (tea.Model, tea.Cmd) {
+	switch msg.Mode {
+	case "edit":
+		if editModel, err := NewVMEditModel(m.vmManager, msg.VMID); err == nil {
+			editModel.SetSize(m.windowWidth-4, m.contentHeight()-2)
+			if m.viewRegistry != nil && m.viewRegistry.GetDef(ViewVMEdit) != nil {
+				m.viewRegistry.SetActiveModel(m.viewRegistry.GetDef(ViewVMEdit), editModel)
+			}
+			m.currentView = ViewVMEdit
+			m.breadcrumbs.Clear()
+			vmObj, _ := m.vmManager.GetVM(msg.VMID)
+			if vmObj != nil {
+				m.breadcrumbs.AddItem("Edit "+vmObj.Name, "vm_edit", 1)
+			}
+			return m, editModel.Init()
+		}
+		m.statusBar.SetMessage("Error creating edit form")
+		return m, nil
+
+	case "delete":
+		if deleteModel, err := NewVMDeleteModel(m.vmManager, msg.VMID, m.debugMode); err == nil {
+			deleteModel.SetSize(m.windowWidth-4, m.contentHeight()-2)
+			if m.viewRegistry != nil && m.viewRegistry.GetDef(ViewVMDelete) != nil {
+				m.viewRegistry.SetActiveModel(m.viewRegistry.GetDef(ViewVMDelete), deleteModel)
+			}
+			m.currentView = ViewVMDelete
+			m.breadcrumbs.Clear()
+			vmObj, _ := m.vmManager.GetVM(msg.VMID)
+			if vmObj != nil {
+				m.breadcrumbs.AddItem("Delete "+vmObj.Name, "vm_delete_confirm", 1)
+			}
+			return m, deleteModel.Init()
+		}
+		m.statusBar.SetMessage("Error creating delete form")
+		return m, nil
+	}
+
+	return m, nil
+}
+
 // handleVMCreated handles VMCreatedMsg.
 func (m *MainModel) handleVMCreated(msg VMCreatedMsg) (tea.Model, tea.Cmd) {
 	m.rebuildMenuList()

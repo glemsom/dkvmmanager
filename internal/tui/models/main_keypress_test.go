@@ -123,13 +123,12 @@ func TestHandleKeyPressDelegatesToList(t *testing.T) {
 func TestHandleKeyPressVMSelectDelegation(t *testing.T) {
 	m := setupTestModelWithVMs(t)
 
-	// Enter VM select mode
-	m.currentView = ViewVMSelect
-	m.selectionMode = "edit"
-	m.vmListForSelection, _ = m.vmManager.ListVMs()
+	// Enter VM select mode via the registry path
+	model, _ := m.showVMSelection()
+	m = model.(*MainModel)
 
-	// Send a key - should not panic
-	model, _ := m.handleKeyPress(tea.KeyPressMsg{Code: tea.KeyDown})
+	// Send a key through Update() which routes to VMSelectModel via registry
+	model, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = model.(*MainModel)
 
 	// Just verify it doesn't crash
@@ -150,19 +149,24 @@ func TestVMSelectEnterDeleteMode(t *testing.T) {
 	if m.currentView != ViewVMSelect {
 		t.Fatalf("Expected ViewVMSelect, got %s", m.currentView)
 	}
-	if len(m.vmListForSelection) == 0 {
-		t.Fatal("Expected VMs to be available for selection")
+
+	// Verify VMSelectModel is active in registry
+	if m.viewRegistry == nil || m.viewRegistry.ActiveName() != ViewVMSelect {
+		t.Fatal("Expected VMSelectModel to be active in registry")
 	}
 
-	// Simulate pressing Enter on the selected VM
-	model, _ = m.delegateToSubView(tea.KeyPressMsg{Code: tea.KeyEnter})
+	// Simulate pressing Enter on the selected VM through Update()
+	// This goes through registry dispatch -> VMSelectModel.Update() -> VMSelectedMsg -> handleVMSelected
+	model, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
+	if cmd != nil {
+		msg := cmd()
+		model, _ = m.Update(msg)
+		m = model.(*MainModel)
+	}
 
 	if m.currentView != ViewVMDelete {
 		t.Errorf("Expected ViewVMDelete after Enter in delete mode, got %s", m.currentView)
-	}
-	if m.vmDeleteModel == nil {
-		t.Error("Expected vmDeleteModel to be initialized")
 	}
 }
 
@@ -178,19 +182,25 @@ func TestVMSelectEnterEditMode(t *testing.T) {
 	if m.currentView != ViewVMSelect {
 		t.Fatalf("Expected ViewVMSelect, got %s", m.currentView)
 	}
-	if len(m.vmListForSelection) == 0 {
-		t.Fatal("Expected VMs to be available for selection")
+
+	// Verify VMSelectModel is active in registry
+	if m.viewRegistry == nil || m.viewRegistry.ActiveName() != ViewVMSelect {
+		t.Fatal("Expected VMSelectModel to be active in registry")
 	}
 
-	// Simulate pressing Enter on the selected VM
-	model, _ = m.delegateToSubView(tea.KeyPressMsg{Code: tea.KeyEnter})
+	// Simulate pressing Enter on the selected VM through Update()
+	// This goes through registry dispatch -> VMSelectModel.Update() -> VMSelectedMsg -> handleVMSelected
+	model, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
+	if cmd != nil {
+		msg := cmd()
+		model, _ = m.Update(msg)
+		m = model.(*MainModel)
+	}
 
 	if m.currentView != ViewVMEdit {
 		t.Errorf("Expected ViewVMEdit after Enter in edit mode, got %s", m.currentView)
 	}
-	// VMEdit may or may not be registered in the viewRegistry depending on setup
-	// The important thing is currentView is set correctly
 }
 
 func TestVMSelectBreadcrumbsAfterDeleteEnter(t *testing.T) {
@@ -202,14 +212,21 @@ func TestVMSelectBreadcrumbsAfterDeleteEnter(t *testing.T) {
 	model, _ := m.showVMSelectionForDeletion()
 	m = model.(*MainModel)
 
-	initialBreadcrumbs := m.breadcrumbs.Len()
-
-	// Simulate pressing Enter on the selected VM
-	model, _ = m.delegateToSubView(tea.KeyPressMsg{Code: tea.KeyEnter})
+	// Simulate pressing Enter on the selected VM through Update()
+	model, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
+	if cmd != nil {
+		msg := cmd()
+		model, _ = m.Update(msg)
+		m = model.(*MainModel)
+	}
 
-	if m.breadcrumbs.Len() <= initialBreadcrumbs {
-		t.Errorf("Expected breadcrumbs to increase after navigating to delete confirmation, got %d (was %d)", m.breadcrumbs.Len(), initialBreadcrumbs)
+	// Breadcrumbs should be updated to the delete confirmation (1 item)
+	if m.breadcrumbs.Len() == 0 {
+		t.Error("Expected breadcrumbs to be set after navigating to delete confirmation")
+	}
+	if m.currentView != ViewVMDelete {
+		t.Errorf("Expected ViewVMDelete, got %s", m.currentView)
 	}
 }
 
@@ -292,8 +309,12 @@ func TestStartStopScriptBrowseOpensFileBrowser(t *testing.T) {
 		t.Fatalf("Expected focus on start_browse, got Kind=%d Key=%s", pos.Kind, pos.Key)
 	}
 
-	model, _ = m.delegateToSubView(tea.KeyPressMsg{Code: tea.KeyEnter})
+	var cmd tea.Cmd
+	model, cmd = m.delegateToSubView(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
+	if cmd != nil {
+		cmd() // Execute file browser Init() to load directory listing
+	}
 
 	if ssm.Form().fileBrowser == nil {
 		t.Fatal("Expected file browser to be created after pressing Enter on browse")

@@ -7,8 +7,8 @@
 
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 # Canonical version source is VERSION file at repo root.
-# When bumping via release-please, update both VERSION and
-# internal/version/version.go. The bump-version target does both.
+# version_gen.go is generated from VERSION — single source of truth.
+# The bump-version target regenerates it automatically.
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
@@ -41,6 +41,11 @@ generate-mod: ## Generate go.mod and go.sum in Docker, copy to host
 		go mod tidy'
 	@chown $$(id -u):$$(id -g) go.mod go.sum 2>/dev/null || true
 	@echo "Done: go.mod and go.sum generated."
+
+.PHONY: generate-version
+generate-version: ## Generate internal/version/version_gen.go from VERSION file
+	@printf '%s\n' '// Code generated from VERSION file. DO NOT EDIT.' '' 'package version' '' '// Version holds the current version of the application.' '// Can be overridden at build time using -ldflags.' 'var Version = "$(shell cat VERSION)"' > internal/version/version_gen.go
+	@echo "Generated internal/version/version_gen.go from VERSION"
 
 .PHONY: coverage
 coverage: ## Run tests with coverage (HTML report in coverage.html)
@@ -80,7 +85,7 @@ build: ## Build application in Docker using go.mod/go.sum from host
 .PHONY: test
 # Go test flags can be passed via TEST_FLAGS (e.g. make test TEST_FLAGS="-v -run TestName")
 # Use COVER=1 to enable coverage (e.g. make test COVER=1)
-test: generate-mod ## Run go vet and all tests (COVER=1 for coverage, TEST_FLAGS for extra args)
+test: generate-mod generate-version ## Run go vet and all tests (COVER=1 for coverage, TEST_FLAGS for extra args)
 	@echo "=== Running go vet and tests ==="
 	@docker run --rm -w /build -v $(shell pwd):/build -e GOCACHE=/tmp/go-cache \
 		--user $$(id -u):$$(id -g) \
@@ -117,12 +122,11 @@ test: generate-mod ## Run go vet and all tests (COVER=1 for coverage, TEST_FLAGS
 
 .PHONY: run-dry
 .PHONY: bump-version
-bump-version: ## Bump version in VERSION and internal/version/version.go (usage: make bump-version NEW_VERSION=0.1.31)
+bump-version: ## Bump version in VERSION and regenerate version_gen.go (usage: make bump-version NEW_VERSION=0.1.31)
 	@if [ -z "$(NEW_VERSION)" ]; then echo "Usage: make bump-version NEW_VERSION=0.1.31"; exit 1; fi
 	@printf '%s' "$(NEW_VERSION)" > VERSION
-	@sed -i 's/var Version = ".*"/var Version = "$(NEW_VERSION)"/' internal/version/version.go
-	@echo "Version bumped to $(NEW_VERSION) in VERSION and internal/version/version.go"
-	@echo "Commit with: git commit -m 'chore: bump v0.x.x → v$(NEW_VERSION)'"
+	@$(MAKE) generate-version
+	@echo "Version bumped to $(NEW_VERSION) — VERSION and version_gen.go updated"
 run-dry: build ## Build and run in dry-run mode (shows QEMU args without launching)
 	@./$(OUTPUT) -dry-run
 

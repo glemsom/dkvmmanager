@@ -167,9 +167,14 @@ func TestEditFormArrowNavigationViaMainModel(t *testing.T) {
 		t.Fatalf("Expected ViewVMSelect, got %s", m.currentView)
 	}
 
-	// Select first VM to enter edit mode
-	model, _ = m.delegateToSubView(tea.KeyPressMsg{Code: tea.KeyEnter})
+	// Select first VM to enter edit mode via registry dispatch
+	model, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
+	if cmd != nil {
+		msg := cmd()
+		model, _ = m.Update(msg)
+		m = model.(*MainModel)
+	}
 
 	if m.currentView != ViewVMEdit {
 		t.Fatalf("Expected ViewVMEdit, got %s", m.currentView)

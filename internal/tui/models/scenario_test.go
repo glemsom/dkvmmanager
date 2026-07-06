@@ -168,7 +168,10 @@ func TestScenarioESCFromVMDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create delete model: %v", err)
 	}
-	m.vmDeleteModel = deleteModel
+	// Register through registry instead of setting m.vmDeleteModel
+	if m.viewRegistry != nil && m.viewRegistry.GetDef(ViewVMDelete) != nil {
+		m.viewRegistry.SetActiveModel(m.viewRegistry.GetDef(ViewVMDelete), deleteModel)
+	}
 	m.currentView = ViewVMDelete
 
 	m = sendKeys(t, m, tea.KeyEsc)
