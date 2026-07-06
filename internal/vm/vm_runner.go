@@ -59,6 +59,8 @@ type VMRunner struct {
 	prevHostJiffies  uint64                      // previous utime+stime for the QEMU process (raw jiffies)
 	prevSnapshotTime time.Time                   // wall clock of previous snapshot
 	prevBlockStats   map[string]QMPBlockDeviceIO // Device -> previous raw counters
+	prevNetStats   map[string]QMPNetDeviceIO // Device -> previous raw counters
+	prevNetTime    time.Time                   // wall clock of previous net snapshot (delta math)
 	prevBlockTime    time.Time                   // wall clock of previous block snapshot (delta math)
 
 	// Proc reader function (overridable for tests)
@@ -415,6 +417,7 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 	// (0, nil) when the guest has no balloon driver), so a nil error
 	// here is the normal case. query-blockstats returns the raw counter
 	// snapshot; delta math happens below under the lock.
+	var netStats []QMPNetDeviceStats
 	var blockStats []QMPBlockDeviceStats
 	if client != nil {
 		bs, err := client.QueryBlockStats()
@@ -441,6 +444,21 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 			}
 		} else {
 			m.BalloonBytes = balloon
+
+		}
+
+		// S6: QMP query-netdev.
+		ns, err := client.QueryNetdev()
+		if err != nil {
+			// Graceful degradation on transient QMP failure.
+			if r.dbgMode {
+				log.Printf("[DEBUG] Snapshot: query-netdev failed: %v", err)
+			}
+			if snapshotErr == nil {
+				snapshotErr = fmt.Errorf("Snapshot: query-netdev failed: %w", err)
+			}
+		} else {
+			netStats = ns
 		}
 	}
 
@@ -582,6 +600,53 @@ func (r *VMRunner) Snapshot() (Metrics, error) {
 		r.prevBlockTime = now
 
 		m.BlockDevices = derived
+	}
+
+	// S6: Network device per-device B/s and Pps from deltas.
+	// Same pattern as block stats: (raw_counter_now - raw_counter_prev) / delta_seconds.
+	if len(netStats) > 0 {
+		var derived []NetStat
+		for _, n := range netStats {
+			ns := NetStat{
+				Device:    n.ID,
+				RXBytes:   n.Stats.RXBytes,
+				TXBytes:   n.Stats.TXBytes,
+				RXPackets: n.Stats.RXPackets,
+				TXPackets: n.Stats.TXPackets,
+			}
+
+			// Delta math: only if we have a previous sample for this device
+			// and a positive wall-clock delta.
+			if r.prevNetStats != nil && !r.prevNetTime.IsZero() {
+				prev, exists := r.prevNetStats[n.ID]
+				deltaSecs := now.Sub(r.prevNetTime).Seconds()
+				if exists && deltaSecs > 0 {
+					if n.Stats.RXBytes >= prev.RXBytes {
+						ns.RXBps = uint64(float64(n.Stats.RXBytes-prev.RXBytes) / deltaSecs)
+					}
+					if n.Stats.TXBytes >= prev.TXBytes {
+						ns.TXBps = uint64(float64(n.Stats.TXBytes-prev.TXBytes) / deltaSecs)
+					}
+					if n.Stats.RXPackets >= prev.RXPackets {
+						ns.RXPps = uint64(float64(n.Stats.RXPackets-prev.RXPackets) / deltaSecs)
+					}
+					if n.Stats.TXPackets >= prev.TXPackets {
+						ns.TXPps = uint64(float64(n.Stats.TXPackets-prev.TXPackets) / deltaSecs)
+					}
+				}
+			}
+
+			derived = append(derived, ns)
+		}
+
+		// Update previous state for next delta math.
+		r.prevNetStats = make(map[string]QMPNetDeviceIO, len(netStats))
+		for _, n := range netStats {
+			r.prevNetStats[n.ID] = n.Stats
+		}
+		r.prevNetTime = now
+
+		m.NetDevices = derived
 	}
 
 	return m, snapshotErr
