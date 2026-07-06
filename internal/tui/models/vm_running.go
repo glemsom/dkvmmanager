@@ -58,6 +58,76 @@ type VMMetricsUpdateMsg struct {
 	Metrics vm.Metrics
 }
 
+// sparklineBuffer is a fixed-capacity circular buffer for trend data.
+// push overwrites the oldest value when full.
+// snapshot returns all buffered values in insertion order.
+type sparklineBuffer struct {
+	values []float64
+	cursor int
+	count  int
+	cap    int
+}
+
+func newSparklineBuffer(cap int) sparklineBuffer {
+	return sparklineBuffer{
+		values: make([]float64, cap),
+		cap:    cap,
+	}
+}
+
+func (b *sparklineBuffer) push(v float64) {
+	if b.cap == 0 {
+		// Lazy-init with default capacity if created zero-valued
+		b.cap = 30
+		b.values = make([]float64, b.cap)
+	} else if b.values == nil {
+		b.values = make([]float64, b.cap)
+	}
+	b.values[b.cursor] = v
+	b.cursor = (b.cursor + 1) % b.cap
+	if b.count < b.cap {
+		b.count++
+	}
+}
+
+func (b *sparklineBuffer) snapshot() []float64 {
+	if b.count == 0 {
+		return nil
+	}
+	out := make([]float64, b.count)
+	if b.count < b.cap {
+		copy(out, b.values[:b.count])
+		return out
+	}
+	copy(out, b.values[b.cursor:])
+	copy(out[b.cap-b.cursor:], b.values[:b.cursor])
+	return out
+}
+
+func (b *sparklineBuffer) peak() float64 {
+	vals := b.snapshot()
+	if len(vals) == 0 {
+		return 0
+	}
+	p := vals[0]
+	for _, v := range vals[1:] {
+		if v > p {
+			p = v
+		}
+	}
+	return p
+}
+
+func (b *sparklineBuffer) latest() (float64, bool) {
+	if b.count == 0 {
+		return 0, false
+	}
+	if b.cursor == 0 {
+		return b.values[b.cap-1], true
+	}
+	return b.values[b.cursor-1], true
+}
+
 // VMRunningModel displays a running VM with log output and status
 type VMRunningModel struct {
 	// VM info
@@ -85,6 +155,10 @@ type VMRunningModel struct {
 	// Metrics snapshot (latest, updated every 2s)
 	metrics vm.Metrics
 
+	// Sparkline trend buffers (60-second window at 2 s cadence → cap=30)
+	cpuTrend sparklineBuffer // aggregate CPU% (×100 fixed-point)
+	memTrend sparklineBuffer // HostRSSBytes
+
 	// Dimensions
 	width  int
 	height int
@@ -104,6 +178,8 @@ func NewVMRunningModel(vmObj *domain.VM, runner *vm.VMRunner) *VMRunningModel {
 		vm:          vmObj,
 		runner:      runner,
 		maxLogLines: 500,
+		cpuTrend:    newSparklineBuffer(30),
+		memTrend:    newSparklineBuffer(30),
 	}
 }
 
@@ -336,6 +412,20 @@ func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case VMMetricsUpdateMsg:
 		m.metrics = msg.Metrics
+
+		// Push aggregate CPU% and RSS into trend buffers
+		if len(msg.Metrics.VCPUs) > 0 {
+			var totalCPU float64
+			for _, vcpu := range msg.Metrics.VCPUs {
+				totalCPU += float64(vcpu.CPUTimeNs)
+			}
+			// CPUTimeNs holds CPU% ×100; push as-is, divide later for display
+			m.cpuTrend.push(totalCPU)
+		}
+		if msg.Metrics.HostRSSBytes > 0 {
+			m.memTrend.push(float64(msg.Metrics.HostRSSBytes))
+		}
+
 		return m, m.pollMetrics()
 
 	case VMStartedMsg:
@@ -431,6 +521,10 @@ func (m *VMRunningModel) calculateInfoHeight() int {
 	if m.metrics.HostRSSBytes > 0 || m.metrics.HostCPUJiffies > 0 {
 		height++
 	}
+
+	// #137: Add 2 lines for CPU and memory trend sparklines
+	// Always present to avoid layout shift (placeholder when empty).
+	height += 2
 
 	// S5: Add one line per block device for per-disk IOPS/B/s display.
 	if len(m.metrics.BlockDevices) > 0 {
@@ -641,6 +735,49 @@ func (m *VMRunningModel) renderInfoPanel() string {
 		b.WriteString("  ")
 		b.WriteString(labelStyle.Render("RSS "))
 		b.WriteString(valueStyle.Render(formatBytes(m.metrics.HostRSSBytes)))
+		b.WriteString("\n")
+	}
+
+	// === Section: CPU and Memory Trend Sparklines (#137) ===
+	// Always present to avoid layout shift (placeholder when empty).
+	// CPU sparkline: 20 braille chars wide, shows aggregate CPU% + peak.
+	cpuVals := m.cpuTrend.snapshot()
+	if len(cpuVals) > 0 {
+		spark := RenderBrailleSparkline(cpuVals, 20)
+		latestCPU, _ := m.cpuTrend.latest()
+		pk := m.cpuTrend.peak()
+		b.WriteString(labelStyle.Render("CPU: "))
+		b.WriteString(valueStyle.Render(spark))
+		b.WriteString("  ")
+		b.WriteString(valueStyle.Render(fmt.Sprintf("%.1f%%", latestCPU/100.0)))
+		b.WriteString(labelStyle.Render("  peak "))
+		b.WriteString(valueStyle.Render(fmt.Sprintf("%.1f%%", pk/100.0)))
+		b.WriteString("\n")
+	} else {
+		b.WriteString(labelStyle.Render("CPU: "))
+		b.WriteString(valueStyle.Render("⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯"))
+		b.WriteString("\n")
+	}
+
+	// Mem sparkline: 20 braille chars wide, shows current RSS + total guest memory.
+	memVals := m.memTrend.snapshot()
+	if len(memVals) > 0 {
+		spark := RenderBrailleSparkline(memVals, 20)
+		latestMem, _ := m.memTrend.latest()
+		memLabel := fmt.Sprintf("  %s", formatBytes(uint64(latestMem)))
+		if m.runner != nil {
+			memTotal := m.runner.MemoryMB() * 1024 * 1024
+			memLabel += fmt.Sprintf(" / %s", formatBytes(uint64(memTotal)))
+		} else {
+			memLabel += " N/A"
+		}
+		b.WriteString(labelStyle.Render("Mem: "))
+		b.WriteString(valueStyle.Render(spark))
+		b.WriteString(mutedStyle.Render(memLabel))
+		b.WriteString("\n")
+	} else {
+		b.WriteString(labelStyle.Render("Mem: "))
+		b.WriteString(valueStyle.Render("⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯"))
 		b.WriteString("\n")
 	}
 
