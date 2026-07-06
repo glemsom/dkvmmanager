@@ -47,6 +47,7 @@ type QMPClientInterface interface {
 	QueryCPUs() ([]VCPUInfo, error)
 	QueryCPUsFast() ([]QMPVCPUInfo, error)
 	QueryBlockStats() ([]QMPBlockDeviceStats, error)
+	QueryNetdev() ([]QMPNetDeviceStats, error)
 	QueryBalloon() (uint64, error)
 	Close() error
 	Quit() error
@@ -348,6 +349,24 @@ type QMPBlockDeviceIO struct {
 	WROps   uint64 `json:"wr_operations"`
 }
 
+// QMPNetDeviceIO is the per-device network counter object inside
+// query-netdev. All counters are cumulative since VM start; the
+// runner computes B/s and Pps from deltas across successive snapshots.
+type QMPNetDeviceIO struct {
+	RXBytes   uint64 `json:"rx-bytes"`
+	TXBytes   uint64 `json:"tx-bytes"`
+	RXPackets uint64 `json:"rx-packets"`
+	TXPackets uint64 `json:"tx-packets"`
+}
+
+// QMPNetDeviceStats is one element of the query-netdev return
+// array. The QMP wire format nests the counters under "stats".
+type QMPNetDeviceStats struct {
+	ID    string         `json:"id"`
+	Type  string         `json:"type"`
+	Stats QMPNetDeviceIO `json:"stats"`
+}
+
 // QueryBalloon returns the current balloon size in bytes via query-balloon.
 // The QMP response shape is {"return": {"actual": N, "mem_period": ..., "max": N}}.
 //
@@ -394,6 +413,25 @@ func (c *QMPClient) QueryBlockStats() ([]QMPBlockDeviceStats, error) {
 	var stats []QMPBlockDeviceStats
 	if err := json.Unmarshal(resp.Return, &stats); err != nil {
 		return nil, fmt.Errorf("failed to parse query-blockstats response: %w", err)
+	}
+	return stats, nil
+}
+
+// QueryNetdev returns per-network-device I/O counters via query-netdev.
+// Each element carries r/w bytes and r/w packet counts since VM start;
+// the runner computes B/s and Pps from deltas across successive snapshots.
+func (c *QMPClient) QueryNetdev() ([]QMPNetDeviceStats, error) {
+	resp, err := c.Execute("query-netdev", nil)
+	if err != nil {
+		return nil, err
+	}
+	if resp.Error != nil {
+		return nil, fmt.Errorf("query-netdev error: %s: %s", resp.Error.Class, resp.Error.Desc)
+	}
+
+	var stats []QMPNetDeviceStats
+	if err := json.Unmarshal(resp.Return, &stats); err != nil {
+		return nil, fmt.Errorf("failed to parse query-netdev response: %w", err)
 	}
 	return stats, nil
 }

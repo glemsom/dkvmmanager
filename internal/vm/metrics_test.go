@@ -438,6 +438,8 @@ func (c *countingBlockClient) QueryBlockStats() ([]QMPBlockDeviceStats, error) {
 			WROps:   c.wrOps(),
 		}},
 	}, nil
+
+
 }
 
 // S5: when the guest has no balloon driver, the QueryBalloon call inside

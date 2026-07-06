@@ -531,7 +531,18 @@ func (m *VMRunningModel) calculateInfoHeight() int {
 		height += len(m.metrics.BlockDevices)
 	}
 
-	// S5: Add a line for the balloon when populated (graceful degradation
+	// S6: Add network device section when devices are present.
+	// Capped at 2 visible lines; if more devices exist, an overflow
+	// indicator line is added so the total is min(2, len) + 1.
+	if len(m.metrics.NetDevices) > 0 {
+		show := len(m.metrics.NetDevices)
+		if show > 2 {
+			show = 2
+			height++ // overflow indicator line
+		}
+		height += show
+	}
+
 	// hides it when 0).
 	if m.metrics.BalloonBytes > 0 {
 		height++
@@ -807,6 +818,39 @@ func (m *VMRunningModel) renderInfoPanel() string {
 	// Only render when BalloonBytes > 0 (graceful degradation: no balloon
 	// driver is a normal guest configuration, not a "0 B" failure).
 	if m.metrics.BalloonBytes > 0 {
+
+	// === Section: Network Metrics (S6) ===
+	// Capped at 2 devices; overflow indicator shows remaining count.
+	// Format: "net <device>: r: <B/s> · <pps>  w: <B/s> · <pps>".
+	// No section when NetDevices is empty.
+	if len(m.metrics.NetDevices) > 0 {
+		show := len(m.metrics.NetDevices)
+		overflow := 0
+		if show > 2 {
+			overflow = show - 2
+			show = 2
+		}
+		for i := 0; i < show; i++ {
+			dev := m.metrics.NetDevices[i]
+			b.WriteString(labelStyle.Render("net "))
+			b.WriteString(valueStyle.Render(dev.Device))
+			b.WriteString(labelStyle.Render(": "))
+			b.WriteString(labelStyle.Render("r: "))
+			b.WriteString(valueStyle.Render(formatRate(dev.RXBps)))
+			b.WriteString(labelStyle.Render(" · "))
+			b.WriteString(valueStyle.Render(fmt.Sprintf("%d pps", dev.RXPps)))
+			b.WriteString(labelStyle.Render("  w: "))
+			b.WriteString(valueStyle.Render(formatRate(dev.TXBps)))
+			b.WriteString(labelStyle.Render(" · "))
+			b.WriteString(valueStyle.Render(fmt.Sprintf("%d pps", dev.TXPps)))
+			b.WriteString("\n")
+		}
+		if overflow > 0 {
+			b.WriteString(labelStyle.Render(fmt.Sprintf("(+%d more)", overflow)))
+			b.WriteString("\n")
+		}
+	}
+
 		b.WriteString(labelStyle.Render("Balloon: "))
 		b.WriteString(valueStyle.Render(formatBytes(m.metrics.BalloonBytes)))
 		b.WriteString("\n")

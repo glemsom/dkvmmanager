@@ -18,6 +18,7 @@ type Metrics struct {
 	// Guest / QMP
 	VCPUs        []VCPUStat  // per-vCPU thread id + total CPU time in ns
 	BlockDevices []BlockStat // per-block r/w bytes, r/w operations (raw counters)
+	NetDevices   []NetStat   // per-netdev r/w bytes, r/w packets (derived rates)
 	BalloonBytes uint64      // from query-balloon; 0 if not available
 
 	// Host /proc/<qemu-pid>
@@ -50,4 +51,25 @@ type BlockStat struct {
 	WRBps  uint64 // bytes written per second
 	RDIOPS uint64 // read operations per second
 	WRIOPS uint64 // write operations per second
+}
+
+// NetStat holds per-network-device statistics for a single snapshot.
+// Raw counters (RXBytes/TXBytes/RXPackets/TXPackets) come from QMP query-netdev.
+// Derived rates (RXBps/TXBps/RXPps/TXPps) are computed from deltas against
+// the previous snapshot by the runner; the view consumes the already-derived
+// numbers directly. On a cold snapshot the rate fields are zero.
+type NetStat struct {
+	Device string // e.g. "hostnet0"
+	RXBytes uint64 // cumulative RX bytes since VM start
+	TXBytes uint64 // cumulative TX bytes since VM start
+	RXPackets uint64 // cumulative RX packets since VM start
+	TXPackets uint64 // cumulative TX packets since VM start
+
+	// Derived (per-second, populated from delta math in Snapshot()).
+	// Cold snapshot leaves these at zero. Negative or wrapped counters
+	// (QEMU counter reset) also leave these at zero rather than going negative.
+	RXBps  uint64 // bytes received per second
+	TXBps  uint64 // bytes transmitted per second
+	RXPps  uint64 // packets received per second
+	TXPps  uint64 // packets transmitted per second
 }
