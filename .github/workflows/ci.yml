@@ -26,9 +26,6 @@ jobs:
       - name: Download modules
         run: go mod download
 
-      - name: Generate version
-        run: printf '%s\n' '// Code generated from VERSION file. DO NOT EDIT.' '' 'package version' '' '// Version holds the current version of the application.' '// Can be overridden at build time using -ldflags.' 'var Version = "$(cat VERSION)"' > internal/version/version_gen.go
-
       - name: Vet
         run: go vet ./...
 
