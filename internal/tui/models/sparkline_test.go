@@ -6,25 +6,25 @@ import (
 )
 
 func TestRenderBrailleSparkline_EmptyInput(t *testing.T) {
-	if got := renderBrailleSparkline(nil, 5); got != "" {
+	if got := RenderBrailleSparkline(nil, 5); got != "" {
 		t.Errorf("nil input: got %q, want empty", got)
 	}
-	if got := renderBrailleSparkline([]float64{}, 5); got != "" {
+	if got := RenderBrailleSparkline([]float64{}, 5); got != "" {
 		t.Errorf("empty slice: got %q, want empty", got)
 	}
 }
 
 func TestRenderBrailleSparkline_ZeroWidth(t *testing.T) {
-	if got := renderBrailleSparkline([]float64{1, 2, 3}, 0); got != "" {
+	if got := RenderBrailleSparkline([]float64{1, 2, 3}, 0); got != "" {
 		t.Errorf("zero width: got %q, want empty", got)
 	}
-	if got := renderBrailleSparkline([]float64{1, 2, 3}, -1); got != "" {
+	if got := RenderBrailleSparkline([]float64{1, 2, 3}, -1); got != "" {
 		t.Errorf("negative width: got %q, want empty", got)
 	}
 }
 
 func TestRenderBrailleSparkline_SingleValue(t *testing.T) {
-	result := renderBrailleSparkline([]float64{42}, 3)
+	result := RenderBrailleSparkline([]float64{42}, 3)
 	if len([]rune(result)) != 3 {
 		t.Errorf("single value width=3: got %d chars, want 3", len([]rune(result)))
 	}
@@ -43,7 +43,7 @@ func TestRenderBrailleSparkline_SingleValue(t *testing.T) {
 
 func TestRenderBrailleSparkline_FlatLine(t *testing.T) {
 	// All zeros
-	result := renderBrailleSparkline([]float64{0, 0, 0, 0}, 4)
+	result := RenderBrailleSparkline([]float64{0, 0, 0, 0}, 4)
 	if len([]rune(result)) != 4 {
 		t.Errorf("flat line: got %d chars, want 4", len([]rune(result)))
 	}
@@ -62,7 +62,7 @@ func TestRenderBrailleSparkline_FlatLine(t *testing.T) {
 
 func TestRenderBrailleSparkline_FlatLineNonZero(t *testing.T) {
 	// All same non-zero value
-	result := renderBrailleSparkline([]float64{5, 5, 5}, 2)
+	result := RenderBrailleSparkline([]float64{5, 5, 5}, 2)
 	runes := []rune(result)
 	if len(runes) != 2 {
 		t.Errorf("flat non-zero: got %d chars, want 2", len(runes))
@@ -78,7 +78,7 @@ func TestRenderBrailleSparkline_FlatLineNonZero(t *testing.T) {
 func TestRenderBrailleSparkline_IncreasingValues(t *testing.T) {
 	// Values from min to max: should show rising pattern
 	values := []float64{0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100}
-	result := renderBrailleSparkline(values, 5)
+	result := RenderBrailleSparkline(values, 5)
 	runes := []rune(result)
 	if len(runes) != 5 {
 		t.Errorf("increasing: got %d chars, want 5", len(runes))
@@ -93,7 +93,7 @@ func TestRenderBrailleSparkline_IncreasingValues(t *testing.T) {
 
 func TestRenderBrailleSparkline_DecreasingValues(t *testing.T) {
 	values := []float64{100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0}
-	result := renderBrailleSparkline(values, 5)
+	result := RenderBrailleSparkline(values, 5)
 	runes := []rune(result)
 	if len(runes) != 5 {
 		t.Errorf("decreasing: got %d chars, want 5", len(runes))
@@ -108,7 +108,7 @@ func TestRenderBrailleSparkline_DecreasingValues(t *testing.T) {
 func TestRenderBrailleSparkline_WidthControlsLength(t *testing.T) {
 	values := []float64{0, 10, 20, 30, 40, 50}
 	for _, w := range []int{1, 2, 3, 6} {
-		result := renderBrailleSparkline(values, w)
+		result := RenderBrailleSparkline(values, w)
 		if len([]rune(result)) != w {
 			t.Errorf("width=%d: got %d chars", w, len([]rune(result)))
 		}
@@ -145,23 +145,10 @@ func TestRenderBrailleSparkline_AllDotLevelsReachable(t *testing.T) {
 	// For right column 3 dots (level 6): bits 7, 5, 4 (dots 8, 6, 5)
 	// For right column 4 dots (level 8): bits 7, 5, 4, 3 (dots 8, 6, 5, 4)
 
-	expectedDots := []struct {
-		offset int
-		bits   []int
-	}{
-		{2, []int{6}},       // left 1 dot
-		{4, []int{6, 2}},    // left 2 dots
-		{6, []int{6, 2, 1}}, // left 3 dots
-		{8, []int{6, 2, 1, 0}}, // left 4 dots
-		{2, []int{7}},       // right 1 dot
-		{4, []int{7, 5}},    // right 2 dots
-		{6, []int{7, 5, 4}}, // right 3 dots
-		{8, []int{7, 5, 4, 3}}, // right 4 dots
-	}
-	_ = expectedDots
+
 
 	// Use 4 braille chars, each with a specific left+right level combo
-	// Char 0: left level 2 (1 dot), right level 2 (1 dot)
+	// Char 0: left level 0 (0 dots), right level 2 (1 dot)
 	// Char 1: left level 4 (2 dots), right level 4 (2 dots)
 	// Char 2: left level 6 (3 dots), right level 6 (3 dots)
 	// Char 3: left level 8 (4 dots), right level 8 (4 dots)
@@ -178,7 +165,7 @@ func TestRenderBrailleSparkline_AllDotLevelsReachable(t *testing.T) {
 	// Build 8 values (4 chars * 2 buckets each)
 	// Start at 0 so min=0, giving clean level mapping
 	v := []float64{0, 25, 50, 50, 75, 75, 100, 100}
-	result := renderBrailleSparkline(v, 4)
+	result := RenderBrailleSparkline(v, 4)
 	runes := []rune(result)
 	if len(runes) != 4 {
 		t.Fatalf("expected 4 runes, got %d", len(runes))
@@ -213,7 +200,7 @@ func TestRenderBrailleSparkline_AllDotLevelsReachable(t *testing.T) {
 func TestRenderBrailleSparkline_AllBrailleInRange(t *testing.T) {
 	// All output chars must be braille pattern Unicode (U+2800–U+28FF)
 	values := []float64{0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100}
-	result := renderBrailleSparkline(values, 10)
+	result := RenderBrailleSparkline(values, 10)
 	for i, r := range result {
 		if r < 0x2800 || r > 0x28FF {
 			t.Errorf("char %d: %U is not in braille range U+2800–U+28FF", i, r)
@@ -227,7 +214,7 @@ func TestRenderBrailleSparkline_Downsampling(t *testing.T) {
 	for i := range values {
 		values[i] = float64(i)
 	}
-	result := renderBrailleSparkline(values, 10)
+	result := RenderBrailleSparkline(values, 10)
 	if len([]rune(result)) != 10 {
 		t.Errorf("downsample: got %d chars, want 10", len([]rune(result)))
 	}
@@ -236,7 +223,7 @@ func TestRenderBrailleSparkline_Downsampling(t *testing.T) {
 func TestRenderBrailleSparkline_Upsampling(t *testing.T) {
 	// Fewer values than buckets — should upsample without error
 	values := []float64{0, 50, 100}
-	result := renderBrailleSparkline(values, 10)
+	result := RenderBrailleSparkline(values, 10)
 	if len([]rune(result)) != 10 {
 		t.Errorf("upsample: got %d chars, want 10", len([]rune(result)))
 	}
@@ -250,7 +237,7 @@ func TestRenderBrailleSparkline_Upsampling(t *testing.T) {
 // Test that each output rune is actually a braille pattern character
 func TestRenderBrailleSparkline_OutputIsBraille(t *testing.T) {
 	values := []float64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	result := renderBrailleSparkline(values, 5)
+	result := RenderBrailleSparkline(values, 5)
 	for i, r := range result {
 		if !unicode.IsPrint(r) {
 			t.Errorf("char %d: %U is not printable", i, r)
@@ -261,7 +248,7 @@ func TestRenderBrailleSparkline_OutputIsBraille(t *testing.T) {
 func TestRenderBrailleSparkline_ExactMatchValuesBuckets(t *testing.T) {
 	// When len(values) == width*2, no resampling occurs
 	values := []float64{0, 100, 50, 50}
-	result := renderBrailleSparkline(values, 2)
+	result := RenderBrailleSparkline(values, 2)
 	runes := []rune(result)
 	if len(runes) != 2 {
 		t.Fatalf("got %d chars, want 2", len(runes))
@@ -278,7 +265,7 @@ func TestRenderBrailleSparkline_ExactMatchValuesBuckets(t *testing.T) {
 func TestRenderBrailleSparkline_LargeValues(t *testing.T) {
 	// Large float64 values shouldn't cause issues
 	values := []float64{1e10, 2e10, 3e10, 4e10, 5e10}
-	result := renderBrailleSparkline(values, 3)
+	result := RenderBrailleSparkline(values, 3)
 	if len([]rune(result)) != 3 {
 		t.Errorf("large values: got %d chars, want 3", len([]rune(result)))
 	}
@@ -286,14 +273,14 @@ func TestRenderBrailleSparkline_LargeValues(t *testing.T) {
 
 func TestRenderBrailleSparkline_NegativeValues(t *testing.T) {
 	values := []float64{-100, -50, 0, 50, 100}
-	result := renderBrailleSparkline(values, 3)
+	result := RenderBrailleSparkline(values, 3)
 	if len([]rune(result)) != 3 {
 		t.Errorf("negative values: got %d chars, want 3", len([]rune(result)))
 	}
 }
 
 func TestRenderBrailleSparkline_AllSameLargeValue(t *testing.T) {
-	result := renderBrailleSparkline([]float64{999, 999, 999, 999}, 2)
+	result := RenderBrailleSparkline([]float64{999, 999, 999, 999}, 2)
 	runes := []rune(result)
 	if len(runes) != 2 {
 		t.Fatalf("got %d chars, want 2", len(runes))

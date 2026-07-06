@@ -2,14 +2,14 @@ package models
 
 import "math"
 
-// renderBrailleSparkline renders values as a braille sparkline of width braille characters.
+// RenderBrailleSparkline renders values as a braille sparkline of width braille characters.
 // Each braille character represents 2 value buckets (left column=bucket n, right column=bucket n+1).
 // Input is downsampled to width*2 buckets via averaging if larger, or upsampled via linear
 // interpolation if smaller.
 //
 // The braille height mapping uses 8 dot levels (0–8) corresponding to the min–max range.
 // A flat line (min==max) renders at mid-height for a visible baseline.
-func renderBrailleSparkline(values []float64, width int) string {
+func RenderBrailleSparkline(values []float64, width int) string {
 	if len(values) == 0 || width <= 0 {
 		return ""
 	}
@@ -35,7 +35,7 @@ func renderBrailleSparkline(values []float64, width int) string {
 // resample adjusts values to exactly n buckets using averaging (downsample) or
 // linear interpolation (upsample).
 func resample(values []float64, n int) []float64 {
-	if len(values) == n {
+	if n <= 1 || len(values) == n {
 		out := make([]float64, n)
 		copy(out, values)
 		return out
@@ -149,5 +149,5 @@ func brailleFromLevels(leftLevel, rightLevel int) rune {
 // levelToDotCount maps a level 0–8 to a dot count 0–4.
 // 0→0, 1→0, 2→1, 3→1, 4→2, 5→2, 6→3, 7→3, 8→4
 func levelToDotCount(level int) int {
-	return (level*4 + 4) / 8
+	return level / 2
 }
