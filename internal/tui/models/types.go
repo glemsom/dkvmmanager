@@ -110,21 +110,11 @@ type MainModel struct {
 	// Quitting flag
 	quitting bool
 
-	// VM delete model (kept for selection flow)
-	vmDeleteModel *VMDeleteModel
-
 	// VM running model (kept for Runner() convenience accessor)
 	vmRunningModel *VMRunningModel
 
 	// Running VM ID - tracks the currently running VM to persist across rebuildMenuList calls
 	runningVMID string
-
-	// VM list for selection
-	vmListForSelection []domain.VM
-	vmSelectList       list.Model
-
-	// Selection mode (edit or delete)
-	selectionMode string
 
 	// Debug mode flag
 	debugMode bool

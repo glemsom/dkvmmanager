@@ -56,8 +56,14 @@ func TestFullTUIEditFlowReproducingBug(t *testing.T) {
 	}
 
 	// Step 3: Press Enter to select first VM (enter edit mode)
-	model, _ = m.delegateToSubView(tea.KeyPressMsg{Code: tea.KeyEnter})
+	// Use Update() through the registry dispatch which routes to VMSelectModel
+	model, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = model.(*MainModel)
+	if cmd != nil {
+		msg := cmd()
+		model, _ = m.Update(msg)
+		m = model.(*MainModel)
+	}
 
 	if m.currentView != ViewVMEdit {
 		t.Fatalf("Expected ViewVMEdit, got %s", m.currentView)
@@ -66,7 +72,7 @@ func TestFullTUIEditFlowReproducingBug(t *testing.T) {
 	// Step 4: Modify the VM name via form and save
 	fm := m.viewRegistry.ActiveModel().(*VMEditModel).Form()
 	fm.vmName = "vm-one-edited"
-	cmd := fm.validateAndSaveCmd()
+	cmd = fm.validateAndSaveCmd()
 	if cmd == nil {
 		t.Fatal("Expected command from save, got nil")
 	}

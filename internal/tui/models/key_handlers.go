@@ -6,7 +6,6 @@ import (
 	"log"
 	"time"
 
-	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"github.com/glemsom/dkvmmanager/internal/tui/components"
 	"github.com/glemsom/dkvmmanager/internal/vm"
@@ -63,6 +62,15 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Handle VM created messages from sub-models (delegated to handleSubViewMsg)
+
+	// Handle VM selected message from VMSelectModel
+	if vsm, ok := msg.(VMSelectedMsg); ok {
+		if m.debugMode {
+			log.Printf("[DEBUG] VM selected: ID=%s, mode=%s", vsm.VMID, vsm.Mode)
+		}
+		return m.handleVMSelected(vsm)
+	}
+
 	// Note: VMCreatedMsg is handled by handleSubViewMsg through the registry
 
 	// Handle VM stopped messages from running model
@@ -160,21 +168,6 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// VMRunning-specific messages (polling/log) must bypass the registry dispatch
-	// because the registry calls cmd() synchronously and feeds the result through
-	// handleSubViewMsg, which breaks the command chain for Tick-based polling and
-	// blocking channel reads. Route them directly to the fallback path instead.
-	if m.currentView == ViewVMRunning && m.vmRunningModel != nil {
-		switch msg.(type) {
-		case VMStatusUpdateMsg, VMLogMsg, VMMetricsUpdateMsg:
-			model, cmd := m.vmRunningModel.Update(msg)
-			if vrm, ok := model.(*VMRunningModel); ok {
-				m.vmRunningModel = vrm
-			}
-			return m, cmd
-		}
-	}
-
 	// Registry-based dispatch
 	// This ensures async messages (e.g. lvVGsLoadedMsg) reach registered views.
 	if m.viewRegistry != nil && m.viewRegistry.IsActive() {
@@ -187,44 +180,13 @@ func (m *MainModel) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return newModel, cmd
 			}
 			if cmd != nil {
-				nextMsg := cmd()
-				return m.handleSubViewMsg(nextMsg)
+				return m, cmd // Let BubbleTea runtime handle Tick-based polling
 			}
 			return m, nil
 		}
 	}
 
-	// If we're in VM running view, delegate to that model
-	if m.currentView == ViewVMRunning && m.vmRunningModel != nil {
-		model, cmd := m.vmRunningModel.Update(msg)
-		if vrm, ok := model.(*VMRunningModel); ok {
-			m.vmRunningModel = vrm
-		}
-		return m, cmd
-	}
 
-	// If we're in VM delete view, delegate to that model
-	if m.currentView == ViewVMDelete && m.vmDeleteModel != nil {
-		model, cmd := m.vmDeleteModel.Update(msg)
-		if vdm, ok := model.(*VMDeleteModel); ok {
-			m.vmDeleteModel = vdm
-		}
-		if cmd != nil {
-			nextMsg := cmd()
-			if vcm, ok := nextMsg.(ViewChangeMsg); ok {
-				m.currentView = vcm.View
-				if vcm.View == ViewMainMenu {
-					m.rebuildMenuList()
-				}
-				return m, nil
-			}
-			if _, ok := nextMsg.(VMDeletedMsg); ok {
-				// Delegate to handleSubViewMsg for consistent handling
-				return m.handleSubViewMsg(nextMsg)
-			}
-		}
-		return m, nil
-	}
 
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
@@ -345,10 +307,10 @@ func (m *MainModel) handleConfigMenuSelection() (tea.Model, tea.Cmd) {
 	}
 
 	switch m.configSelectedIndex {
-	case 1: // Edit VM (not in registry — requires VM selection first)
-		return m.showVMSelection()
-	case 2: // Delete VM (not in registry — requires VM selection first)
-		return m.showVMSelectionForDeletion()
+	case 1: // Edit VM — activate VM selection
+		return m.showVMSelectionWithMode("edit", "No VMs available to edit")
+	case 2: // Delete VM — activate VM selection
+		return m.showVMSelectionWithMode("delete", "No VMs available to delete")
 	}
 
 	// "Save changes" is always the last item in the config list
@@ -443,16 +405,10 @@ func (m *MainModel) handlePowerSelection() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// isSubViewActive returns true if a sub-view is active
+// isSubViewActive returns true if a sub-view is active.
+// All sub-views route through the ViewRegistry.
 func (m *MainModel) isSubViewActive() bool {
-	if m.viewRegistry != nil && m.viewRegistry.IsActive() {
-		return true
-	}
-	switch m.currentView {
-	case ViewVMDelete, ViewVMSelect, ViewVMRunning:
-		return true
-	}
-	return false
+	return m.viewRegistry != nil && m.viewRegistry.IsActive()
 }
 
 // isFileBrowserActiveInSubView returns true if a file browser is active within the current sub-view
@@ -468,16 +424,16 @@ func (m *MainModel) returnFromSubView() (tea.Model, tea.Cmd) {
 	m.currentView = ViewMainMenu
 	m.breadcrumbs.Clear()
 
-	// Registry-based: read parent tab from active view
 	if m.viewRegistry != nil && m.viewRegistry.ActiveDef() != nil {
 		def := m.viewRegistry.ActiveDef()
 		m.tabModel.SetActiveTab(def.ParentTab)
 		// VMRunning is special: keep the model if VM is still running
 		// so status updates continue to arrive. Only deactivate if stopped.
 		if def.Name == ViewVMRunning {
-			if m.vmRunningModel != nil && m.vmRunningModel.Runner() != nil && m.vmRunningModel.Runner().IsRunning() {
+			runningModel := m.viewRegistry.ActiveModel()
+			if rvm, ok := runningModel.(*VMRunningModel); ok && rvm.Runner() != nil && rvm.Runner().IsRunning() {
 				if m.runningVMID == "" {
-					m.runningVMID = m.vmRunningModel.Runner().VM().ID
+					m.runningVMID = rvm.Runner().VM().ID
 				}
 			} else {
 				m.vmRunningModel = nil
@@ -488,12 +444,8 @@ func (m *MainModel) returnFromSubView() (tea.Model, tea.Cmd) {
 			m.viewRegistry.Deactivate()
 		}
 	} else {
-		// VMSelect: returns to Configuration tab
+		// No active registry view, default to Configuration tab
 		m.tabModel.SetActiveTab(components.TabConfiguration)
-		// Clear VMSelect state
-		m.vmSelectList = list.Model{}
-		m.vmListForSelection = nil
-		m.selectionMode = ""
 	}
 
 	m.rebuildMenuList()
@@ -519,11 +471,9 @@ func (m *MainModel) onTabChanged() {
 	}
 }
 
-// delegateToSubView handles key events when a sub-view is active
+// delegateToSubView handles key events when a sub-view is active.
+// All sub-views now route through the ViewRegistry.
 func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-
-	// Try registry-based dispatch first
 	if m.viewRegistry != nil && m.viewRegistry.IsActive() {
 		model := m.viewRegistry.ActiveModel()
 		if model != nil {
@@ -535,67 +485,12 @@ func (m *MainModel) delegateToSubView(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return newModel, modelCmd
 			}
 			if modelCmd != nil {
-				nextMsg := modelCmd()
-				return m.handleSubViewMsg(nextMsg)
+				return m, modelCmd
 			}
 			return m, nil
 		}
 	}
-
-	switch m.currentView {
-	case ViewVMDelete:
-		if m.vmDeleteModel != nil {
-			vmModel, vmCmd := m.vmDeleteModel.Update(msg)
-			if vmDelete, ok := vmModel.(*VMDeleteModel); ok {
-				m.vmDeleteModel = vmDelete
-			}
-			if vmCmd != nil {
-				nextMsg := vmCmd()
-				return m.handleSubViewMsg(nextMsg)
-			}
-		}
-	case ViewVMSelect:
-		m.ensureVMSelectList()
-		// Handle Enter or Space key to navigate to delete/edit confirmation
-		if km, ok := msg.(tea.KeyPressMsg); ok && (km.String() == "enter" || km.String() == "space") {
-			selectedIndex := m.vmSelectList.Index()
-			if selectedIndex >= 0 && selectedIndex < len(m.vmListForSelection) {
-				selectedVM := m.vmListForSelection[selectedIndex]
-				if m.selectionMode == "delete" {
-				if deleteModel, err := NewVMDeleteModel(m.vmManager, selectedVM.ID, m.debugMode); err == nil {
-						m.vmDeleteModel = deleteModel
-						if m.viewRegistry != nil && m.viewRegistry.GetDef(ViewVMDelete) != nil {
-							m.viewRegistry.SetActiveModel(m.viewRegistry.GetDef(ViewVMDelete), deleteModel)
-						}
-						m.currentView = ViewVMDelete
-						m.breadcrumbs.AddItem("Delete "+selectedVM.Name, "vm_delete_confirm", 1)
-						return m, nil
-					}
-				} else if m.selectionMode == "edit" {
-					if editModel, err := NewVMEditModel(m.vmManager, selectedVM.ID); err == nil {
-						editModel.form.SetSize(m.windowWidth-4, m.contentHeight()-2)
-						if m.viewRegistry != nil && m.viewRegistry.GetDef(ViewVMEdit) != nil {
-							m.viewRegistry.SetActiveModel(m.viewRegistry.GetDef(ViewVMEdit), editModel)
-						}
-						m.currentView = ViewVMEdit
-						m.breadcrumbs.AddItem("Edit "+selectedVM.Name, "vm_edit", 1)
-						return m, nil
-					}
-				}
-			}
-		}
-		m.vmSelectList, cmd = m.vmSelectList.Update(msg)
-	case ViewVMRunning:
-		if m.vmRunningModel != nil {
-			vrm, vrmCmd := m.vmRunningModel.Update(msg)
-			if runningModel, ok := vrm.(*VMRunningModel); ok {
-				m.vmRunningModel = runningModel
-			}
-			return m, vrmCmd
-		}
-	}
-
-	return m, cmd
+	return m, nil
 }
 
 

@@ -52,11 +52,11 @@ func TestShowVMSelectionWithMode(t *testing.T) {
 	if m.currentView != ViewVMSelect {
 		t.Errorf("Expected view to be ViewVMSelect, got %s", m.currentView)
 	}
-	if m.selectionMode != "edit" {
-		t.Errorf("Expected selection mode to be 'edit', got '%s'", m.selectionMode)
+	if m.viewRegistry == nil || m.viewRegistry.ActiveName() != ViewVMSelect {
+		t.Error("Expected VMSelect to be active in registry")
 	}
-	if len(m.vmListForSelection) == 0 {
-		t.Error("Expected VMs to be loaded for selection")
+	if m.viewRegistry.ActiveModel() == nil {
+		t.Error("Expected VMSelectModel to be created")
 	}
 }
 
@@ -102,8 +102,11 @@ func TestShowVMSelectionEdit(t *testing.T) {
 	model, _ := m.showVMSelection()
 	m = model.(*MainModel)
 
-	if m.selectionMode != "edit" {
-		t.Errorf("Expected selection mode 'edit', got '%s'", m.selectionMode)
+	if m.currentView != ViewVMSelect {
+		t.Errorf("Expected ViewVMSelect, got %s", m.currentView)
+	}
+	if m.viewRegistry == nil || m.viewRegistry.ActiveName() != ViewVMSelect {
+		t.Error("Expected VMSelect to be active in registry")
 	}
 }
 
@@ -113,8 +116,11 @@ func TestShowVMSelectionForDeletion(t *testing.T) {
 	model, _ := m.showVMSelectionForDeletion()
 	m = model.(*MainModel)
 
-	if m.selectionMode != "delete" {
-		t.Errorf("Expected selection mode 'delete', got '%s'", m.selectionMode)
+	if m.currentView != ViewVMSelect {
+		t.Errorf("Expected ViewVMSelect, got %s", m.currentView)
+	}
+	if m.viewRegistry == nil || m.viewRegistry.ActiveName() != ViewVMSelect {
+		t.Error("Expected VMSelect to be active in registry")
 	}
 }
 
