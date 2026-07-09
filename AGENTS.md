@@ -27,12 +27,18 @@ make build   # via Docker (golang:1.26-alpine)
 - `examples/` — example scripts
 - `VERSION` — current version
 
-## Agent conventions
+## Agent skills
 
-| Thing | Convention |
-|-------|------------|
-| Issues | GitHub Issues in `glemsom/dkvmmanager` — see `docs/agents/issue-tracker.md` |
-| Triage labels | `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix` — see `docs/agents/triage-labels.md` |
-| Domain docs | Single `CONTEXT.md` + `docs/adr/` — see `docs/agents/domain.md` |
+### Issue tracker
+
+GitHub Issues in `glemsom/dkvmmanager`. External PRs are **not** treated as a triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical roles mapped to default label names (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo — one `CONTEXT.md` + `docs/adr/` at the root. See `docs/agents/domain.md`.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for full workflow.
