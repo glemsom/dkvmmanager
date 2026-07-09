@@ -168,8 +168,8 @@ func TestVMRunningModelWindowSizeUpdate(t *testing.T) {
 	if m.vp.Width() != 100 {
 		t.Errorf("Expected viewport width 100, got %d", m.vp.Width())
 	}
-	if m.vp.Height() != 21 { // 30 - infoHeight(6) - 3 = 21
-		t.Errorf("Expected viewport height 21, got %d", m.vp.Height())
+	if m.vp.Height() != 23 { // 30 - infoHeight(4) - 3 = 23
+		t.Errorf("Expected viewport height 23, got %d", m.vp.Height())
 	}
 }
 
@@ -201,8 +201,8 @@ func TestVMRunningModelSetSizeTwice(t *testing.T) {
 	if m.vp.Width() != 120 {
 		t.Errorf("Expected viewport width 120, got %d", m.vp.Width())
 	}
-	if m.vp.Height() != 31 { // 40 - infoHeight(6) - 3 = 31
-		t.Errorf("Expected viewport height 31, got %d", m.vp.Height())
+	if m.vp.Height() != 33 { // 40 - infoHeight(4) - 3 = 33
+		t.Errorf("Expected viewport height 33, got %d", m.vp.Height())
 	}
 }
 
@@ -687,138 +687,6 @@ func TestVMRunningModelMultipleDisksRendering(t *testing.T) {
 	}
 }
 
-// #137: sparklineBuffer circular buffer tests
-func TestSparklineBufferPushAndSnapshot(t *testing.T) {
-	b := newSparklineBuffer(5)
-	b.push(1)
-	b.push(2)
-	b.push(3)
-	got := b.snapshot()
-	if len(got) != 3 {
-		t.Fatalf("snapshot len = %d, want 3", len(got))
-	}
-	if got[0] != 1 || got[1] != 2 || got[2] != 3 {
-		t.Errorf("snapshot = %v, want [1 2 3]", got)
-	}
-}
-
-func TestSparklineBufferWraparound(t *testing.T) {
-	b := newSparklineBuffer(3)
-	b.push(10)
-	b.push(20)
-	b.push(30)
-	b.push(40) // overwrites values[0]
-	b.push(50) // overwrites values[1]
-	got := b.snapshot()
-	if len(got) != 3 {
-		t.Fatalf("snapshot len = %d, want 3", len(got))
-	}
-	if got[0] != 30 || got[1] != 40 || got[2] != 50 {
-		t.Errorf("after wrap snapshot = %v, want [30 40 50]", got)
-	}
-}
-
-func TestSparklineBufferEmptySnapshot(t *testing.T) {
-	b := newSparklineBuffer(5)
-	if got := b.snapshot(); got != nil {
-		t.Errorf("empty snapshot = %v, want nil", got)
-	}
-}
-
-func TestSparklineBufferLatest(t *testing.T) {
-	b := newSparklineBuffer(5)
-	if _, ok := b.latest(); ok {
-		t.Error("empty buffer latest() should return false")
-	}
-	b.push(42)
-	v, ok := b.latest()
-	if !ok {
-		t.Fatal("latest() after push should return true")
-	}
-	if v != 42 {
-		t.Errorf("latest() = %v, want 42", v)
-	}
-	b.push(99)
-	v, _ = b.latest()
-	if v != 99 {
-		t.Errorf("latest() after second push = %v, want 99", v)
-	}
-}
-
-func TestSparklineBufferPeak(t *testing.T) {
-	b := newSparklineBuffer(10)
-	b.push(5)
-	b.push(3)
-	b.push(8)
-	b.push(2)
-	if p := b.peak(); p != 8 {
-		t.Errorf("peak = %v, want 8", p)
-	}
-}
-
-func TestSparklineBufferEmptyPeak(t *testing.T) {
-	b := newSparklineBuffer(5)
-	if p := b.peak(); p != 0 {
-		t.Errorf("empty peak = %v, want 0", p)
-	}
-}
-
-func TestSparklineBufferZeroValueLazyInit(t *testing.T) {
-	// A zero-valued sparklineBuffer should init on first push.
-	var b sparklineBuffer // zero value: all fields 0
-	b.push(100)
-	got := b.snapshot()
-	if len(got) != 1 || got[0] != 100 {
-		t.Errorf("lazy-init snapshot = %v, want [100]", got)
-	}
-}
-
-func TestVMRunningModelCPUTrendPushedOnMetricsUpdate(t *testing.T) {
-	m := setupRunningModel(t, "running")
-	// Send metrics update with VCPU data (CPU% ×100 in CPUTimeNs)
-	metrics := vm.Metrics{
-		VCPUs: []vm.VCPUStat{
-			{ThreadID: 100, CPUTimeNs: 1500}, // 15.00%
-			{ThreadID: 101, CPUTimeNs: 2500}, // 25.00%
-		},
-	}
-	upd, _ := m.Update(VMMetricsUpdateMsg{Metrics: metrics})
-	m2 := upd.(*VMRunningModel)
-	vals := m2.cpuTrend.snapshot()
-	if len(vals) != 1 {
-		t.Fatalf("expected 1 cpu trend value, got %d: %v", len(vals), vals)
-	}
-	// Sum should be 1500 + 2500 = 4000
-	if vals[0] != 4000 {
-		t.Errorf("cpu trend value = %v, want 4000 (sum of CPUTimeNs)", vals[0])
-	}
-}
-
-func TestVMRunningModelMemTrendPushedOnMetricsUpdate(t *testing.T) {
-	m := setupRunningModel(t, "running")
-	metrics := vm.Metrics{
-		HostRSSBytes: 512 * 1024 * 1024, // 512 MiB
-	}
-	upd, _ := m.Update(VMMetricsUpdateMsg{Metrics: metrics})
-	m2 := upd.(*VMRunningModel)
-	vals := m2.memTrend.snapshot()
-	if len(vals) != 1 {
-		t.Fatalf("expected 1 mem trend value, got %d", len(vals))
-	}
-	if vals[0] != 512*1024*1024 {
-		t.Errorf("mem trend value = %v, want 512 MiB", vals[0])
-	}
-}
-
-func TestVMRunningModelSparklinePlaceholderWhenEmpty(t *testing.T) {
-	// When buffers are empty, the info panel should show placeholder dots.
-	m := setupRunningModel(t, "running")
-	m.SetSize(100, 30)
-	view := m.View().Content
-	if !strings.Contains(view, "⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯") {
-		t.Error("expected placeholder dots in view when sparkline buffers empty")
-	}
-}
 
 // S4: formatBytes covers B, KiB, MiB, and GiB boundaries.
 func TestFormatBytes(t *testing.T) {
