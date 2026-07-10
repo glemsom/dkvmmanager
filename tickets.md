@@ -131,7 +131,7 @@ Memory display (`vm_running.go:528-534`): `memMB % 1024 == 0` uses "8 GB", other
 
 **Blocked by:** None — can start immediately
 
-- [ ] Guard `buildConfigListAdapter` with `len(items) == 0` check
-- [ ] Change `config.Load()` to use `viper.New()` local instance instead of global `viper`
-- [ ] Add nil check for `result` in `FormatError` before accessing fields
-- [ ] Add tests: empty config registry, concurrent config loading in tests, nil result to FormatError
+- [x] Guard `buildConfigListAdapter` with `len(items) == 0` check
+- [x] Change `config.Load()` to use `viper.New()` local instance instead of global `viper`
+- [x] Add nil check for `result` in `FormatError` before accessing fields
+- [x] Add tests: empty config registry, concurrent config loading in tests, nil result to FormatError
