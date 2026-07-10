@@ -56,10 +56,10 @@ After QMP connects, `connectQMP()` does `r.logChan <- "[QMP] Connected..."` (lin
 
 **Blocked by:** None — can start immediately
 
-- [ ] Add cancellation context or done-channel check to `qmpWatchdog`
-- [ ] Track and `Wait()` on stop-script reader goroutines before cleanup completes
-- [ ] Replace select-based guard in `closePersistLog` with `sync.Once`
-- [ ] Add tests: concurrent closePersistLog calls, goroutine lifecycle after Cleanup
+- [x] Add cancellation context or done-channel check to `qmpWatchdog`
+- [x] Track and `Wait()` on stop-script reader goroutines before cleanup completes
+- [x] Replace select-based guard in `closePersistLog` with `sync.Once`
+- [x] Add tests: concurrent closePersistLog calls, goroutine lifecycle after Cleanup
 
 ## Fix /proc/stat parsing robustness
 
