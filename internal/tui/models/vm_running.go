@@ -332,8 +332,9 @@ func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Don't overwrite stopping/stopped status from stale poll ticks
 		if m.status != "stopping" && m.status != "stopped" {
 			m.status = msg.Status
+			return m, m.pollStatus()
 		}
-		return m, m.pollStatus()
+		return m, nil
 
 	case VMMetricsUpdateMsg:
 		m.metrics = msg.Metrics
@@ -490,6 +491,10 @@ func (m *VMRunningModel) renderInfoPanel() string {
 		Foreground(styles.Colors.Warning).
 		Bold(true)
 
+	statusStopping := lipgloss.NewStyle().
+		Foreground(styles.Colors.Error).
+		Bold(true)
+
 	var b strings.Builder
 
 	// === Section 1: VM Name and Status ===
@@ -505,7 +510,7 @@ func (m *VMRunningModel) renderInfoPanel() string {
 	case "stopped", "exited", "shutdown":
 		statusStr = statusStopped.Render("[STOPPED]")
 	case "stopping", "finish":
-		statusStr = statusStarting.Render("[STOPPING]")
+		statusStr = statusStopping.Render("[STOPPING]")
 	default:
 		statusStr = statusStarting.Render("[STARTING]")
 	}
@@ -526,12 +531,7 @@ func (m *VMRunningModel) renderInfoPanel() string {
 	if m.runner != nil {
 		b.WriteString(labelStyle.Render("Memory: "))
 		memMB := m.runner.MemoryMB()
-		memGB := memMB / 1024
-		if memMB%1024 == 0 {
-			b.WriteString(valueStyle.Render(fmt.Sprintf("%d GB", memGB)))
-		} else {
-			b.WriteString(valueStyle.Render(fmt.Sprintf("%.1f GB", float64(memMB)/1024.0)))
-		}
+		b.WriteString(valueStyle.Render(fmt.Sprintf("%.1f GB", float64(memMB)/1024.0)))
 
 		// vCPU count
 		vcpuCount := m.runner.VCpuCount()

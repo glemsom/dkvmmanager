@@ -314,11 +314,9 @@ func (m *MainModel) contentHeight() int {
 	return height
 }
 
-// effectiveWidth returns the window width clamped to minimum for safe rendering
+// effectiveWidth returns the window width.
+// No clamping — individual render functions handle minimum widths as needed.
 func (m *MainModel) effectiveWidth() int {
-	if m.windowWidth < 80 {
-		return 80
-	}
 	return m.windowWidth
 }
 
