@@ -104,15 +104,7 @@ func (r *VMRunner) Subscribe() <-chan string {
 	r.subsMu.Lock()
 	// Drain staging buffer into the new channel
 	for _, line := range r.staging {
-		select {
-		case ch <- line:
-		default:
-			select {
-			case <-ch:
-			default:
-			}
-			ch <- line
-		}
+		trySendOrDrop(ch, line)
 	}
 	r.staging = nil
 	r.subscribers[ch] = struct{}{}
@@ -260,6 +252,29 @@ func (r *VMRunner) writePersistLine(line string) {
 	_ = r.persistBuf.Flush()
 }
 
+// trySendOrDrop attempts to send a line to a channel. If the channel is full,
+// it drains one item (drops oldest) then tries a non-blocking send.
+// If the send still fails, the line is dropped silently.
+// This prevents deadlocks when the channel is full and no goroutine is reading.
+func trySendOrDrop(ch chan string, line string) {
+	select {
+	case ch <- line:
+	default:
+		// Channel full — drain one to make room
+		select {
+		case <-ch:
+			// One slot freed, try non-blocking send
+			select {
+			case ch <- line:
+			default:
+				// Still full, drop the line
+			}
+		default:
+			// No reader ready, drop the line
+		}
+	}
+}
+
 // forwardViewLine sends a line to all registered subscriber channels.
 // If no subscribers exist, the line is buffered in the staging buffer
 // (up to stagingMax) for future subscribers to drain.
@@ -277,16 +292,7 @@ func (r *VMRunner) forwardViewLine(line string) {
 	}
 
 	for ch := range r.subscribers {
-		select {
-		case ch <- line:
-		default:
-			// Channel full, drop oldest
-			select {
-			case <-ch:
-			default:
-			}
-			ch <- line
-		}
+		trySendOrDrop(ch, line)
 	}
 }
 
@@ -1144,16 +1150,7 @@ func (r *VMRunner) readOutput(pipe io.Reader, source string) {
 		if r.dbgMode {
 			log.Printf("[DEBUG] [%s] %s", source, line)
 		}
-		select {
-		case r.logChan <- prefix + line:
-		default:
-			// Channel full, drop oldest
-			select {
-			case <-r.logChan:
-			default:
-			}
-			r.logChan <- prefix + line
-		}
+		trySendOrDrop(r.logChan, prefix+line)
 	}
 	// Scanner ended - check error
 	if err := scanner.Err(); err != nil {
@@ -1178,16 +1175,7 @@ func (r *VMRunner) readScriptOutput(pipe io.Reader, source string) {
 			prefix = "[stop ERR] "
 		}
 		// Always send to log channel for UI display
-		select {
-		case r.logChan <- prefix + line:
-		default:
-			// Channel full, drop oldest
-			select {
-			case <-r.logChan:
-			default:
-			}
-			r.logChan <- prefix + line
-		}
+		trySendOrDrop(r.logChan, prefix+line)
 		// Also log in debug mode
 		if r.dbgMode {
 			log.Printf("[DEBUG] %s: %s", source, line)
@@ -1330,16 +1318,16 @@ func (r *VMRunner) connectQMP() {
 			r.qmpClient = client
 			r.mu.Unlock()
 
-			r.logChan <- "[QMP] Connected to QEMU monitor"
+			trySendOrDrop(r.logChan, "[QMP] Connected to QEMU monitor")
 			if err := r.ApplyVCPUPinning(r.runCfg.VCPUPinning); err != nil {
-				r.logChan <- fmt.Sprintf("[vCPU pinning] WARNING: %v", err)
+				trySendOrDrop(r.logChan, fmt.Sprintf("[vCPU pinning] WARNING: %v", err))
 			}
 			return
 		}
 		time.Sleep(1 * time.Second)
 	}
 
-	r.logChan <- "[QMP] WARNING: Failed to connect to QMP after timeout"
+	trySendOrDrop(r.logChan, "[QMP] WARNING: Failed to connect to QMP after timeout")
 }
 
 // filterPassthroughArgs removes PCI/USB passthrough and drive ROM arguments

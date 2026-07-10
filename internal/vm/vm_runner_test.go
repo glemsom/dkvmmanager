@@ -1790,3 +1790,136 @@ func TestStartForceStopConcurrent(t *testing.T) {
 	runner.running = false
 	runner.mu.Unlock()
 }
+
+// --- Channel deadlock prevention tests ---
+
+func TestTrySendOrDropDoesNotBlockWhenFullNoReader(t *testing.T) {
+	t.Parallel()
+	// Channel with no reader and full buffer must not block.
+	ch := make(chan string, 3)
+	// Fill it
+	for i := 0; i < 3; i++ {
+		ch <- "dummy"
+	}
+
+	done := make(chan struct{})
+	go func() {
+		for i := 0; i < 100; i++ {
+			trySendOrDrop(ch, "test")
+		}
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// All sends completed without blocking
+	case <-time.After(3 * time.Second):
+		t.Fatal("trySendOrDrop blocked on full channel with no reader")
+	}
+}
+
+func TestForwardViewLineDoesNotBlockWhenFullNoReader(t *testing.T) {
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+	vm := &domain.VM{ID: "1", Name: "test-vm"}
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
+
+	// Manually add a subscriber channel that's already full and has no reader.
+	fullCh := make(chan string, 3)
+	for i := 0; i < 3; i++ {
+		fullCh <- "filler"
+	}
+	runner.subsMu.Lock()
+	runner.subscribers[fullCh] = struct{}{}
+	runner.subsMu.Unlock()
+
+	// forwardViewLine must not block.
+	done := make(chan struct{})
+	go func() {
+		for i := 0; i < 500; i++ {
+			runner.forwardViewLine(fmt.Sprintf("line %d", i))
+		}
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// All forwards completed without blocking
+	case <-time.After(3 * time.Second):
+		t.Fatal("forwardViewLine blocked on full subscriber with no reader")
+	}
+}
+
+func TestLogChanDoesNotBlockWhenFullNoReader(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+	vm := &domain.VM{ID: "1", Name: "test-vm"}
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
+	// Do NOT start persistLogLoop — no reader on logChan.
+	// Direct writes to logChan must not block.
+
+	done := make(chan struct{})
+	go func() {
+		for i := 0; i < 500; i++ {
+			trySendOrDrop(runner.logChan, fmt.Sprintf("line %d", i))
+		}
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// All sends completed without blocking
+	case <-time.After(5 * time.Second):
+		t.Fatal("trySendOrDrop blocked on logChan with no reader")
+	}
+}
+
+func TestConnectQMPWritesDroppedGracefully(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+	vm := &domain.VM{ID: "1", Name: "test-vm"}
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
+	// No persist log started — logChan has no reader
+	// The trySendOrDrop calls in connectQMP must not block.
+
+	// Fill logChan to capacity (256)
+	for i := 0; i < 256; i++ {
+		runner.logChan <- "filler"
+	}
+
+	// These are the same patterns used in connectQMP
+	done := make(chan struct{})
+	go func() {
+		trySendOrDrop(runner.logChan, "[QMP] Connected to QEMU monitor")
+		trySendOrDrop(runner.logChan, "[vCPU pinning] WARNING: something")
+		trySendOrDrop(runner.logChan, "[QMP] WARNING: Failed to connect to QMP after timeout")
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// All writes completed without blocking
+	case <-time.After(3 * time.Second):
+		t.Fatal("connectQMP-style writes blocked on full logChan with no reader")
+	}
+}
