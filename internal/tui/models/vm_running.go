@@ -332,12 +332,9 @@ func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Don't overwrite stopping/stopped status from stale poll ticks
 		if m.status != "stopping" && m.status != "stopped" {
 			m.status = msg.Status
+			return m, m.pollStatus()
 		}
-		// Stop re-arming status tick when status is terminal
-		if m.status == "stopping" || m.status == "stopped" {
-			return m, nil
-		}
-		return m, m.pollStatus()
+		return m, nil
 
 	case VMMetricsUpdateMsg:
 		m.metrics = msg.Metrics

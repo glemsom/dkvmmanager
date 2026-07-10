@@ -125,6 +125,34 @@ func TestVMRunningModelStatusUpdate(t *testing.T) {
 	}
 }
 
+func TestVMRunningModelStatusUpdateStopped(t *testing.T) {
+	// When status is terminal ("stopped"), VMStatusUpdateMsg should NOT re-arm the poll tick.
+	m := setupRunningModel(t, "starting")
+	m.status = "stopped"
+	updated, cmd := m.Update(VMStatusUpdateMsg{Status: "running"})
+	m = updated.(*VMRunningModel)
+	if m.status != "stopped" {
+		t.Errorf("Expected status to remain 'stopped', got '%s'", m.status)
+	}
+	if cmd != nil {
+		t.Error("Expected nil command (no re-arm) when status is 'stopped' after VMStatusUpdateMsg")
+	}
+}
+
+func TestVMRunningModelStatusUpdateStopping(t *testing.T) {
+	// When status is terminal ("stopping"), VMStatusUpdateMsg should NOT re-arm the poll tick.
+	m := setupRunningModel(t, "starting")
+	m.status = "stopping"
+	updated, cmd := m.Update(VMStatusUpdateMsg{Status: "running"})
+	m = updated.(*VMRunningModel)
+	if m.status != "stopping" {
+		t.Errorf("Expected status to remain 'stopping', got '%s'", m.status)
+	}
+	if cmd != nil {
+		t.Error("Expected nil command (no re-arm) when status is 'stopping' after VMStatusUpdateMsg")
+	}
+}
+
 func TestVMRunningModelWindowSize(t *testing.T) {
 	m := setupRunningModel(t, "running")
 	m.ready = false
