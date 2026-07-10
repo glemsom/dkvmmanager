@@ -278,3 +278,4 @@ See the [App Config Schema](../reference/app-config.md) for the complete field r
 - [Hardware Configuration](hardware-config.md) — CPU topology, vCPU pinning, PCI/USB passthrough
 - [Storage](storage.md) — LVM logical volume creation
 - [Keybindings](keybindings.md) — keyboard reference
+- [Security Considerations](security.md) — host hardening and file permissions

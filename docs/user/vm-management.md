@@ -235,3 +235,4 @@ Read-only devices are marked `[RO]`. Navigate with `↑/↓` / `j/k`, select wit
 - [Scripts & SSH](scripts-and-ssh.md) — Start/stop hook scripts and SSH password
 - [Running VMs](running-vms.md) — Start, monitor, and stop VMs
 - [Keybindings](keybindings.md) — Complete keyboard reference
+- [Security Considerations](security.md) — VNC binding, QMP socket, and config file permissions

@@ -22,6 +22,7 @@ New to DKVM Manager? Follow this recommended reading order — each document bui
 5. **[Running VMs](running-vms.md)** — runtime monitoring, logs, metrics
 6. **[Storage](storage.md)** — LVM logical volume creation and disk management
 7. **[Power & Save](power-and-save.md)** — power off, reboot, and saving configuration changes
+8. **[Security Considerations](security.md)** — SSH password, PCI passthrough, config file permissions, VNC, QMP, log files
 
 This complements the alphabetical index below by providing a purpose-driven reading order.
 
@@ -39,8 +40,8 @@ This complements the alphabetical index below by providing a purpose-driven read
 | [Keybindings](keybindings.md) | Complete keyboard reference for the TUI |
 | [FAQ](faq.md) | Frequently asked questions |
 | [Upgrade & Migration](upgrade.md) | Upgrade binary, Alpine package, version compatibility, migrating to a new host |
-| [Troubleshooting](troubleshooting.md) | Common issues and solutions |
 | [Backup & Restore](backup-and-restore.md) | Protect VM configs, LVM volumes, and Alpine overlay; restore after failure |
+| [Security Considerations](security.md) | SSH password, PCI passthrough, config file permissions, VNC, QMP, log files, command execution |
 
 ## Understanding DKVM Manager
 

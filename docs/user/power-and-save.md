@@ -102,3 +102,4 @@ Configuration tab → scroll to bottom → **Save changes** (always the last ite
 - [Scripts & SSH](scripts-and-ssh.md) — hook scripts and SSH password (changes need saving)
 - [Storage](storage.md) — LVM volume creation (changes need saving)
 - [Keybindings](keybindings.md) — complete keyboard reference
+- [Security Considerations](security.md) — `lbu commit`, `poweroff`, and `reboot` privileges

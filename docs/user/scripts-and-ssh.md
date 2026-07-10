@@ -158,3 +158,4 @@ Score maps to labels: **Weak** (≤1, red), **Fair** (2–3, yellow), **Strong**
 - [Hardware Configuration](hardware-config.md) — PCI passthrough device configuration (used by builtin scripts)
 - [Example Scripts](../../examples/README.md) — reference scripts for PCI passthrough
 - [Keybindings](keybindings.md) — complete keyboard reference
+- [Security Considerations](security.md) — SSH password and script security

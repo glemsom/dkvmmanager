@@ -231,3 +231,4 @@ See [Keybindings](keybindings.md) for the full reference.
 - [Scripts & SSH](scripts-and-ssh.md) — start/stop scripts
 - [Hardware Configuration](hardware-config.md) — CPU pinning, PCI/USB passthrough
 - [Keybindings](keybindings.md) — complete keyboard reference
+- [Security Considerations](security.md) — VNC, QMP socket, and log file exposure

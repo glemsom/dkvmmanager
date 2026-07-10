@@ -438,3 +438,4 @@ See [Keybindings](keybindings.md) for the full reference.
 - [Setup](setup.md) — IOMMU, vfio-pci, hugepages, LVM
 - [Running VMs](running-vms.md) — Start, monitor, and stop VMs
 - [Keybindings](keybindings.md) — Complete keyboard reference
+- [Security Considerations](security.md) — PCI passthrough and IOMMU security
