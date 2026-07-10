@@ -297,6 +297,22 @@ func TestHandleVMSelectionOutOfBounds(t *testing.T) {
 	}
 }
 
+func TestBuildConfigListAdapterEmpty(t *testing.T) {
+	reg := NewViewRegistry()
+	// No views registered — BuildConfigMenuItems returns just [Save changes].
+	// The guard prevents a panic on items[0]/items[len-1] for truly empty slices,
+	// but with Save changes present we verify no panic and get valid output.
+	items := buildConfigListAdapter(reg)
+	// Must not panic, should return items of expected structure
+	if len(items) == 0 {
+		t.Error("Expected items, got empty")
+	}
+	// First item should be Save changes (the only item from BuildConfigMenuItems)
+	if items[0].FilterValue() != "Save changes" {
+		t.Errorf("Expected first item 'Save changes', got '%s'", items[0].FilterValue())
+	}
+}
+
 func TestBuildConfigListAdapter(t *testing.T) {
 	reg := NewViewRegistry()
 

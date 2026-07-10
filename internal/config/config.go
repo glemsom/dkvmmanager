@@ -57,28 +57,30 @@ func DefaultConfig() *Config {
 
 // Load loads the configuration from file or returns defaults
 func Load() *Config {
+	v := viper.New()
+
 	// Try to load from config file
-	viper.SetConfigName(".dkvmmanager")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("$HOME")
-	viper.AddConfigPath("/etc/dkvm")
+	v.SetConfigName(".dkvmmanager")
+	v.SetConfigType("yaml")
+	v.AddConfigPath("$HOME")
+	v.AddConfigPath("/etc/dkvm")
 
 	// Set defaults
 	cfg := DefaultConfig()
-	viper.SetDefault("data_folder", cfg.DataFolder)
-	viper.SetDefault("vms_config_file", cfg.VMsConfigFile)
-	viper.SetDefault("reserved_mem_mb", cfg.ReservedMemMB)
-	viper.SetDefault("bios_code", cfg.BIOSCode)
-	viper.SetDefault("bios_vars", cfg.BIOSVars)
-	viper.SetDefault("network_bridge", cfg.NetworkBridge)
-	viper.SetDefault("qemu_path", cfg.QEMUPath)
-	viper.SetDefault("tpm_binary", cfg.TPMBinary)
-	viper.SetDefault("log_file", cfg.LogFile)
-	viper.SetDefault("grub_config_path", cfg.GrubConfigPath)
+	v.SetDefault("data_folder", cfg.DataFolder)
+	v.SetDefault("vms_config_file", cfg.VMsConfigFile)
+	v.SetDefault("reserved_mem_mb", cfg.ReservedMemMB)
+	v.SetDefault("bios_code", cfg.BIOSCode)
+	v.SetDefault("bios_vars", cfg.BIOSVars)
+	v.SetDefault("network_bridge", cfg.NetworkBridge)
+	v.SetDefault("qemu_path", cfg.QEMUPath)
+	v.SetDefault("tpm_binary", cfg.TPMBinary)
+	v.SetDefault("log_file", cfg.LogFile)
+	v.SetDefault("grub_config_path", cfg.GrubConfigPath)
 
 	// Read config
-	if err := viper.ReadInConfig(); err == nil {
-		if err := viper.Unmarshal(cfg); err != nil {
+	if err := v.ReadInConfig(); err == nil {
+		if err := v.Unmarshal(cfg); err != nil {
 			// Unmarshal failed, defaults will be used
 			_ = err
 		}
@@ -127,16 +129,17 @@ func (c *Config) Save() error {
 
 	configPath := filepath.Join(home, ".dkvmmanager.yaml")
 
-	viper.Set("data_folder", c.DataFolder)
-	viper.Set("vms_config_file", c.VMsConfigFile)
-	viper.Set("reserved_mem_mb", c.ReservedMemMB)
-	viper.Set("bios_code", c.BIOSCode)
-	viper.Set("bios_vars", c.BIOSVars)
-	viper.Set("network_bridge", c.NetworkBridge)
-	viper.Set("qemu_path", c.QEMUPath)
-	viper.Set("tpm_binary", c.TPMBinary)
-	viper.Set("log_file", c.LogFile)
-	viper.Set("grub_config_path", c.GrubConfigPath)
+	v := viper.New()
+	v.Set("data_folder", c.DataFolder)
+	v.Set("vms_config_file", c.VMsConfigFile)
+	v.Set("reserved_mem_mb", c.ReservedMemMB)
+	v.Set("bios_code", c.BIOSCode)
+	v.Set("bios_vars", c.BIOSVars)
+	v.Set("network_bridge", c.NetworkBridge)
+	v.Set("qemu_path", c.QEMUPath)
+	v.Set("tpm_binary", c.TPMBinary)
+	v.Set("log_file", c.LogFile)
+	v.Set("grub_config_path", c.GrubConfigPath)
 
-	return viper.WriteConfigAs(configPath)
+	return v.WriteConfigAs(configPath)
 }

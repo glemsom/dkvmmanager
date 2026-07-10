@@ -99,6 +99,14 @@ func TestCheckResultIsSufficient(t *testing.T) {
 	}
 }
 
+func TestFormatErrorNilResult(t *testing.T) {
+	errMsg := FormatError(nil)
+	expected := "insufficient hugepages: unknown (check result is nil)"
+	if errMsg != expected {
+		t.Errorf("Expected %q, got %q", expected, errMsg)
+	}
+}
+
 func TestFormatError(t *testing.T) {
 	result := &CheckResult{
 		AvailablePages: 1000,

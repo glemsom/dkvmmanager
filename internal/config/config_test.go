@@ -4,6 +4,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 )
 
@@ -168,4 +169,20 @@ func TestConfigStruct(t *testing.T) {
 	if cfg.LogFile != "/test/log" {
 		t.Errorf("LogFile = %v, want /test/log", cfg.LogFile)
 	}
+}
+
+
+func TestConcurrentLoad(t *testing.T) {
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			cfg := Load()
+			if cfg == nil {
+				t.Error("Load() returned nil")
+			}
+		}()
+	}
+	wg.Wait()
 }

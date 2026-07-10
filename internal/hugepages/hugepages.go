@@ -172,6 +172,9 @@ func Ensure(cfg *Config) (*CheckResult, error) {
 
 // FormatError creates a user-friendly error message for insufficient hugepages
 func FormatError(result *CheckResult) string {
+	if result == nil {
+		return "insufficient hugepages: unknown (check result is nil)"
+	}
 	return fmt.Sprintf(
 		"insufficient hugepages: have %d, need %d (try: echo %d > /proc/sys/vm/nr_hugepages)",
 		result.AvailablePages,

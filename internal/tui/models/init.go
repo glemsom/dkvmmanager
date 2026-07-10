@@ -219,6 +219,9 @@ func buildMenuListAdapter(items []MenuItem) []list.Item {
 // Edit VM and Delete VM are inserted manually since they require VM selection first.
 func buildConfigListAdapter(reg *ViewRegistry) []list.Item {
 	items := reg.BuildConfigMenuItems()
+	if len(items) == 0 {
+		return nil
+	}
 	// Insert "Edit VM" and "Delete VM" after "Add VM" (position 1 and 2)
 	// matching the original menu layout. The last item is "Save changes".
 	editVM := MenuItem{Title: "Edit VM", Type: "INT_CONFIG"}
