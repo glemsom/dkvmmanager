@@ -77,7 +77,6 @@ type VMRunningModel struct {
 
 	// Status
 	status  string
-	threads []int
 
 	// Status polling tracking
 	pollingSince time.Time
@@ -330,8 +329,10 @@ func (m *VMRunningModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case VMStatusUpdateMsg:
-		m.status = msg.Status
-		m.threads = msg.Threads
+		// Don't overwrite stopping/stopped status from stale poll ticks
+		if m.status != "stopping" && m.status != "stopped" {
+			m.status = msg.Status
+		}
 		return m, m.pollStatus()
 
 	case VMMetricsUpdateMsg:
@@ -420,7 +421,7 @@ func (m *VMRunningModel) calculateLayout() {
 // calculateInfoHeight returns the height needed for the info panel
 func (m *VMRunningModel) calculateInfoHeight() int {
 	// Minimum base height
-	height := 4 // Base: status line + vCPU info + blank + separator
+	height := 2 // Base: status line + memory/vCPU line
 
 	// Add lines for vCPU metrics (independent of runner)
 	if len(m.metrics.VCPUs) > 0 {
@@ -433,24 +434,12 @@ func (m *VMRunningModel) calculateInfoHeight() int {
 		height++
 	}
 
-	// S5: Add one line per block device for per-disk IOPS/B/s display.
+	// Block devices — one line per device
 	if len(m.metrics.BlockDevices) > 0 {
 		height += len(m.metrics.BlockDevices)
 	}
 
-	// S6: Add network device section when devices are present.
-	// Capped at 2 visible lines; if more devices exist, an overflow
-	// indicator line is added so the total is min(2, len) + 1.
-	if len(m.metrics.NetDevices) > 0 {
-		show := len(m.metrics.NetDevices)
-		if show > 2 {
-			show = 2
-			height++ // overflow indicator line
-		}
-		height += show
-	}
-
-	// hides it when 0).
+	// Balloon — one line when present
 	if m.metrics.BalloonBytes > 0 {
 		height++
 	}
@@ -523,7 +512,7 @@ func (m *VMRunningModel) renderInfoPanel() string {
 	switch m.status {
 	case "running", "paused", "postmigrate", "prelaunch":
 		statusStr = statusRunning.Render("[RUNNING]")
-	case "stopped", "exited":
+	case "stopped", "exited", "shutdown":
 		statusStr = statusStopped.Render("[STOPPED]")
 	case "stopping", "finish":
 		statusStr = statusStarting.Render("[STOPPING]")
@@ -684,46 +673,12 @@ func (m *VMRunningModel) renderInfoPanel() string {
 	// Only render when BalloonBytes > 0 (graceful degradation: no balloon
 	// driver is a normal guest configuration, not a "0 B" failure).
 	if m.metrics.BalloonBytes > 0 {
-
-	// === Section: Network Metrics (S6) ===
-	// Capped at 2 devices; overflow indicator shows remaining count.
-	// Format: "net <device>: r: <B/s> · <pps>  w: <B/s> · <pps>".
-	// No section when NetDevices is empty.
-	if len(m.metrics.NetDevices) > 0 {
-		show := len(m.metrics.NetDevices)
-		overflow := 0
-		if show > 2 {
-			overflow = show - 2
-			show = 2
-		}
-		for i := 0; i < show; i++ {
-			dev := m.metrics.NetDevices[i]
-			b.WriteString(labelStyle.Render("net "))
-			b.WriteString(valueStyle.Render(dev.Device))
-			b.WriteString(labelStyle.Render(": "))
-			b.WriteString(labelStyle.Render("r: "))
-			b.WriteString(valueStyle.Render(formatRate(dev.RXBps)))
-			b.WriteString(labelStyle.Render(" · "))
-			b.WriteString(valueStyle.Render(fmt.Sprintf("%d pps", dev.RXPps)))
-			b.WriteString(labelStyle.Render("  w: "))
-			b.WriteString(valueStyle.Render(formatRate(dev.TXBps)))
-			b.WriteString(labelStyle.Render(" · "))
-			b.WriteString(valueStyle.Render(fmt.Sprintf("%d pps", dev.TXPps)))
-			b.WriteString("\n")
-		}
-		if overflow > 0 {
-			b.WriteString(labelStyle.Render(fmt.Sprintf("(+%d more)", overflow)))
-			b.WriteString("\n")
-		}
-	}
-
 		b.WriteString(labelStyle.Render("Balloon: "))
 		b.WriteString(valueStyle.Render(formatBytes(m.metrics.BalloonBytes)))
 		b.WriteString("\n")
 	}
 
-	// === Separator line ===
-	b.WriteString(mutedStyle.Render("─── QEMU Output ───"))
+	// === Separator is rendered inside viewport in renderLogContent ===
 
 	return b.String()
 }

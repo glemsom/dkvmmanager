@@ -115,19 +115,10 @@ func TestVMRunningModelStoppedMsg(t *testing.T) {
 
 func TestVMRunningModelStatusUpdate(t *testing.T) {
 	m := setupRunningModel(t, "starting")
-	threads := []int{100, 101, 102}
-	updated, cmd := m.Update(VMStatusUpdateMsg{Status: "running", Threads: threads})
+	updated, cmd := m.Update(VMStatusUpdateMsg{Status: "running"})
 	m = updated.(*VMRunningModel)
 	if m.status != "running" {
 		t.Errorf("Expected status 'running', got '%s'", m.status)
-	}
-	if len(m.threads) != 3 {
-		t.Fatalf("Expected 3 threads, got %d", len(m.threads))
-	}
-	for i, tid := range threads {
-		if m.threads[i] != tid {
-			t.Errorf("Expected thread[%d]=%d, got %d", i, tid, m.threads[i])
-		}
 	}
 	if cmd == nil {
 		t.Error("Expected non-nil command (pollStatus) after status update")
@@ -168,8 +159,8 @@ func TestVMRunningModelWindowSizeUpdate(t *testing.T) {
 	if m.vp.Width() != 100 {
 		t.Errorf("Expected viewport width 100, got %d", m.vp.Width())
 	}
-	if m.vp.Height() != 23 { // 30 - infoHeight(4) - 3 = 23
-		t.Errorf("Expected viewport height 23, got %d", m.vp.Height())
+	if m.vp.Height() != 25 { // 30 - infoHeight(2) - 3 = 25
+		t.Errorf("Expected viewport height 25, got %d", m.vp.Height())
 	}
 }
 
@@ -201,8 +192,8 @@ func TestVMRunningModelSetSizeTwice(t *testing.T) {
 	if m.vp.Width() != 120 {
 		t.Errorf("Expected viewport width 120, got %d", m.vp.Width())
 	}
-	if m.vp.Height() != 33 { // 40 - infoHeight(4) - 3 = 33
-		t.Errorf("Expected viewport height 33, got %d", m.vp.Height())
+	if m.vp.Height() != 35 { // 40 - infoHeight(2) - 3 = 35
+		t.Errorf("Expected viewport height 35, got %d", m.vp.Height())
 	}
 }
 
@@ -339,27 +330,21 @@ func TestVMRunningModelStoppedMsgUpdatesViewport(t *testing.T) {
 
 func TestVMRunningModelMultipleStatusUpdates(t *testing.T) {
 	m := setupRunningModel(t, "starting")
-	updated, _ := m.Update(VMStatusUpdateMsg{Status: "running", Threads: []int{100}})
+	updated, _ := m.Update(VMStatusUpdateMsg{Status: "running"})
 	m = updated.(*VMRunningModel)
-	updated, _ = m.Update(VMStatusUpdateMsg{Status: "running", Threads: []int{100, 101}})
+	updated, _ = m.Update(VMStatusUpdateMsg{Status: "running"})
 	m = updated.(*VMRunningModel)
 	if m.status != "running" {
 		t.Errorf("Expected status 'running', got '%s'", m.status)
-	}
-	if len(m.threads) != 2 {
-		t.Errorf("Expected 2 threads, got %d", len(m.threads))
 	}
 }
 
 func TestVMRunningModelStatusUpdateNoThreads(t *testing.T) {
 	m := setupRunningModel(t, "starting")
-	updated, _ := m.Update(VMStatusUpdateMsg{Status: "running", Threads: nil})
+	updated, _ := m.Update(VMStatusUpdateMsg{Status: "running"})
 	m = updated.(*VMRunningModel)
 	if m.status != "running" {
 		t.Errorf("Expected status 'running', got '%s'", m.status)
-	}
-	if len(m.threads) != 0 {
-		t.Errorf("Expected 0 threads, got %d", len(m.threads))
 	}
 }
 
