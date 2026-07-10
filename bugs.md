@@ -131,45 +131,29 @@ Same pattern in several Update handlers.
 
 ## MEDIUM — Visual/TUI Bugs
 
-### 10. Status tick loop continues after VM stopped
+### 10. Status tick loop continues after VM stopped  ✅ FIXED (PR #150)
 
 **File:** `internal/tui/models/vm_running.go:332-336`
 
-`VMStatusUpdateMsg` handler always returns `m.pollStatus()` even when `m.status` is `"stopping"` or `"stopped"` (the status value is not updated but the tick IS re-armed). Status ticks keep firing until `VMStoppedMsg` arrives and breaks the chain. Extra ticks are harmless but wasteful.
+`VMStatusUpdateMsg` handler no longer re-arms pollStatus when status is terminal.
 
-True fix: stop re-arming when status is terminal.
-
-### 11. Stopping status styled as STARTING
+### 11. Stopping status styled as STARTING  ✅ FIXED (PR #150)
 
 **File:** `internal/tui/models/vm_running.go:508`
 
-```go
-case "stopping", "finish":
-    statusStr = statusStarting.Render("[STOPPING]")
-```
+Uses distinct `statusStopping` style (red/error) instead of `statusStarting` (yellow/warning).
 
-Stopping uses `statusStarting` (warning/yellow color). Should use a distinct stopping style (maybe error/orange) for visual clarity.
-
-### 12. Memory display format inconsistent
+### 12. Memory display format inconsistent  ✅ FIXED (PR #150)
 
 **File:** `internal/tui/models/vm_running.go:528-534`
 
-```go
-memGB := memMB / 1024
-if memMB%1024 == 0 {
-    // "8 GB"
-} else {
-    // fmt.Sprintf("%.1f GB", float64(memMB)/1024.0)
-}
-```
+Now always uses `"%.1f GB"` — e.g. "8.0 GB" always, never "8 GB".
 
-8193 MB → `8193/1024 = 8.0009...` → displays "8.0 GB". 8192 MB → "8 GB". Inconsistent decimal precision. Minor but looks sloppy.
-
-### 13. `effectiveWidth()` masks terminal resize below 80 cols
+### 13. `effectiveWidth()` masks terminal resize below 80 cols  ✅ FIXED (PR #150)
 
 **File:** `internal/tui/models/view.go:318-323`
 
-`effectiveWidth()` clamps to 80, but `renderVMsTabWithWidth()` (line 152) checks `m.windowWidth < 80` (the actual value, not clamped). If terminal is 60 wide, render uses `listWidth = 36`, but `effectiveWidth()` reports 80 for layout purposes. Inconsistent layout math across tabs.
+`renderVMsTabWithWidth()` uses `width` param (effectiveWidth) consistently instead of raw `m.windowWidth`.
 
 ### 14. `PadToScreen` creates massive string allocations per frame
 

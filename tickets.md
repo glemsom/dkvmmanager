@@ -110,11 +110,17 @@ Memory display (`vm_running.go:528-534`): `memMB % 1024 == 0` uses "8 GB", other
 
 **Blocked by:** None — can start immediately
 
-- [ ] Stop re-arming status tick when status is terminal (`"stopping"`, `"stopped"`)
-- [ ] Add a distinct style (error/orange) for stopping/finish status rendering
-- [ ] Normalize memory display: always use `"%.1f GB"` or a helper that gives clean integer strings for exact GB
-- [ ] Fix `effectiveWidth()`/`renderVMsTabWithWidth()` to use consistent width value
-- [ ] Add tests: status tick not re-armed after stop, memory format consistency at boundary values
+- [x] Stop re-arming status tick when status is terminal ("stopping", "stopped")
+- [x] Add a distinct style (error/orange) for stopping/finish status rendering
+- [x] Normalize memory display: always use "%.1f GB" or a helper that gives clean integer strings for exact GB
+- [x] Fix `effectiveWidth()`/`renderVMsTabWithWidth()` to use consistent width value
+- [x] Add tests: status tick not re-armed after stop, memory format consistency at boundary values
+  - TestVMRunningModelStatusUpdateStopsPollWhenStopping
+  - TestVMRunningModelStatusUpdateStopsPollWhenStopped
+  - TestVMRunningModelStatusUpdateReArmsPollWhenNonTerminal
+  - TestVMRunningModelMemoryFormatConsistent
+  - TestVMRunningModelViewStoppingStyle
+  - TestVMRunningModelViewNarrowWidth
 
 ## Fix edge case panics & test pollution
 
