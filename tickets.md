@@ -72,9 +72,9 @@ After QMP connects, `connectQMP()` does `r.logChan <- "[QMP] Connected..."` (lin
 
 **Blocked by:** None — can start immediately
 
-- [ ] Parse `/proc/[pid]/stat` by finding comm field start (`(`) then scanning forward byte-by-byte to the matching `)`
-- [ ] Or use `strings.IndexByte` after the first `(` to find the first `)` that terminates comm
-- [ ] Add tests with process names containing `)`, special characters, empty comm field
+- [x] Parse `/proc/[pid]/stat` by finding comm field start (`(`) then scanning forward byte-by-byte to the matching `)`
+- [x] Or use `strings.IndexByte` after the first `(` to find the first `)` that terminates comm
+- [x] Add tests with process names containing `)`, special characters, empty comm field
 
 ## Fix TUI event-loop blocking & allocation churn
 

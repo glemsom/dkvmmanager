@@ -61,6 +61,98 @@ func TestReadStatCPUJiffiesMalformed(t *testing.T) {
 	}
 }
 
+func TestReadStatCPUJiffiesParenInComm(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "stat")
+
+	// Process name containing ')' valid in Linux via prctl(PR_SET_NAME)
+	data := "12345 (my)weird)process) S 1 12345 12345 0 -1 4194560 0 0 0 0 1500 2500 0 0 20 0 8 0 123456789 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n"
+	if err := os.WriteFile(path, []byte(data), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	jiffies, err := readStatCPUJiffies(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if jiffies != 4000 {
+		t.Errorf("expected 4000 jiffies, got %d", jiffies)
+	}
+}
+
+func TestReadStatCPUJiffiesCommOnlyClosingParen(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "stat")
+
+	// Comm field is ')' produces "))" in output
+	data := "12345 ()) S 1 12345 12345 0 -1 4194560 0 0 0 0 1500 2500 0 0 20 0 8 0 123456789 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n"
+	if err := os.WriteFile(path, []byte(data), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	jiffies, err := readStatCPUJiffies(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if jiffies != 4000 {
+		t.Errorf("expected 4000 jiffies, got %d", jiffies)
+	}
+}
+
+func TestReadStatCPUJiffiesEmptyComm(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "stat")
+
+	// Empty comm field "()" for empty string
+	data := "12345 () S 1 12345 12345 0 -1 4194560 0 0 0 0 1500 2500 0 0 20 0 8 0 123456789 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n"
+	if err := os.WriteFile(path, []byte(data), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	jiffies, err := readStatCPUJiffies(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if jiffies != 4000 {
+		t.Errorf("expected 4000 jiffies, got %d", jiffies)
+	}
+}
+
+func TestReadStatCPUJiffiesNoOpeningParen(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "stat")
+
+	// No opening paren malformed but has ')'
+	data := "12345 qemu) S 1 12345 12345 0 -1 4194560 0 0 0 0 1500 2500 ...\n"
+	if err := os.WriteFile(path, []byte(data), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := readStatCPUJiffies(path)
+	if err == nil {
+		t.Error("expected error for stat file with no opening paren")
+	}
+}
+
+func TestReadStatCPUJiffiesSpecialCharsComm(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "stat")
+
+	// Comm field with special characters (parens inside)
+	data := "42 (a)b(c)) S 1 12345 12345 0 -1 4194560 0 0 0 0 1500 2500 0 0 20 0 8 0 123456789 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n"
+	if err := os.WriteFile(path, []byte(data), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	jiffies, err := readStatCPUJiffies(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if jiffies != 4000 {
+		t.Errorf("expected 4000 jiffies, got %d", jiffies)
+	}
+}
+
 func TestNSecPerJiffy(t *testing.T) {
 	expected := int64(10_000_000) // 10ms per jiffy at CLK_TCK=100
 	if nsPerJiffy != expected {

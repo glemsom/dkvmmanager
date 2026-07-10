@@ -2,6 +2,7 @@
 package vm
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strconv"
@@ -87,11 +88,21 @@ func readStatCPUJiffies(path string) (uint64, error) {
 		return 0, fmt.Errorf("failed to read %s: %w", path, err)
 	}
 
-	// Find the closing paren of the comm field: "... (comm) STATE ..."
-	closeParen := strings.LastIndexByte(string(data), ')')
-	if closeParen < 0 {
-		return 0, fmt.Errorf("malformed stat file %s: no closing paren", path)
+	// Find the opening paren of the comm field: "PID (comm) STATE ..."
+	openParen := bytes.IndexByte(data, '(')
+	if openParen < 0 {
+		return 0, fmt.Errorf("malformed stat file %s: no opening paren", path)
 	}
+
+	// Find the closing paren. The kernel format is "%d (%s) %c ..." where
+	// %s is the comm field (no escaping). The closing paren is always the
+	// last ')' in the line because no other field contains ')'.
+	tail := data[openParen+1:]
+	closeParen := bytes.LastIndexByte(tail, ')')
+	if closeParen < 0 {
+		return 0, fmt.Errorf("malformed stat file %s: no closing paren after comm", path)
+	}
+	closeParen += openParen + 1 // adjust to absolute position
 
 	fields := strings.Fields(string(data[closeParen+1:]))
 	// fields[0] = state, fields[1..] = remaining
