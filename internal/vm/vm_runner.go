@@ -52,7 +52,9 @@ type VMRunner struct {
 	persistFile *os.File
 	persistBuf  *bufio.Writer
 	persistQuit chan struct{}
-	persistWg   sync.WaitGroup
+	persistWg        sync.WaitGroup
+	closePersistOnce sync.Once
+	stopScriptWg     sync.WaitGroup
 
 	// Metrics snapshot state (for delta computation)
 	prevVCPUTime     map[int]int64               // ThreadID -> previous CPUTimeNs (absolute, in ns)
@@ -172,15 +174,11 @@ func (r *VMRunner) startPersistLog() error {
 // closePersistLog signals the flusher goroutine to stop, drains remaining lines,
 // flushes the buffered writer, and closes the file. It is safe to call multiple times.
 func (r *VMRunner) closePersistLog() {
-	// Idempotent close of persistQuit
-	if r.persistQuit != nil {
-		select {
-		case <-r.persistQuit:
-			// already closed
-		default:
+	r.closePersistOnce.Do(func() {
+		if r.persistQuit != nil {
 			close(r.persistQuit)
 		}
-	}
+	})
 	r.persistWg.Wait()
 }
 
@@ -1132,6 +1130,8 @@ func (r *VMRunner) Cleanup() {
 		os.Remove(r.socketPath)
 	}
 	// Ensure TPM process is terminated and state cleaned up
+	// Ensure stop-script reader goroutines have finished
+	r.stopScriptWg.Wait()
 	r.cleanupTPM()
 	// Close persisted log
 	r.closePersistLog()
@@ -1218,12 +1218,20 @@ func (r *VMRunner) monitorProcess() {
 	}
 }
 
-// qmpWatchdog periodically checks QMP connection status and logs diagnostics
+// qmpWatchdog periodically checks QMP connection status and logs diagnostics.
+// It exits when the VM is done (r.done closed), the process exits, or QMP connects.
 func (r *VMRunner) qmpWatchdog() {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
-	for range ticker.C {
+	for {
+		select {
+		case <-ticker.C:
+		case <-r.done:
+			// VM has exited, no need to keep watching
+			return
+		}
+
 		r.mu.Lock()
 		running := r.running
 		proc := r.cmdProcess
@@ -1521,8 +1529,15 @@ func (r *VMRunner) executeStopScript() {
 		}
 
 		// Read output in goroutines to avoid blocking
-		go r.readScriptOutput(stdout, "stop script stdout")
-		go r.readScriptOutput(stderr, "stop script stderr")
+		r.stopScriptWg.Add(2)
+		go func() {
+			defer r.stopScriptWg.Done()
+			r.readScriptOutput(stdout, "stop script stdout")
+		}()
+		go func() {
+			defer r.stopScriptWg.Done()
+			r.readScriptOutput(stderr, "stop script stderr")
+		}()
 
 		if err := cmd.Wait(); err != nil {
 			if r.dbgMode {
@@ -1563,8 +1578,15 @@ func (r *VMRunner) executeStopScript() {
 		}
 
 		// Read output in goroutines to avoid blocking
-		go r.readScriptOutput(stdout, "stop script stdout")
-		go r.readScriptOutput(stderr, "stop script stderr")
+		r.stopScriptWg.Add(2)
+		go func() {
+			defer r.stopScriptWg.Done()
+			r.readScriptOutput(stdout, "stop script stdout")
+		}()
+		go func() {
+			defer r.stopScriptWg.Done()
+			r.readScriptOutput(stderr, "stop script stderr")
+		}()
 
 		if err := cmd.Wait(); err != nil {
 			if r.dbgMode {

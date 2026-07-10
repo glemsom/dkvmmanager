@@ -1887,6 +1887,125 @@ func TestLogChanDoesNotBlockWhenFullNoReader(t *testing.T) {
 	}
 }
 
+// --- Goroutine & channel lifecycle cleanup tests ---
+
+func TestClosePersistLogConcurrent(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+	vm := &domain.VM{ID: "1", Name: "test-vm"}
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
+
+	if err := runner.startPersistLog(); err != nil {
+		t.Fatalf("startPersistLog() failed: %v", err)
+	}
+
+	// Start multiple concurrent callers to closePersistLog
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			runner.closePersistLog()
+		}()
+	}
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// All concurrent calls completed without panic
+	case <-time.After(3 * time.Second):
+		t.Fatal("Timed out: concurrent closePersistLog calls blocked")
+	}
+}
+
+func TestQMPWatchdogExitsOnDone(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+	vm := &domain.VM{ID: "1", Name: "test-vm"}
+	runner := NewVMRunner(vm, cfg, RunConfig{}, true) // debug mode
+
+	// Start the watchdog goroutine
+	exited := make(chan struct{})
+	go func() {
+		runner.qmpWatchdog()
+		close(exited)
+	}()
+
+	// Give it a tick to start
+	time.Sleep(50 * time.Millisecond)
+
+	// Close the done channel (simulates VM exit)
+	close(runner.done)
+
+	select {
+	case <-exited:
+		// Watchdog exited cleanly when done was closed
+	case <-time.After(3 * time.Second):
+		t.Fatal("qmpWatchdog did not exit when r.done was closed")
+	}
+}
+
+func TestCleanupWaitsForStopScriptGoroutines(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	vmDir := filepath.Join(dir, "vms", "1")
+	os.MkdirAll(vmDir, 0755)
+
+	cfg := &config.Config{
+		DataFolder: dir,
+		QEMUPath:   "/usr/bin/qemu-system-x86_64",
+	}
+	vm := &domain.VM{ID: "1", Name: "test-vm"}
+	runner := NewVMRunner(vm, cfg, RunConfig{}, false)
+
+	// Manually add to stopScriptWg to simulate an in-flight goroutine
+	runner.stopScriptWg.Add(1)
+	scriptRunning := make(chan struct{})
+
+	go func() {
+		defer runner.stopScriptWg.Done()
+		close(scriptRunning)
+		// Simulate a long-running stop script reader
+		time.Sleep(100 * time.Millisecond)
+	}()
+
+	// Wait for goroutine to start
+	<-scriptRunning
+
+	// Cleanup should wait for the goroutine
+	done := make(chan struct{})
+	go func() {
+		runner.Cleanup()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Cleanup completed after goroutine finished
+	case <-time.After(3 * time.Second):
+		t.Fatal("Cleanup blocked waiting for stop-script goroutines")
+	}
+}
+
 func TestConnectQMPWritesDroppedGracefully(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
