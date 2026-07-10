@@ -6,6 +6,55 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.2.4] - 2026-07-10
+
+### Fixed
+- Goroutine & channel lifecycle cleanup across VM runner lifecycle.
+  ([#151](https://github.com/glemsom/dkvmmanager/pull/151))
+- TUI display bugs: status update handler dispatch, width clamping, memory display
+  formatting, terminal status view freeze.
+  ([#149](https://github.com/glemsom/dkvmmanager/pull/149),
+  [#150](https://github.com/glemsom/dkvmmanager/pull/150))
+- Edge case panics and test pollution (ticket 7).
+- Channel deadlocks in vm-runner when buffer full with no reader.
+- Robust `/proc/stat` parsing for `comm` field with `)` characters.
+- 5 bugs in `vm_running` status view.
+
+### Changed
+- Remove Disk I/O, Network I/O, and Balloon sections from VMRunningModel info panel.
+- Remove CPU and memory trend sparklines from VMRunningModel info panel.
+
+### Added
+- Security considerations documentation.
+  ([#112](https://github.com/glemsom/dkvmmanager/issues/112))
+- Sync agent skill docs with updated skill templates.
+
+## [0.2.3] - 2026-07-06
+
+### Added
+- Live network I/O metrics to running VM view.
+  ([#136](https://github.com/glemsom/dkvmmanager/issues/136),
+  [#141](https://github.com/glemsom/dkvmmanager/pull/141))
+- CPU and memory trend sparklines to running VM view.
+  ([#137](https://github.com/glemsom/dkvmmanager/issues/137),
+  [#140](https://github.com/glemsom/dkvmmanager/pull/140))
+- `RenderBrailleSparkline` helper function.
+
+### Fixed
+- Export `RenderBrailleSparkline`, fix resample edge case, simplify
+  `levelToDotCount`.
+- CI: remove redundant Generate version step.
+- Version resolution: use `VERSION` file via generated `version_gen.go`.
+
+### Changed
+- Unify `ViewVMSelect`, `ViewVMDelete`, `ViewVMRunning` under `ViewRegistry`.
+
+## [0.2.2] - 2026-07-04
+
+### Fixed
+- Populate `Config` field in `MainModelConfig` to prevent nil pointer panic
+  when accessing config from TUI components.
+
 ## [0.2.1] - 2026-07-02
 
 ### Fixed
@@ -395,7 +444,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/glemsom/dkvmmanager/compare/v0.2.3...v0.2.4
+[0.2.3]: https://github.com/glemsom/dkvmmanager/compare/v0.2.2...v0.2.3
+[0.2.2]: https://github.com/glemsom/dkvmmanager/compare/v0.2.1...v0.2.2
+[0.2.1]: https://github.com/glemsom/dkvmmanager/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/glemsom/dkvmmanager/compare/v0.1.31...v0.2.0
 [0.1.31]: https://github.com/glemsom/dkvmmanager/compare/v0.1.30...v0.1.31
 [0.1.30]: https://github.com/glemsom/dkvmmanager/compare/v0.1.29...v0.1.30
