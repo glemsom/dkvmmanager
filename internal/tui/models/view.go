@@ -149,8 +149,8 @@ func (m *MainModel) renderVMsTabWithWidth(width int) string {
 			Render(content)
 	}
 
-	if m.windowWidth < 80 {
-		listWidth := max(1, m.windowWidth-4)
+	if width < 80 {
+		listWidth := max(1, width-4)
 		m.menuList.SetSize(listWidth, m.contentHeight()-2)
 		return m.menuList.View()
 	}

@@ -667,3 +667,101 @@ func TestNilRunnerWaitForVMExitReturnsNil(t *testing.T) {
 		t.Errorf("Expected nil message when runner is nil, got %T: %v", msg, msg)
 	}
 }
+
+
+func TestVMRunningModelStatusUpdateStopsPollWhenStopping(t *testing.T) {
+	m := setupRunningModel(t, "running")
+	// Simulate status changing to stopping (e.g., via keypress)
+	m.status = "stopping"
+	// Now send a VMStatusUpdateMsg — should NOT re-arm pollStatus
+	updated, cmd := m.Update(VMStatusUpdateMsg{Status: "running", Threads: nil})
+	m = updated.(*VMRunningModel)
+	if cmd != nil {
+		t.Error("Expected nil command when status is stopping (should stop polling)")
+	}
+	// Status should NOT be overwritten by stale poll
+	if m.status != "stopping" {
+		t.Errorf("Expected status 'stopping', got '%s'", m.status)
+	}
+}
+
+func TestVMRunningModelStatusUpdateStopsPollWhenStopped(t *testing.T) {
+	m := setupRunningModel(t, "stopped")
+	updated, cmd := m.Update(VMStatusUpdateMsg{Status: "running", Threads: nil})
+	m = updated.(*VMRunningModel)
+	if cmd != nil {
+		t.Error("Expected nil command when status is stopped (should stop polling)")
+	}
+	if m.status != "stopped" {
+		t.Errorf("Expected status 'stopped', got '%s'", m.status)
+	}
+}
+
+func TestVMRunningModelStatusUpdateReArmsPollWhenNonTerminal(t *testing.T) {
+	m := setupRunningModel(t, "running")
+	updated, cmd := m.Update(VMStatusUpdateMsg{Status: "running", Threads: nil})
+	m = updated.(*VMRunningModel)
+	if cmd == nil {
+		t.Error("Expected non-nil command (pollStatus) when status is running")
+	}
+	if m.status != "running" {
+		t.Errorf("Expected status 'running', got '%s'", m.status)
+	}
+}
+
+func TestVMRunningModelMemoryFormatConsistent(t *testing.T) {
+	runner := vm.NewVMRunner(&domain.VM{Name: "test-vm", ID: "1"}, nil, vm.RunConfig{}, false)
+	m := &VMRunningModel{
+		vm:          &domain.VM{Name: "test-vm", ID: "1"},
+		runner:      runner,
+		maxLogLines: 500,
+		vp:          viewport.New(viewport.WithWidth(80), viewport.WithHeight(24)),
+		ready:       true,
+		width:       80,
+		height:      24,
+		status:      "running",
+	}
+	viewContent := m.View().Content
+	// Memory should display in "X.X GB" format (always decimal)
+	if !strings.Contains(viewContent, "GB") {
+		t.Error("Expected memory display to contain GB")
+	}
+	// Check it uses the consistent format (no bare integer like "8 GB")
+	// The default is 8192 MB so should show "8.0 GB" not "8 GB"
+	if strings.Contains(viewContent, " 8 GB") {
+		t.Errorf("Memory display should use consistent format with decimal (e.g. 8.0 GB), avoid bare int format (e.g. 8 GB)")
+	}
+}
+
+func TestVMRunningModelViewStoppingStyle(t *testing.T) {
+	// Verify stopping/finish renders [STOPPING] not [STARTING]
+	tests := []struct {
+		status string
+		expect string
+	}{
+		{"stopping", "[STOPPING]"},
+		{"finish", "[STOPPING]"},
+		{"starting", "[STARTING]"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.status, func(t *testing.T) {
+			m := setupRunningModel(t, tt.status)
+			m.updateViewport()
+			viewContent := m.View().Content
+			if !strings.Contains(viewContent, tt.expect) {
+				t.Errorf("Expected status '%s' to render '%s', got:\n%s", tt.status, tt.expect, viewContent)
+			}
+		})
+	}
+}
+
+func TestVMRunningModelViewNarrowWidth(t *testing.T) {
+	// Verify that rendering works with narrow terminals (<80 cols)
+	m := setupRunningModel(t, "running")
+	m.SetSize(60, 24)
+	m.updateViewport()
+	viewContent := m.View().Content
+	if !strings.Contains(viewContent, "[RUNNING]") {
+		t.Error("View should show [RUNNING] even at narrow width")
+	}
+}
