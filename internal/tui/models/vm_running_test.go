@@ -675,6 +675,72 @@ func TestNilRunnerWaitForLogReturnsNil(t *testing.T) {
 	}
 }
 
+func TestInitialStatusAfterExitReturnsStopped(t *testing.T) {
+	// After QEMU exits, runner has no QMP client and IsRunning=false.
+	// initialStatus() should return "stopped", not "starting".
+	runner := vm.NewVMRunner(&domain.VM{Name: "test-vm", ID: "1"}, nil, vm.RunConfig{}, false)
+	m := &VMRunningModel{
+		vm:          &domain.VM{Name: "test-vm", ID: "1"},
+		runner:      runner,
+		maxLogLines: 500,
+		vp:          viewport.New(viewport.WithWidth(80), viewport.WithHeight(24)),
+		ready:       true,
+		width:       80,
+		height:      24,
+		status:      "running",
+	}
+
+	// runner was never started: IsRunning()=false, QMPClient()=nil
+	cmd := m.initialStatus()
+	if cmd == nil {
+		t.Fatal("initialStatus should return non-nil command")
+	}
+	msg := cmd()
+	statusMsg, ok := msg.(VMStatusUpdateMsg)
+	if !ok {
+		t.Fatalf("Expected VMStatusUpdateMsg, got %T: %v", msg, msg)
+	}
+	if statusMsg.Status == "starting" {
+		t.Errorf("Status after VM exit should be terminal (stopped/shutdown), got 'starting'")
+	}
+	if statusMsg.Status != "stopped" && statusMsg.Status != "shutdown" {
+		t.Errorf("Expected 'stopped' or 'shutdown' after VM exit, got '%s'", statusMsg.Status)
+	}
+}
+
+func TestPollStatusAfterExitReturnsStopped(t *testing.T) {
+	// After QEMU exits, pollStatus should return "stopped", not "starting".
+	runner := vm.NewVMRunner(&domain.VM{Name: "test-vm", ID: "1"}, nil, vm.RunConfig{}, false)
+	m := &VMRunningModel{
+		vm:          &domain.VM{Name: "test-vm", ID: "1"},
+		runner:      runner,
+		maxLogLines: 500,
+		vp:          viewport.New(viewport.WithWidth(80), viewport.WithHeight(24)),
+		ready:       true,
+		width:       80,
+		height:      24,
+		status:      "running",
+	}
+
+	// Execute the pollStatus tick callback directly.
+	// tea.Tick returns a Cmd; calling it invokes the tick.
+	cmd := m.pollStatus()
+	if cmd == nil {
+		t.Fatal("pollStatus should return non-nil command")
+	}
+	msg := cmd()
+	statusMsg, ok := msg.(VMStatusUpdateMsg)
+	if !ok {
+		t.Fatalf("Expected VMStatusUpdateMsg, got %T: %v", msg, msg)
+	}
+	if statusMsg.Status == "starting" {
+		t.Errorf("Status after VM exit should be terminal (stopped/shutdown), got 'starting'")
+	}
+	if statusMsg.Status != "stopped" && statusMsg.Status != "shutdown" {
+		t.Errorf("Expected 'stopped' or 'shutdown' after VM exit, got '%s'", statusMsg.Status)
+	}
+}
+
 func TestNilRunnerWaitForVMExitReturnsNil(t *testing.T) {
 	// When runner is nil, waitForVMExit should return nil (no-op),
 	// not a VMStoppedMsg.

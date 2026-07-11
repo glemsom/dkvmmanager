@@ -148,6 +148,10 @@ func (m *VMRunningModel) initialStatus() tea.Cmd {
 		}
 		client := m.runner.QMPClient()
 		if client == nil {
+			// No QMP client. If the process has also exited, the VM is stopped.
+			if !m.runner.IsRunning() {
+				return VMStatusUpdateMsg{Status: "stopped"}
+			}
 			return VMStatusUpdateMsg{Status: "starting"}
 		}
 		status, err := client.QueryStatus()
@@ -225,8 +229,10 @@ func (m *VMRunningModel) pollStatus() tea.Cmd {
 				if !m.pollingSince.IsZero() && time.Since(m.pollingSince) > 5*time.Second {
 					return VMStatusUpdateMsg{Status: "running"}
 				}
+				return VMStatusUpdateMsg{Status: "starting"}
 			}
-			return VMStatusUpdateMsg{Status: "starting"}
+			// Process has exited - no QMP client means VM is stopped.
+			return VMStatusUpdateMsg{Status: "stopped"}
 		}
 
 		status, err := client.QueryStatus()
