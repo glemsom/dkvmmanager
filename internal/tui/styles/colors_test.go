@@ -340,7 +340,8 @@ func TestListItemStyles(t *testing.T) {
 func TestListItemSelectedStyle(t *testing.T) {
 	style := ListItemSelectedStyle()
 
-	if !style.GetBold() {
+	// Under TERM=linux, bold is intentionally skipped (vgacon workaround).
+	if !isLinuxTerm() && !style.GetBold() {
 		t.Error("ListItemSelectedStyle() should be bold")
 	}
 
