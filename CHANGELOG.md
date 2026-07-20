@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.2.6] - 2026-07-11
+
+### Added
+- Accessibility smoke tests: invisible text detection across all views
+  (main menu, VMs tab, config tab, power tab, mount point warning,
+  VM selection, edit form, quit view, VM detail).
+  ([#152](https://github.com/glemsom/dkvmmanager/pull/152))
+
+### Fixed
+- `TestListItemSelectedStyle` skips bold assertion on `TERM=linux`
+  (vgacon workaround) to prevent false test failures.
+
+## [0.2.5] - 2026-07-11
+
+### Fixed
+- TUI status permanently shows `[STARTING]` after guest shuts down
+  internally. `initialStatus()` and `pollStatus()` now check
+  `IsRunning()` when QMP client is nil.
+  ([#152](https://github.com/glemsom/dkvmmanager/issues/152))
+
 ## [0.2.4] - 2026-07-10
 
 ### Fixed
@@ -444,7 +464,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added yq and jq to Docker image for improved scripting
 
 <!-- Links -->
-[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/glemsom/dkvmmanager/compare/v0.2.6...HEAD
+[0.2.6]: https://github.com/glemsom/dkvmmanager/compare/v0.2.5...v0.2.6
+[0.2.5]: https://github.com/glemsom/dkvmmanager/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/glemsom/dkvmmanager/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/glemsom/dkvmmanager/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/glemsom/dkvmmanager/compare/v0.2.1...v0.2.2
